@@ -33,7 +33,7 @@
 #include <cstring>
 #include <ctype.h>
 
-#include "cnf.hh"
+#include "cnf_info.hh"
 #include "q25.h"
 #include "counters.h"
 #include "report.h"

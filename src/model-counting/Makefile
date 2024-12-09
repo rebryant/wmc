@@ -6,25 +6,17 @@ CFLAGS=-g $(OPT) -Wno-nullability-completeness -I $(IDIR)
 IDIR = ../../include
 LDIR = ../../lib
 CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11 -I $(IDIR)
-GDIR = ~/repos/d4pp/d4v2/3rdParty/glucose-3.0
-GINC = -I $(GDIR)
 
-MYLIBS =  $(LDIR)/wmc_arithmetic.a $(LDIR)/wmc_util.a $(GDIR)/glucose.a
+MYLIBS =  $(LDIR)/wmc_arithmetic.a $(LDIR)/wmc_util.a 
 LIBS = $(MYLIBS) -lz
 
 all:  nnfcount
 
-$(GDIR)/Solver.h:
-	cd $(GDIR); make lib -f Makefile-compile
+cnf_info.o: cnf_info.hh cnf_info.cpp 
+	$(CXX) $(CPPFLAGS) -c cnf_info.cpp
 
-$(GDIR)/glucose.a:
-	cd $(GDIR); make lib -f Makefile-compile
-
-cnf.o: cnf.hh cnf.cpp $(GDIR)/Solver.h
-	$(CXX) $(CPPFLAGS) $(GINC) -c cnf.cpp
-
-nnfcount: nnfcount.cpp cnf.o counters.o $(MYLIBS)
-	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf.o counters.o $(LIBS)
+nnfcount: nnfcount.cpp cnf_info.o counters.o $(MYLIBS)
+	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf_info.o counters.o $(LIBS)
 
 .SUFFIXES: .c .cpp .o
 
@@ -36,6 +28,6 @@ nnfcount: nnfcount.cpp cnf.o counters.o $(MYLIBS)
 
 clean:
 	rm -f *.o *~
-	rm -f tpp nnfcount
+	rm -f nnfcount
 	rm -rf *.dSYM
 
