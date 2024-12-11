@@ -51,31 +51,19 @@ struct Egraph_edge {
 };
 
 class Egraph {
-private:
+public:
     std::vector<Egraph_operation> operations;
     std::vector<Egraph_edge> edges;
     int root_id;
     std::unordered_set<int> *data_variables;
     bool is_smoothed;
-    // For evaluation
-    std::unordered_map<int,q25_ptr> evaluation_weights;
-    std::unordered_map<int,q25_ptr> smoothing_weights;
-    q25_ptr rescale;
 
-
-
-public:
     Egraph(std::unordered_set<int> *data_variables);
     void read_nnf(FILE *infile);
     void write_nnf(FILE *outfile);
 
     void smooth();
-    // literal_weights == NULL for unweighted
-    void prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
-    q25_ptr evaluate(bool smoothed);
-    void clear_evaluation();
 
-private:
     bool is_data_variable(int var) { return data_variables->find(var) != data_variables->end(); }
     bool is_literal(int lit) { return lit < 0 ? is_data_variable(-lit) : is_data_variable(lit); }
     bool is_operation(int id) { return id > 0 && id <= operations.size(); }
@@ -84,8 +72,27 @@ private:
     int add_edge(int from_id, int to_id);
     void add_edge_literal(int eid, int lit);
     void add_smoothing_variable(int eid, int var);
-    q25_ptr evaluate_edge(Egraph_edge &e, bool smoothed);
+};
 
+class Evaluator_q25 {
+private:
+    Egraph *egraph;
+    // For evaluation
+    std::unordered_map<int,q25_ptr> evaluation_weights;
+    std::unordered_map<int,q25_ptr> smoothing_weights;
+    q25_ptr rescale;
+
+public:
+
+    Evaluator_q25(Egraph *egraph);
+    // literal_weights == NULL for unweighted
+    void prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
+    q25_ptr evaluate(bool smoothed);
+
+    void clear_evaluation();
+    
+private:
+    q25_ptr evaluate_edge(Egraph_edge &e, bool smoothed);
 
 };
 

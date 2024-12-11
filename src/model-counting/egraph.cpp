@@ -45,7 +45,6 @@ static int line_number = 0;
 Egraph::Egraph(std::unordered_set<int> *dvars) {
     data_variables = dvars;
     is_smoothed = false;
-    rescale = q25_from_32(0);
 }
 
 void Egraph::add_operation(int id, nnf_type_t type) {
@@ -313,9 +312,9 @@ bool read_cnf(FILE *infile, std::unordered_set<int> **data_variables, std::unord
 }
 
 // literal_weights == NULL for unweighted
-void Egraph::prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed) {
+void Evaluator_q25::prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed) {
     clear_evaluation();
-    for (int v : *data_variables) {
+    for (int v : *egraph->data_variables) {
 	q25_ptr pwt = NULL;
 	q25_ptr nwt = NULL;
 	if (!literal_weights) {
@@ -361,7 +360,7 @@ void Egraph::prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, b
     }
 }
 
-q25_ptr Egraph::evaluate_edge(Egraph_edge &e, bool smoothed) {
+q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e, bool smoothed) {
     q25_ptr result = q25_from_32(1);
     int mark = q25_enter();
     for (int lit : e.literals) {
@@ -383,11 +382,11 @@ q25_ptr Egraph::evaluate_edge(Egraph_edge &e, bool smoothed) {
     return result;
 }
 
-q25_ptr Egraph::evaluate(bool smoothed) {
+q25_ptr Evaluator_q25::evaluate(bool smoothed) {
     std::vector<q25_ptr> operation_values;
-    operation_values.resize(operations.size());
-    for (int id = 1; id <= operations.size(); id++) {
-	switch (operations[id-1].type) {
+    operation_values.resize(egraph->operations.size());
+    for (int id = 1; id <= egraph->operations.size(); id++) {
+	switch (egraph->operations[id-1].type) {
 	case NNF_TRUE:
 	case NNF_AND:
 	    operation_values[id-1] = q25_from_32(1);
@@ -398,11 +397,11 @@ q25_ptr Egraph::evaluate(bool smoothed) {
 	    operation_values[id-1] = q25_from_32(0);
 	}
     }
-    for (Egraph_edge e : edges) {
+    for (Egraph_edge e : egraph->edges) {
 	int mark = q25_enter();
 	q25_ptr edge_val = evaluate_edge(e, smoothed);
 	q25_ptr product = q25_mark(q25_mul(q25_mark(edge_val), operation_values[e.from_id-1]));
-	bool multiply = operations[e.to_id-1].type == NNF_AND;
+	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
 	q25_ptr new_val = multiply ? 
 	    q25_mul(q25_mark(operation_values[e.to_id-1]), product) :
 	    q25_add(q25_mark(operation_values[e.to_id-1]), product);
@@ -419,9 +418,9 @@ q25_ptr Egraph::evaluate(bool smoothed) {
 	operation_values[e.to_id-1] = new_val;
 	q25_leave(mark);
     }
-    q25_ptr result = operation_values[root_id-1];
-    for (int id = 1; id <= operations.size(); id++) {
-	if (id != root_id)
+    q25_ptr result = operation_values[egraph->root_id-1];
+    for (int id = 1; id <= egraph->operations.size(); id++) {
+	if (id != egraph->root_id)
 	    q25_free(operation_values[id-1]);
     }
     operation_values.clear();
@@ -445,7 +444,13 @@ q25_ptr Egraph::evaluate(bool smoothed) {
     return result;
 }
 
-void Egraph::clear_evaluation() {
+Evaluator_q25::Evaluator_q25(Egraph *eg) { 
+    egraph = eg;
+    rescale = NULL;
+    clear_evaluation();
+}
+    
+void Evaluator_q25::clear_evaluation() {
     for (auto iter : evaluation_weights)
 	q25_free(iter.second);
     evaluation_weights.clear();

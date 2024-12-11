@@ -55,6 +55,7 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     cnf = new Cnf();
     cnf->import_file(cnf_file, true, false);
     Egraph eg = Egraph(cnf->data_variables);
+    Evaluator_q25 ev = Evaluator_q25(&eg);
     eg.read_nnf(nnf_file);
     if (smooth)
 	eg.smooth();
@@ -62,8 +63,8 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	eg.write_nnf(out_file);
     // Regular count
     long start_count = q25_operation_count();
-    eg.prepare_weights(NULL, smooth);
-    q25_ptr count = eg.evaluate(smooth);
+    ev.prepare_weights(NULL, smooth);
+    q25_ptr count = ev.evaluate(smooth);
     long unweighted_operations = q25_operation_count() - start_count;
     char *scount = q25_string(count);
     lprintf("%s   UNWEIGHTED COUNT = %s\n", prefix, scount);
@@ -71,11 +72,11 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	    prefix, unweighted_operations);
     free(scount);
     q25_free(count);
-    eg.clear_evaluation();
+    ev.clear_evaluation();
     if (cnf->is_weighted()) {
 	start_count = q25_operation_count();
-	eg.prepare_weights(cnf->input_weights, smooth);
-	q25_ptr wcount = eg.evaluate(smooth);
+	ev.prepare_weights(cnf->input_weights, smooth);
+	q25_ptr wcount = ev.evaluate(smooth);
 	long weighted_operations = q25_operation_count() - start_count;
 	char *swcount = q25_string(wcount);
 	lprintf("%s   WEIGHTED COUNT   = %s\n", prefix, swcount);
@@ -83,7 +84,7 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 		prefix, weighted_operations);
 	free(swcount);
 	q25_free(wcount);
-	eg.clear_evaluation();
+	ev.clear_evaluation();
     }
 }
 
