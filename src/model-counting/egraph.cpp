@@ -382,7 +382,8 @@ q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e, bool smoothed) {
     return result;
 }
 
-q25_ptr Evaluator_q25::evaluate(bool smoothed) {
+q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed) {
+    prepare_weights(literal_weights, smoothed);
     std::vector<q25_ptr> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {

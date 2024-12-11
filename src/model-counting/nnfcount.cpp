@@ -63,8 +63,7 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	eg.write_nnf(out_file);
     // Regular count
     long start_count = q25_operation_count();
-    ev.prepare_weights(NULL, smooth);
-    q25_ptr count = ev.evaluate(smooth);
+    q25_ptr count = ev.evaluate(NULL, smooth);
     long unweighted_operations = q25_operation_count() - start_count;
     char *scount = q25_string(count);
     lprintf("%s   UNWEIGHTED COUNT = %s\n", prefix, scount);
@@ -75,8 +74,7 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     ev.clear_evaluation();
     if (cnf->is_weighted()) {
 	start_count = q25_operation_count();
-	ev.prepare_weights(cnf->input_weights, smooth);
-	q25_ptr wcount = ev.evaluate(smooth);
+	q25_ptr wcount = ev.evaluate(cnf->input_weights, smooth);
 	long weighted_operations = q25_operation_count() - start_count;
 	char *swcount = q25_string(wcount);
 	lprintf("%s   WEIGHTED COUNT   = %s\n", prefix, swcount);

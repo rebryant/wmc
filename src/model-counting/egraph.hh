@@ -86,12 +86,11 @@ public:
 
     Evaluator_q25(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    void prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
-    q25_ptr evaluate(bool smoothed);
-
+    q25_ptr evaluate(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
     void clear_evaluation();
     
 private:
+    void prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
     q25_ptr evaluate_edge(Egraph_edge &e, bool smoothed);
 
 };
