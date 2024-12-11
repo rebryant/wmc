@@ -1,7 +1,7 @@
 2CC=gcc
 CXX=g++
-OPT = -O2
-#OPT = -O0
+#OPT = -O2
+OPT = -O0
 CFLAGS=-g $(OPT) -fPIC -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
 INC = -I..

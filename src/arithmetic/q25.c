@@ -57,6 +57,7 @@
 
 /* Working area parameters */
 
+
 /* How many numbers are in working area */
 #define DCOUNT 3
 /* How many digits are allocated in initial arrays */
@@ -91,6 +92,14 @@ static void q25_show_internal(int id, FILE *outfile);
 /* Count of operations */
 static long operation_counter = 0;
 
+/* Support for stack-based memory management */
+#define QSTACK_INIT_SIZE  100
+static q25_ptr *qstack = NULL;
+static int qstack_size = 0;
+static int qstack_alloc_size = 0;
+
+
+
 /* Static functions */
 
 /* Initialize data structures */
@@ -119,6 +128,9 @@ static void q25_init() {
 	power5[i] = p5;
 	p5 *= 5;
     }
+    qstack = (q25_ptr *) calloc(QSTACK_INIT_SIZE, sizeof(q25_ptr));
+    qstack_size = 0;
+    qstack_alloc_size = QSTACK_INIT_SIZE;
 }
 
 // Setting working value to number x < RADIX
@@ -451,6 +463,7 @@ q25_ptr q25_copy(q25_ptr q) {
     q25_work(WID, q);
     return q25_build(WID);
 }
+
 
 q25_ptr q25_scale(q25_ptr q, int32_t p2, int32_t p5) {
     q25_work(WID, q);
@@ -989,4 +1002,23 @@ bool get_int64(q25_ptr q, int64_t *ip) {
 
 long q25_operation_count() {
     return operation_counter;
+}
+
+/* Stack management */
+int q25_enter() {
+    return qstack_size;
+}
+void q25_leave(int pos) {
+    while (qstack_size > pos)
+	q25_free(qstack[--qstack_size]);
+}
+
+q25_ptr q25_mark(q25_ptr q) {
+    q25_init();
+    if (qstack_size >= qstack_alloc_size) {
+	qstack_alloc_size *= 2;
+	qstack = (q25_ptr *) realloc(qstack, qstack_alloc_size * sizeof(q25_ptr));
+    }
+    qstack[qstack_size++] = q;
+    return q;
 }

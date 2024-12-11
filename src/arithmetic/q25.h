@@ -127,6 +127,11 @@ bool get_int64(q25_ptr q, int64_t *ip);
 /* Count of number of non-trivial operations since initialization */
 long q25_operation_count();
 
+/* Stack-based memory management.  Call q25_enter() when enter context, q25_exit() when leave */
+int q25_enter();
+void q25_leave(int pos);
+q25_ptr q25_mark(q25_ptr q);
+
 #ifdef CPLUSPLUS
 }
 #endif
