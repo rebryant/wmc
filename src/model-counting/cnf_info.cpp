@@ -169,9 +169,7 @@ void Cnf::initialize(int input_count) {
 
 // Must explicitly deallocate sets
 void Cnf::deallocate() {
-    delete data_variables;
     delete forget_variables;
-    delete input_weights;
 }
 
 int Cnf::new_clause() {
@@ -291,6 +289,7 @@ void Cnf::finish() {
 	    data_variables->insert(v);
     }
     incr_count_by(COUNT_INPUT_CLAUSE, maximum_clause_id());
+    incr_count_by(COUNT_DATA_VARIABLES, data_variables->size());
     return true;
 }
 

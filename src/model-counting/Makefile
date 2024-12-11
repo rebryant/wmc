@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
-OPT=-O2
-#OPT=-O0
+#OPT=-O2
+OPT=-O0
 CFLAGS=-g $(OPT) -Wno-nullability-completeness -I $(IDIR)
 IDIR = ../../include
 LDIR = ../../lib
@@ -15,8 +15,11 @@ all:  nnfcount
 cnf_info.o: cnf_info.hh cnf_info.cpp 
 	$(CXX) $(CPPFLAGS) -c cnf_info.cpp
 
-nnfcount: nnfcount.cpp cnf_info.o counters.o $(MYLIBS)
-	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf_info.o counters.o $(LIBS)
+egraph.o: egraph.hh egraph.cpp
+	$(CXX) $(CPPFLAGS) -c egraph.cpp
+
+nnfcount: nnfcount.cpp cnf_info.o counters.o egraph.o $(MYLIBS)
+	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf_info.o counters.o egraph.o $(LIBS)
 
 .SUFFIXES: .c .cpp .o
 

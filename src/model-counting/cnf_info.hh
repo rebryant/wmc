@@ -76,6 +76,9 @@ public:
     bool show(FILE *outfile);
     bool write(FILE *outfile, bool show_data_variables, bool show_forget_variables, bool show_weights);
 
+    // Determine whether the file calls for weighted counting
+    bool is_weighted() { return !input_weights || input_weights->size() != 0; }
+
     // Add new clauses one literal at a time
     // Returns clause ID
     int new_clause();
