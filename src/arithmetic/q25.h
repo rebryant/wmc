@@ -54,7 +54,8 @@ extern "C" {
 typedef struct {
     bool valid : 1;    // Is this a valid number
     bool negative: 1;  // Is it negative
-    unsigned dcount : 30; // How many digits does it have (must be at least 1)
+    bool infinite: 1;  // Is it + or - infinity
+    unsigned dcount : 29; // How many digits does it have (must be at least 1)
     int32_t pwr2;         // Power of 2
     int32_t pwr5;         // Power of 5
     uint32_t digit[1];    // Sequence of digits, each between 0 and RADIX-1
@@ -69,6 +70,12 @@ q25_ptr q25_copy(q25_ptr q);
 q25_ptr q25_from_64(int64_t x);
 q25_ptr q25_from_32(int32_t x);
 q25_ptr q25_invalid();
+q25_ptr q25_infinity(bool negative);
+
+
+/* Convert from/to double-precision FP.  Assume IEEE representation */
+q25_ptr q25_from_double(double x);
+double q25_to_double(q25_ptr q);
 
 /* Scale by powers of 2 & 5 */
 q25_ptr q25_scale(q25_ptr q, int32_t p2, int32_t p5);
@@ -92,9 +99,15 @@ bool q25_is_zero(q25_ptr q);
 /* Is it one */
 bool q25_is_one(q25_ptr q);
 
+/* Is it infinite */
+bool q25_is_infinite(q25_ptr q, bool *negativep);
+
+/* Is it negative */
+bool q25_is_negative(q25_ptr q);
+
 /* 
    Compare two numbers.  Return -1 (q1<q2), 0 (q1=q2), or +1 (q1>q2)
-   Return -2 if either invalid
+   Return -2 if either invalid, or comparing two infinities of the same sign
 */
 int q25_compare(q25_ptr q1, q25_ptr q2);
 
@@ -113,9 +126,11 @@ q25_ptr q25_read(FILE *infile);
 /* Write to file */
 void q25_write(q25_ptr q, FILE *outfile);
 
+/* Read from string */
+q25_ptr q25_from_string(const char *sq);
+
 /* Generate dynamically allocated string.  Should free() when done */
 char *q25_string(q25_ptr q);
-
 
 /* Show value in terms of its representation */
 void q25_show(q25_ptr q, FILE *outfile);

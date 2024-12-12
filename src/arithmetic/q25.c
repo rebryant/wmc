@@ -114,6 +114,7 @@ static void q25_init() {
 	digit_buffer[id] = (uint32_t *) calloc(INIT_DIGITS, sizeof(uint32_t));
 	digit_buffer[id][0] = 0;
 	working_val[id].valid = true;
+	working_val[id].infinite = false;
 	working_val[id].pwr2 = 0;
 	working_val[id].pwr5 = 0;
 	working_val[id].dcount = 1;
@@ -137,6 +138,7 @@ static void q25_init() {
 static void q25_set(int id, uint32_t x) {
     q25_init();
     working_val[id].valid = true;
+    working_val[id].infinite = false;
     working_val[id].pwr2 = 0;
     working_val[id].pwr5 = 0;
     working_val[id].dcount = 1;
@@ -148,6 +150,7 @@ static void q25_set(int id, uint32_t x) {
 static void q25_work(int id, q25_ptr q) {
     q25_check(id, q->dcount);
     working_val[id].valid = q->valid;
+    working_val[id].infinite = q->infinite;
     working_val[id].negative = q->negative;
     working_val[id].dcount = q->dcount;
     working_val[id].pwr2 = q->pwr2;
@@ -175,7 +178,7 @@ static void q25_clear_digits(int id, unsigned len) {
 
 
 // Divide by a number < RADIX
-// Assume dividend is valid and nonzero, and divisor is nonzero
+// Assume dividend is valid, finite, and nonzero, and divisor is nonzero
 // Return remainder
 static uint32_t q25_div_word(int id, uint32_t divisor) {
     if (divisor == 1)
@@ -269,7 +272,13 @@ static void q25_reduce5(int id) {
 /* Canonize working value */
 static void q25_canonize(int id) {
     if (!working_val[id].valid) {
+	working_val[id].infinite = false;
 	working_val[id].negative = false;
+	working_val[id].dcount = 1;
+	digit_buffer[id][0] = 0;
+	working_val[id].pwr2 = 0;
+	working_val[id].pwr5 = 0;
+    } else if (working_val[id].infinite) {
 	working_val[id].dcount = 1;
 	digit_buffer[id][0] = 0;
 	working_val[id].pwr2 = 0;
@@ -279,6 +288,7 @@ static void q25_canonize(int id) {
 	while (working_val[id].dcount > 1 && digit_buffer[id][working_val[id].dcount-1] == 0)
 	    working_val[id].dcount--;
 	if (working_val[id].dcount == 1 && digit_buffer[id][0] == 0) {
+	    /* Canonize zero */
 	    working_val[id].negative = false;
 	    working_val[id].pwr2 = 0;
 	    working_val[id].pwr5 = 0;
@@ -299,6 +309,7 @@ static q25_ptr q25_build(int id) {
     if (result == NULL)
 	return NULL;
     result->valid = working_val[id].valid;
+    result->infinite = working_val[id].infinite;
     result->negative = working_val[id].negative;
     result->dcount = working_val[id].dcount;
     result->pwr2 = working_val[id].pwr2;
@@ -350,7 +361,6 @@ static void q25_scale_digits(int id, bool p2, int pwr) {
    Compare two working numbers.
    Must have already been scaled so that both numbers have same values for pwr2 & pwr5
    Return -1 (q1<q2), 0 (q1=q2), or +1 (q1>q2)
-   Return -2 if either invalid
 */
 static int q25_compare_working_magnitude(int id1, int id2) {
     if (working_val[id1].dcount < working_val[id2].dcount)
@@ -369,7 +379,7 @@ static int q25_compare_working_magnitude(int id1, int id2) {
 
 /* How many decimal digits are in representation? */
 static int q25_length10(int id) {
-    if (!working_val[id].valid)
+    if (!working_val[id].valid || working_val[id].infinite)
 	return -1;
     int n10 = (working_val[id].dcount-1) * Q25_DIGITS;
     uint32_t word = digit_buffer[id][working_val[id].dcount-1];
@@ -395,6 +405,8 @@ static unsigned q25_get_digit10(int id, int index) {
 static void q25_show_internal(int id, FILE *outfile) {
     if (!working_val[id].valid)
 	fprintf(outfile, "INVALID");
+    if (working_val[id].infinite)
+	fprintf(outfile, "INFINITE");
     fprintf(outfile, "[%c,p2=%d,p5=%d", working_val[id].negative ? '-' : '+', working_val[id].pwr2, working_val[id].pwr5);
     int d;
     for (d = working_val[id].dcount-1; d >= 0; d--) {
@@ -459,6 +471,15 @@ q25_ptr q25_invalid() {
     return q25_build(WID);
 }
 
+q25_ptr q25_infinity(bool negative) {
+    q25_set(WID, 0);
+    working_val[WID].infinite = true;
+    if (negative)
+	working_val[WID].negative = 1;
+    return q25_build(WID);
+}
+
+
 q25_ptr q25_copy(q25_ptr q) {
     q25_work(WID, q);
     return q25_build(WID);
@@ -496,22 +517,42 @@ bool q25_is_valid(q25_ptr q) {
 }
 
 bool q25_is_zero(q25_ptr q) {
-    return q->valid && q->dcount == 1 && q->digit[0] == 0;
+    return q->valid && !q->infinite && q->dcount == 1 && q->digit[0] == 0;
 }
 
 bool q25_is_one(q25_ptr q) {
-    return q->valid && q->dcount == 1 && q->digit[0] == 1 
+    return q->valid && !q->infinite && q->dcount == 1 && q->digit[0] == 1 
 	&& q->pwr2 == 0 && q->pwr5 == 0;
+}
+
+bool q25_is_infinite(q25_ptr q, bool *negativep) {
+    *negativep = q->negative == 1;
+    return q->infinite;
+}
+
+bool q25_is_negative(q25_ptr q) {
+    return q->negative;
 }
 
 
 /* 
    Compare two numbers.  Return -1 (q1<q2), 0 (q1=q2), or +1 (q1>q2)
-   Return -2 if either invalid
+   Return -2 if either invalid, or comparing same infinities
 */
 int q25_compare(q25_ptr q1, q25_ptr q2) {
     if (q1->valid != q2->valid)
 	return -2;
+    if (q1->infinite) {
+	if (q2->infinite) {
+	    if (q1->negative == q2->negative)
+		return -2;
+	    else
+		return q1->negative ? -1 : 1;
+	} else
+	    return q1->negative ? -1 : 1;
+    } else if (q2->infinite) {
+	return q2->negative ? 1 : -1;
+    }
     if (q1->negative && !q2->negative)
 	return -1;
     if (!q1->negative && q2->negative)
@@ -540,10 +581,20 @@ int q25_compare(q25_ptr q1, q25_ptr q2) {
 
 
 q25_ptr q25_add(q25_ptr q1, q25_ptr q2) {
+    if (!q1->valid || !q2->valid)
+	return q25_invalid();
+    if (q1->infinite) {
+	if (q2->infinite)
+	    return q1->negative == q2->negative ? q25_copy(q1) : q25_invalid();
+	else return q25_copy(q1);
+    } else if (q2->infinite)
+	return q25_copy(q2);
     if (q25_is_zero(q1))
 	return q25_copy(q2);
     if (q25_is_zero(q2))
 	return q25_copy(q1);
+
+
     /* Must move arguments into working area.  Build result with id 0 */
     q25_work(1, q1);
     q25_work(2, q2);
@@ -634,21 +685,32 @@ q25_ptr q25_add(q25_ptr q1, q25_ptr q2) {
 }
 
 q25_ptr q25_one_minus(q25_ptr q) {
+    if (!q->valid)
+	return q25_copy(q);
+    if (q->infinite)
+	return q25_negate(q);
     q25_ptr one = q25_from_32(1);
     if (q25_is_zero(q))
 	return one;
-    /* Hack.  Temporarily negate argument */
-    q->negative = !q->negative;
-    q25_ptr sum = q25_add(one, q);
-    q->negative = !q->negative;
+    q25_ptr mq = q25_negate(q);
+    q25_ptr sum = q25_add(one, mq);
     q25_free(one);
+    q25_free(mq);
     return sum;
 }
 
 q25_ptr q25_mul(q25_ptr q1, q25_ptr q2) {
-    if (q25_is_zero(q1) || !q1->valid)
+    if (!q1->valid || !q2->valid)
+	return q25_invalid();
+    if (q1->infinite) {
+	if (q2->infinite)
+	    return q25_infinity(q1->negative != q2->negative);
+	else return q25_is_zero(q2) ? q25_invalid() : q25_copy(q1);
+    } else if (q2->infinite)
+	return q25_is_zero(q1) ? q25_invalid() : q25_copy(q2);
+    if (q25_is_zero(q1))
 	return q25_copy(q1);
-    if (q25_is_zero(q2) || !q2->valid)
+    if (q25_is_zero(q2))
 	return q25_copy(q2);
     if (q1->dcount == 1 && q1->digit[0] == 1) {
 	q25_ptr result = q25_scale(q2, q1->pwr2, q1->pwr5);
@@ -806,6 +868,125 @@ q25_ptr q25_read(FILE *infile) {
 #endif
     return q25_build(WID);
 }
+
+q25_ptr q25_from_string(const char *sq) {
+    int pos = 0;
+    /* Fill up digit buffer in reverse order */
+    int d = 0;
+    q25_check(1, d+1);
+    digit_buffer[1][d] = 0;
+    bool negative = false;
+    int pwr10 = 0;
+    bool got_point = false;
+    /* Number of base 10 digits read */
+    int n10 = 0;
+    bool first = true;
+    while (true) {
+	int c = sq[pos++];
+	if (c == '-') {
+	    if (first) {
+		negative = true;
+		first = false;
+		continue;
+	    }
+	    else {
+		--pos;
+		break;
+	    }
+	} else if (c == '.') {
+	    if (got_point) {
+		--pos;
+		break;
+	    } else
+		got_point = true;
+	} else if (isdigit(c)) {
+	    n10++;
+	    if (got_point)
+		pwr10--;
+	    if (n10 > Q25_DIGITS && (n10-1) % Q25_DIGITS == 0) {
+		// Time to start new word
+		d++;
+		q25_check(1, d+1);
+		digit_buffer[1][d] = 0;
+	    }
+	    unsigned dig = c - '0';
+	    digit_buffer[1][d] = 10 * digit_buffer[1][d] + dig;
+	} else {
+	    --pos;
+	    break;
+	}
+	first = false;
+    }
+    bool valid = n10 > 0;
+    if (valid) {
+	// See if there's an exponent
+	int c = sq[pos++];
+	if (c == 'e') {
+	    // Deal with exponent
+	    bool exp_negative = false;
+	    int nexp = 0;
+	    int exponent = 0;
+	    bool exp_first = true;
+	    while (true) {
+		c = sq[pos++];
+		if (c == '-') {
+		    if (exp_first)
+			exp_negative = true;
+		    else {
+			--pos;
+			valid = false;
+			break;
+		    }
+		} else if (isdigit(c)) {
+		    nexp++;
+		    unsigned dig = c - '0';
+		    exponent = 10 * exponent + dig;
+		} else {
+		    --pos;
+		    break;
+		}
+		exp_first = false;
+	    }
+	    valid = valid && nexp > 0;
+	    if (exp_negative)
+		exponent = -exponent;
+	    pwr10 += exponent;
+	} else
+	    --pos;
+    }
+    if (!valid) {
+	q25_set(WID, 0);
+	working_val[WID].valid = false;
+	return q25_build(WID);
+    }
+    q25_set(WID, 0);
+    working_val[WID].negative = negative;
+    // Reverse the digits
+    unsigned dcount = (n10 + Q25_DIGITS-1) / Q25_DIGITS;
+    q25_check(WID, dcount);
+    for (d = 0; d < dcount; d++) {
+	digit_buffer[WID][d] = digit_buffer[1][dcount - 1 - d];
+    }
+    // Now could have a problem with the bottom word
+    // Slide up to top and let the canonizer fix things
+    unsigned extra_count = n10 % Q25_DIGITS;
+    if (extra_count > 0) {
+	unsigned scale = Q25_DIGITS-extra_count;
+	unsigned multiplier = power10[scale];
+	digit_buffer[WID][0] *= multiplier;
+	pwr10 -= scale;
+    }
+    working_val[WID].dcount = dcount;
+    working_val[WID].pwr2 = pwr10;
+    working_val[WID].pwr5 = pwr10;
+#if DEBUG
+    printf("  Read value before canonizing: ");
+    q25_show_internal(WID, stdout);
+    printf("\n");
+#endif
+    return q25_build(WID);
+}
+
 
 void q25_write(q25_ptr q, FILE *outfile) {
     if (!q->valid) {
@@ -998,6 +1179,123 @@ bool get_int64(q25_ptr q, int64_t *ip) {
 	val *= 5;
     *ip = val;
     return true;
+}
+
+q25_ptr q25_from_double(double x) {
+    union {
+	double dx;
+	uint64_t bx;
+    } u;
+    /* Get bit representation of x */
+    u.dx = x;
+    uint64_t bits = u.bx;
+    unsigned sign = bits >> 63;
+    int  biased_exp = (bits >> 52) & 0x7FF;
+    int exp = biased_exp - (int) 0x3FF;
+    int64_t frac = bits & 0xFFFFFFFFFFFFFL;
+    if (biased_exp == 0) {
+	/* Denormalized */
+	exp++;
+#if DEBUG
+	printf("x = %.20f.  sign = %d, biased_exp = %u, frac = %ld.  Denormalized.  Exponent = %d\n",
+	       x, sign, biased_exp, (long) frac, exp);
+#endif
+    } else if (biased_exp == 0x7FF) {
+	/* Special */
+	if (frac == 0) {
+#if DEBUG
+	    printf("x = %.20f.  sign = %d, biased_exp = %u, Infinity\n",
+		   x, sign, biased_exp);
+#endif
+	    return q25_infinity(sign == 1);
+	} else {
+#if DEBUG
+	    printf("x = %.20f.  sign = %d, biased_exp = %u, Special\n",
+		   x, sign, biased_exp);
+#endif
+	    return q25_invalid();
+	}
+    } else {
+	/* Normalized */
+	frac += 1L << 52;
+#if DEBUG
+	printf("x = %.20f.  sign = %d, biased_exp = %d, frac = %ld.  Normalized.  Exponent = %d\n",
+	       x, sign, biased_exp, (long) frac, exp);
+#endif
+    }
+    /* Shift binary point to the right */
+    exp -=  52;
+    if (sign)
+	frac = -frac;
+    q25_ptr ifrac = q25_from_64(frac);
+    ifrac->pwr2 += exp;
+    {
+	char *sfrac = q25_string(ifrac);
+#if DEBUG
+	printf("Q25 representation: %s\n", sfrac);
+#endif
+	free(sfrac);
+    }
+    return ifrac;
+}
+
+static double bits2double(uint64_t bits) {
+    union {
+	double dx;
+	uint64_t bx;
+    } u;
+    u.bx = bits;
+    return u.dx;
+}    
+
+static uint64_t double2bits(double x) {
+    union {
+	double dx;
+	uint64_t bx;
+    } u;
+    u.dx = x;
+    return u.bx;
+}    
+
+static double build_infinity(bool neg) {
+    uint64_t bits = 0x7FF0000000000000L;
+    if (neg)
+	bits += (1L << 63);
+    return bits2double(bits);
+}
+
+static double build_nan() {
+    return bits2double(0x7FFfffffffffffffL);
+}
+
+static bool double_is_infinite(double x, bool *negativep) {
+    uint64_t bits = double2bits(x);
+    unsigned sign = bits >> 63;
+    int  biased_exp = (bits >> 52) & 0x7FF;
+    int64_t frac = bits & 0xFFFFFFFFFFFFFL;
+    *negativep = (sign == 1);
+    return biased_exp == 0x7FF &&  frac == 0;
+}
+
+static bool double_is_nan(double x) {
+    uint64_t bits = double2bits(x);
+    int  biased_exp = (bits >> 52) & 0x7FF;
+    int64_t frac = bits & 0xFFFFFFFFFFFFFL;
+    return biased_exp == 0x7FF &&  frac != 0;
+}
+
+double q25_to_double(q25_ptr q) {
+    double x;
+    bool negative;
+    if (!q25_is_valid(q))
+	return build_nan();
+    if (q25_is_infinite(q, &negative))
+	return build_infinity(negative);
+    char *sq = q25_string(q);
+    if (sscanf(sq, "%lf", &x) != 1) 
+	return build_nan();
+    free(sq);
+    return x;
 }
 
 long q25_operation_count() {
