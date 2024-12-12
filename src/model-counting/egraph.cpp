@@ -36,6 +36,10 @@
 #include "egraph.hh"
 #include "cnf_info.hh"
 
+/*******************************************************************************************************************
+ Graph representing NNF formula
+*******************************************************************************************************************/
+
 static const char *nnf_type_name[NNF_NUM] = { "NONE", "TRUE", "FALSE", "AND", "OR" };
 static const char nnf_type_char[NNF_NUM] = { '\0', 't', 'f', 'a', 'o' };
 
@@ -300,32 +304,48 @@ void Egraph::smooth() {
     is_smoothed = true;
 }
 
+/*******************************************************************************************************************
+Evaluation via Q25
+*******************************************************************************************************************/
 
-bool read_cnf(FILE *infile, std::unordered_set<int> **data_variables, std::unordered_map<int,q25_ptr> **weights) {
-    Cnf *cnf = new Cnf();
-    if (!cnf->import_file(infile, true, false))
-	return false;
-    *data_variables = cnf->data_variables;
-    *weights = cnf->input_weights;
-    //    delete cnf;
-    return true;
+Evaluator_q25::Evaluator_q25(Egraph *eg) { 
+    egraph = eg;
+    rescale = NULL;
+    clear_evaluation();
+}
+    
+void Evaluator_q25::clear_evaluation() {
+    for (auto iter : evaluation_weights)
+	q25_free(iter.second);
+    evaluation_weights.clear();
+    for (auto iter : smoothing_weights)
+	q25_free(iter.second);
+    smoothing_weights.clear();
+    q25_free(rescale);
+    rescale = q25_from_32(1);
 }
 
-// literal_weights == NULL for unweighted
-void Evaluator_q25::prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed) {
+// literal_string_weights == NULL for unweighted
+void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
     clear_evaluation();
     for (int v : *egraph->data_variables) {
 	q25_ptr pwt = NULL;
 	q25_ptr nwt = NULL;
-	if (!literal_weights) {
+	if (!literal_string_weights) {
 	    // Unweighted counting
 	    pwt = q25_from_32(1);
 	    nwt = q25_from_32(1);
 	} else {
-	    if (literal_weights->find(v) != literal_weights->end())
-		pwt = q25_copy((*literal_weights)[v]);
-	    if (literal_weights->find(-v) != literal_weights->end())
-		nwt = q25_copy((*literal_weights)[-v]);
+	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
+		pwt = q25_from_string((*literal_string_weights)[v]);
+		if (!q25_is_valid(pwt))
+		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+	    }
+	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
+		nwt = q25_from_string((*literal_string_weights)[-v]);
+		if (!q25_is_valid(nwt))
+		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+	    }
 	    if (pwt) {
 		if (!nwt)
 		    nwt = q25_one_minus(pwt);
@@ -346,7 +366,7 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,q25_ptr> *literal_wei
 	    q25_ptr recip = q25_mark(q25_recip(sum));
 	    if (!q25_is_valid(recip)) {
 		char *srecip = q25_string(sum);
-		err(true, "Could not get reciprocal of summed weights for variable %d.  Sum = s\n", v, srecip);
+		err(true, "Could not get reciprocal of summed weights for variable %d.  Sum = s\n", v, sum);
 		free(srecip);
 	    }
 	    rescale = q25_mul(q25_mark(rescale), q25_mark(sum));
@@ -382,8 +402,8 @@ q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e, bool smoothed) {
     return result;
 }
 
-q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed) {
-    prepare_weights(literal_weights, smoothed);
+q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    prepare_weights(literal_string_weights, smoothed);
     std::vector<q25_ptr> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -445,20 +465,135 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,q25_ptr> *literal_weights
     return result;
 }
 
-Evaluator_q25::Evaluator_q25(Egraph *eg) { 
+/*******************************************************************************************************************
+Evaluation via DOUBLE
+*******************************************************************************************************************/
+
+Evaluator_double::Evaluator_double(Egraph *eg) { 
     egraph = eg;
-    rescale = NULL;
+    rescale = 1.0;
     clear_evaluation();
 }
     
-void Evaluator_q25::clear_evaluation() {
-    for (auto iter : evaluation_weights)
-	q25_free(iter.second);
+void Evaluator_double::clear_evaluation() {
     evaluation_weights.clear();
-    for (auto iter : smoothing_weights)
-	q25_free(iter.second);
     smoothing_weights.clear();
-    q25_free(rescale);
-    rescale = q25_from_32(1);
+    rescale = 1.0;
+}
+
+// literal_string_weights == NULL for unweighted
+void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    clear_evaluation();
+    for (int v : *egraph->data_variables) {
+	double pwt = 0.0;
+	bool have_pos = false;
+	double nwt = 0.0;
+	bool have_neg = false;
+	if (!literal_string_weights) {
+	    // Unweighted counting
+	    pwt = 1.0;
+	    nwt = 1.0;
+	} else {
+	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
+		if (sscanf((*literal_string_weights)[v], "%lf", &pwt) != 1)
+		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		have_pos = true;
+	    }
+	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
+		if (sscanf((*literal_string_weights)[-v], "%lf", &nwt) != 1)
+		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		have_neg = true;
+	    }
+	    if (have_pos) {
+		if (!have_neg)
+		    nwt = 1.0 - pwt;
+	    } else {
+		if (have_neg)
+		    pwt = 1.0 - nwt;
+		else {
+		    nwt = 1.0;
+		    pwt = 1.0;
+		}
+	    }
+	}
+	double sum = pwt + nwt;
+	if (smoothed)
+	    smoothing_weights[v] = sum;
+	else {
+	    if (sum == 0) {
+		err(true, "Could not get reciprocal of summed weights for variable %d.  Sum = %f\n", v, sum);
+	    }
+	    rescale *= sum;
+	    pwt = pwt/sum;
+	    nwt = nwt/sum;
+	}
+	evaluation_weights[v] = pwt;
+	evaluation_weights[-v] = nwt;
+    }
+}
+
+double Evaluator_double::evaluate_edge(Egraph_edge &e, bool smoothed) {
+    double result = 1.0;
+    for (int lit : e.literals) {
+	double wt = evaluation_weights[lit];
+	result *= wt;
+    }
+    if (smoothed) {
+	for (int v : e.smoothing_variables) {
+	    double wt = smoothing_weights[v];
+	    result *= wt;
+	}
+    }
+    if (verblevel >= 4) {
+	report(4, "Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, result);
+    }
+    return result;
+}
+
+double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    prepare_weights(literal_string_weights, smoothed);
+    std::vector<double> operation_values;
+    operation_values.resize(egraph->operations.size());
+    for (int id = 1; id <= egraph->operations.size(); id++) {
+	switch (egraph->operations[id-1].type) {
+	case NNF_TRUE:
+	case NNF_AND:
+	    operation_values[id-1] = 1.0;
+	    break;
+	case NNF_FALSE:
+	case NNF_OR:
+	default:
+	    operation_values[id-1] = 0.0;
+	}
+    }
+    for (Egraph_edge e : egraph->edges) {
+	double edge_val = evaluate_edge(e, smoothed);
+	double product = edge_val * operation_values[e.from_id-1];
+	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
+	double new_val = multiply ? 
+	    operation_values[e.to_id-1] * product:
+	    operation_values[e.to_id-1] + product;
+	if (verblevel >= 4) {
+	    double dfrom = operation_values[e.from_id-1];
+	    double dold = operation_values[e.to_id-1];
+	    report(4, "Density: Updating %d from %d.  %f * %f %c %f --> %f\n",
+		   e.to_id, e.from_id, dfrom, edge_val, multiply ? '*' : '+', dold, new_val);
+	}
+	operation_values[e.to_id-1] = new_val;
+    }
+
+    double result = operation_values[egraph->root_id-1];
+    operation_values.clear();
+    if (!smoothed) {
+	double oresult = result;
+	result *= rescale;
+	if (verblevel >= 4) {
+	    report(4, "Final result: Rescale = %f.  Density = %f.  Result = %f\n",
+		   rescale, oresult, result);
+	}
+    } else
+	report(4, "Smoothed result = %f\n", result);
+
+    return result;
 }
 

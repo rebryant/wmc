@@ -33,8 +33,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "q25.h"
-
 #define TAUTOLOGY INT_MAX
 #define CONFLICT (-TAUTOLOGY)
 // Used to convert literal to variable
@@ -90,7 +88,7 @@ public:
     // Variables that were detected to have Forget property during preprocessing
     std::unordered_set<int> *forget_variables;
     // Optional weights of data variables
-    std::unordered_map<int,q25_ptr> *input_weights;
+    std::unordered_map<int,const char*> *input_weights;
 
     bool is_data_variable(int var) { return data_variables->find(var) != data_variables->end(); }
     bool is_forget_variable(int var) { return forget_variables->find(var) != forget_variables->end(); }

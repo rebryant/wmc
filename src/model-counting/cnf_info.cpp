@@ -89,15 +89,18 @@ static bool find_string_token(FILE *infile, char *dest, int maxlen, int *len) {
     return (c != EOF);
 }
 
+#define BSIZE 1024
+
 // Process comment, looking additional data variables & weights
 // Return last character
 static void process_comment(FILE *infile, std::unordered_set<int> *data_variables,
 			    std::unordered_set<int> *forget_variables,
-			    std::unordered_map<int,q25_ptr> *input_weights) {
-    char buf[50];
+			    std::unordered_map<int,const char*> *input_weights) {
+    char buf[BSIZE];
+    char wbuf[BSIZE];
     int len;
-    if (find_string_token(infile, buf, 50, &len) && len == 1 && strncmp(buf, "p", 1) == 0
-	&& find_string_token(infile, buf, 50, &len)) {
+    if (find_string_token(infile, buf, BSIZE, &len) && len == 1 && strncmp(buf, "p", 1) == 0
+	&& find_string_token(infile, buf, BSIZE, &len)) {
 	bool show = true;
 	if (len == 4 && ((show = (strncmp(buf, "show", 4) == 0))
 			 || strncmp(buf, "forget", 6) == 0)) {
@@ -119,18 +122,17 @@ static void process_comment(FILE *infile, std::unordered_set<int> *data_variable
 		return;
 	    }
 	    find_token(infile);
-	    q25_ptr wt = q25_read(infile);
-	    if (!q25_is_valid(wt)) {
+	    if (find_string_token(infile, wbuf, BSIZE, &len))
+		(*input_weights)[lit] = archive_string(wbuf);
+	    else {
 		err(false, "Couldn't read weight for literal %d (skipping)\n", lit);
 		skip_line(infile);
 		return;
 	    }
-	    (*input_weights)[lit] = wt;
 	    int zero;
 	    if (fscanf(infile, "%d", &zero) != 1 || zero != 0) {
 		err(false, "Couldn't read terminating zero in weight declaration for literal %d (accepting weight)\n", lit);
 	    }
-
 	}
     }
     skip_line(infile);
@@ -163,7 +165,7 @@ void Cnf::initialize(int input_count) {
     if (!forget_variables)
 	forget_variables = new std::unordered_set<int>;
     if (!input_weights)
-	input_weights = new std::unordered_map<int, q25_ptr>;
+	input_weights = new std::unordered_map<int, const char *>;
     new_clause();
 }
 

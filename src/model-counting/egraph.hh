@@ -36,6 +36,10 @@
 
 #include "q25.h"
 
+/*******************************************************************************************************************
+ Graph representing NNF formula
+*******************************************************************************************************************/
+
 typedef enum { NNF_NONE, NNF_TRUE, NNF_FALSE, NNF_AND, NNF_OR, NNF_NUM } nnf_type_t;
 
 struct Egraph_operation {
@@ -74,6 +78,10 @@ public:
     void add_smoothing_variable(int eid, int var);
 };
 
+/*******************************************************************************************************************
+Evaluation via Q25
+*******************************************************************************************************************/
+
 class Evaluator_q25 {
 private:
     Egraph *egraph;
@@ -86,16 +94,37 @@ public:
 
     Evaluator_q25(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    q25_ptr evaluate(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
+    q25_ptr evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void clear_evaluation();
     
 private:
-    void prepare_weights(std::unordered_map<int,q25_ptr> *literal_weights, bool smoothed);
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     q25_ptr evaluate_edge(Egraph_edge &e, bool smoothed);
 
 };
 
-// Support for evaluation
-bool read_cnf(FILE *infile, std::unordered_set<int> **data_variables, std::unordered_map<int,q25_ptr> **weights);
+/*******************************************************************************************************************
+Evaluation via double-precision floating point
+*******************************************************************************************************************/
+
+class Evaluator_double {
+private:
+    Egraph *egraph;
+    // For evaluation
+    std::unordered_map<int,double> evaluation_weights;
+    std::unordered_map<int,double> smoothing_weights;
+    double rescale;
+
+public:
+
+    Evaluator_double(Egraph *egraph);
+    // literal_weights == NULL for unweighted
+    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void clear_evaluation();
+    
+private:
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    double evaluate_edge(Egraph_edge &e, bool smoothed);
+};
 
 
