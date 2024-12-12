@@ -526,7 +526,8 @@ bool q25_is_one(q25_ptr q) {
 }
 
 bool q25_is_infinite(q25_ptr q, bool *negativep) {
-    *negativep = q->negative == 1;
+    if (negativep)
+	*negativep = q->negative == 1;
     return q->infinite;
 }
 
@@ -1273,7 +1274,8 @@ static bool double_is_infinite(double x, bool *negativep) {
     unsigned sign = bits >> 63;
     int  biased_exp = (bits >> 52) & 0x7FF;
     int64_t frac = bits & 0xFFFFFFFFFFFFFL;
-    *negativep = (sign == 1);
+    if (negativep)
+	*negativep = (sign == 1);
     return biased_exp == 0x7FF &&  frac == 0;
 }
 

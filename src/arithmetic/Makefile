@@ -10,8 +10,8 @@ IDIR = ../../include
 
 LFILE = wmc_arithmetic.a
 
-OFILES = q25.o
-IFILES = q25.h
+OFILES = q25.o analysis.o
+IFILES = q25.h analysis.h
 
 all: $(LFILE) $(IFILES)
 	cp -p $(LFILE) $(LDIR)
@@ -25,6 +25,12 @@ $(LFILE): $(OFILES)
 
 .cxx.o:
 	$(CXX) $(CFLAGS) $(INC) -c $<
+
+dtest: dtest.c q25.o
+	$(CXX) $(CFLAGS) -o dtest dtest.c q25.o
+
+atest: atest.c q25.o analysis.o
+	$(CXX) $(CFLAGS) -o atest atest.c q25.o analysis.o
 
 clean:
 	 rm -f *.a *.o *~

@@ -37,6 +37,7 @@
 #include "egraph.hh"
 #include "counters.h"
 #include "report.h"
+#include "analysis.h"
 
 void usage(const char *name) {
     lprintf("Usage: %s [-h] [-s] [-v VERB] [-L LOG] [-o OUT.nnf] FORMULA.cnf FORMULA.nnf\n", name);
@@ -70,12 +71,13 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     lprintf("%s   Unweighted count required %ld q25 operations\n",
 	    prefix, unweighted_operations);
     free(scount);
-    q25_free(count);
     qev.clear_evaluation();
 
     Evaluator_double dev = Evaluator_double(&eg);
     double dcount = dev.evaluate(NULL, smooth);
-    lprintf("%s   APPROX UNWEIGHTED COUNT = %.1f\n", prefix, dcount);
+    double err = digit_error_mix(count, dcount);
+    lprintf("%s   APPROX UNWEIGHTED COUNT = %.1f (err = %.2f)\n", prefix, dcount, err);
+    q25_free(count);
     dev.clear_evaluation();
 
     if (cnf->is_weighted()) {
@@ -87,11 +89,12 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	lprintf("%s   Weighted count required %ld q25 operations\n",
 		prefix, weighted_operations);
 	free(swcount);
-	q25_free(wcount);
 	qev.clear_evaluation();
 
 	double dwcount = dev.evaluate(cnf->input_weights, smooth);
-	lprintf("%s   APPROX WEIGHTED COUNT = %.20f\n", prefix, dwcount);
+	double werr = digit_error_mix(wcount, dwcount);
+	lprintf("%s   APPROX WEIGHTED COUNT = %.20g (err = %.2f)\n", prefix, dwcount, werr);
+	q25_free(wcount);
 	dev.clear_evaluation();
 
     }
