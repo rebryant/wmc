@@ -1,7 +1,7 @@
-2CC=gcc
+CC=gcc
 CXX=g++
-#OPT = -O2
-OPT = -O0
+OPT = -O2
+#OPT = -O0
 CFLAGS=-g $(OPT) -fPIC -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
 INC = -I..
@@ -31,6 +31,15 @@ dtest: dtest.c q25.o
 
 atest: atest.c q25.o analysis.o
 	$(CXX) $(CFLAGS) -o atest atest.c q25.o analysis.o
+
+find_product: find_product.c q25.o analysis.o
+	$(CXX) $(CFLAGS) -o find_product find_product.c q25.o analysis.o
+
+tiny_product: tiny_product.c q25.o analysis.o
+	$(CXX) $(CFLAGS) -o tiny_product tiny_product.c q25.o analysis.o
+
+random_product: random_product.c q25.o analysis.o
+	$(CXX) $(CFLAGS) -o random_product random_product.c q25.o analysis.o
 
 clean:
 	 rm -f *.a *.o *~
