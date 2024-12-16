@@ -166,8 +166,7 @@ def runJob(home, root, force):
     ok = runD4(root, home)
     if not ok:
         p.print("Error encountered running on %s" % root)
-        if exitWhenError:
-            sys.exit(1)
+        sys.exit(1)
     p.print("File %s written" % logName)
 
     
