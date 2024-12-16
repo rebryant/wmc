@@ -33,6 +33,8 @@
 #include <vector>
 #include <unordered_set>
 
+#include <gmpxx.h>
+
 
 #include "q25.h"
 
@@ -125,6 +127,57 @@ public:
 private:
     void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     double evaluate_edge(Egraph_edge &e, bool smoothed);
+};
+
+/*******************************************************************************************************************
+Evaluation via Gnu multi-precision floating point
+*******************************************************************************************************************/
+
+class Evaluator_mpf {
+private:
+    Egraph *egraph;
+    // For evaluation
+    std::unordered_map<int,mpf_class> evaluation_weights;
+    std::unordered_map<int,mpf_class> smoothing_weights;
+    mpf_class rescale;
+    mp_bitcnt_t precision;
+
+public:
+
+    Evaluator_mpf(Egraph *egraph);
+    // literal_weights == NULL for unweighted
+    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void clear_evaluation();
+    
+    void set_precision(mp_bitcnt_t p) { precision = p; }
+
+private:
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    mpf_class evaluate_edge(Egraph_edge &e, bool smoothed);
+};
+
+/*******************************************************************************************************************
+Evaluation via Gnu multi-precision rational arithmetic
+*******************************************************************************************************************/
+
+class Evaluator_mpq {
+private:
+    Egraph *egraph;
+    // For evaluation
+    std::unordered_map<int,mpq_class> evaluation_weights;
+    std::unordered_map<int,mpq_class> smoothing_weights;
+    double rescale;
+
+public:
+
+    Evaluator_mpq(Egraph *egraph);
+    // literal_weights == NULL for unweighted
+    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void clear_evaluation();
+    
+private:
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    mpq_class evaluate_edge(Egraph_edge &e, bool smoothed);
 };
 
 
