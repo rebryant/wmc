@@ -25,9 +25,18 @@
 
 #pragma once
 
+/* Allow functions that make use of the Gnu Multiprecision (GMP) library */
+#define ENABLE_GMP 1
+
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#if ENABLE_GMP
+#include <gmp.h>
+#endif
+
 
 /* Allow this headerfile to define C++ constructs if requested */
 #ifdef __cplusplus
@@ -146,6 +155,19 @@ long q25_operation_count();
 int q25_enter();
 void q25_leave(int pos);
 q25_ptr q25_mark(q25_ptr q);
+
+/* Extensions make use of GMP */
+#if ENABLE_GMP
+
+/* 
+   Convert from q25 to GMP rational.  
+   Sets *ok to true if successful.
+   Will fail if q is special value
+*/
+bool q25_to_mpq(mpq_ptr dest, q25_ptr q);
+q25_ptr q25_from_mpq(mpq_ptr z);
+
+#endif /* INCLUDE_GMP */
 
 #ifdef CPLUSPLUS
 }

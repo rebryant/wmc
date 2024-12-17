@@ -1322,3 +1322,345 @@ q25_ptr q25_mark(q25_ptr q) {
     qstack[qstack_size++] = q;
     return q;
 }
+
+/*********************** GMP Code ********************************/
+#if ENABLE_GMP
+
+/* Table of powers of 5.  Entry i contains 5**(2**i) */
+static mpz_t p5_table[8 * sizeof(uint32_t)];
+/* How many entries are valid */
+static uint32_t p5_count = 0;
+
+static void generate_p5_entry(uint32_t i) {
+    if (i < p5_count)
+	return;
+    /* First entry in table is 5 */
+    if (p5_count == 0) {
+	mpz_init(p5_table[0]);
+	mpz_set_ui(p5_table[0], 5);
+	p5_count++;
+#if 0
+	/* DEBUG */
+	{
+	    char *st = mpz_get_str(NULL, 10, p5_table[0]);
+	    printf("pcount = %d. 5^(2^%d) = %s\n", p5_count, 0, st);
+	    free(st);
+	}
+#endif
+    }
+    /* Fill with successive squares */
+    while (p5_count <= i) {
+	uint32_t fromi = p5_count-1;
+	uint32_t toi = p5_count;
+	p5_count++;
+	mpz_init(p5_table[toi]);
+	mpz_mul(p5_table[toi], p5_table[fromi], p5_table[fromi]);
+#if 0
+	/* DEBUG */
+	{
+	    char *st = mpz_get_str(NULL, 10, p5_table[toi]);
+	    printf("pcount = %d. 5^(2^%d) = %s\n", p5_count, toi, st);
+	    free(st);
+	}
+#endif
+    }
+}
+
+static void mpz_pow5(mpz_ptr z, uint32_t a) {
+    mpz_init(z);
+    mpz_set_ui(z, 1);
+    uint32_t i = 0;
+#if 0
+    printf("Computing 5^%d\n", a);
+    uint32_t a_init = a;
+#endif 
+    while (a > 0) {
+	if (a & 0x1) {
+	    generate_p5_entry(i);
+	    {
+#if 0
+		char *sz = mpz_get_str(NULL, 10, z);
+#endif
+		mpz_mul(z, z, p5_table[i]);
+#if 0
+		char *snz = mpz_get_str(NULL, 10, z);
+		printf("Bit %d.  %s --> %s\n", i, sz, snz);
+		free(sz); free(snz);
+#endif
+	    }
+	}
+	a >>= 1;
+	i++;
+    }
+#if 0
+    char *sz = mpz_get_str(NULL, 10, z);
+    printf("pow5(%u) --> %s\n", a_init, sz);
+    free(sz);
+#endif
+
+}
+
+bool q25_to_mpq(mpq_ptr dest, q25_ptr q) {
+    if (!q25_is_valid(q))
+	return false;
+    if (q25_is_infinite(q, NULL))
+	return false;
+    if (q25_is_zero(q)) {
+	mpq_init(dest);
+	return true;
+    }
+    mpz_t num;
+    mpz_t den;
+    mpz_init(num);
+    mpz_init(den);
+    mpz_set_ui(num, q->digit[q->dcount-1]);
+    mpz_set_ui(den, 1);
+#if 0
+    printf("Initial value = %u\n", q->digit[q->dcount-1]);
+#endif
+
+    if (q->dcount > 1) {
+	mpz_t radix;
+	mpz_init(radix);
+	mpz_set_ui(radix, Q25_RADIX);
+	int d;
+	for (d = q->dcount-2; d >= 0; d--) {
+	    /* DEBUG */
+	    char *ns1 = mpz_get_str(NULL, 10, num);
+	    char *rs = mpz_get_str(NULL, 10, radix);
+
+	    mpz_mul(num, num, radix);
+
+	    char *ns2 = mpz_get_str(NULL, 10, num);
+
+	    mpz_add_ui(num, num, q->digit[d]);
+
+	    char *ns3 = mpz_get_str(NULL, 10, num);
+#if 0
+	    printf("d = %d.  Num %s * %s (=%s) + %u --> %s\n",
+		   d, ns1, rs, ns2, q->digit[d], ns3);
+#endif
+	    free(ns1); free(rs); free(ns2); free(ns3);
+	}
+	mpz_clear(radix);
+    }
+
+    /* Scale by powers of 2 & 5 */
+    /* DEBUG */
+#if 0
+    {
+	char *ns = mpz_get_str(NULL, 10, num);
+	char *ds = mpz_get_str(NULL, 10, den);
+	printf("  Scaling %s/%s by 2^%d X 5^%d\n", ns, ds, q->pwr2, q->pwr5);
+	free(ns); free(ds);
+    }
+#endif
+    if (q->pwr2 > 0) {
+	mpz_mul_2exp(num, num, q->pwr2);
+#if 0
+	/* DEBUG */
+	{
+	    char *ns = mpz_get_str(NULL, 10, num);
+	    printf("  Num * 2^%d --> %s\n", q->pwr2, ns);
+	    free(ns);
+	}
+#endif
+    }
+    else if (q->pwr2 < 0) {
+	mpz_mul_2exp(den, den, -q->pwr2);
+#if 0
+	/* DEBUG */
+	{
+	    char *ds = mpz_get_str(NULL, 10, den);
+	    printf("  Den * 2^%d --> %s\n", -q->pwr2, ds);
+	    free(ds);
+	}
+#endif
+    }
+    if (q->pwr5 > 0) {
+	mpz_t scale;
+	mpz_pow5(scale, q->pwr5);
+	mpz_mul(num, num, scale);
+#if 0
+	/* DEBUG */
+	{
+	    char *ns = mpz_get_str(NULL, 10, num);
+	    char *ss = mpz_get_str(NULL, 10, scale);
+	    printf("  Num * 5^%d (=%s) --> %s\n", q->pwr5, ss, ns);
+	    free(ss); free(ns);
+	}
+#endif
+	mpz_clear(scale);
+    } else if (q->pwr5 < 0) {
+	mpz_t scale;
+	mpz_pow5(scale, -q->pwr5);
+	mpz_mul(den, den, scale);
+#if 0
+	/* DEBUG */
+	{
+	    char *ds = mpz_get_str(NULL, 10, den);
+	    char *ss = mpz_get_str(NULL, 10, scale);
+	    printf("  Den * 5^%d (=%s) --> %s\n", -q->pwr5, ss, ds);
+	    free(ss); free(ds);
+	}
+#endif
+	mpz_clear(scale);
+    }
+
+#if 0
+    /* DEBUG */
+    {
+	char *qstring = q25_string(q);
+	char *nstring = mpz_get_str(NULL, 10, num);
+	char *dstring = mpz_get_str(NULL, 10, den);
+	printf("|Q25 %s| --> MPQ %s / %s\n", qstring, nstring, dstring);
+	free(qstring);
+	free(nstring);
+	free(dstring);
+    }
+#endif
+
+    /* Assemble result */
+    mpq_init(dest);
+    mpq_set_num(dest, num);
+    mpq_set_den(dest, den);
+    mpz_clear(num);
+    mpz_clear(den);
+    if (q25_is_negative(q))
+	mpq_neg(dest, dest);
+
+#if 0
+    /* DEBUG */
+    {
+	char *rstring = mpq_get_str(NULL, 10, dest);
+	printf(" MPQ result = %s\n", rstring);
+    }
+#endif
+
+    return true;
+}
+
+q25_ptr q25_from_mpq(mpq_ptr z) {
+    bool is_negative = false;
+    switch (mpq_sgn(z)) {
+    case -1:
+	is_negative = true;
+	break;
+    case 0:
+	return q25_from_32(0);
+	break;
+    case +1:
+    default:
+	break;
+    }
+    mpz_t num;
+    mpz_init(num);
+    mpq_get_num(num, z);
+    mpz_abs(num, num);
+
+#if 0
+    /* DEBUG */
+    char *nstring = mpz_get_str(NULL, 10, num);
+#endif
+
+    mpz_t two;
+    mpz_init(two);
+    mpz_set_ui(two, 2);
+    mpz_t five;
+    mpz_init(five);
+    mpz_set_ui(five, 5);
+
+    int p2 = mpz_remove(num, num, two);
+    int p5 = mpz_remove(num, num, five);
+
+#if 0
+    /* DEBUG */
+    {
+	char *nnstring = mpz_get_str(NULL, 10, num);
+	printf("Numerator %s --> %s X 2^%d X 5^%d\n", nstring, nnstring, p2, p5);
+	free(nnstring);
+    }
+#endif
+
+    mpz_t den;
+    mpz_init(den);
+    mpq_get_den(den, z);
+
+    /* DEBUG */
+    char *dstring = mpz_get_str(NULL, 10, den);
+
+    int dp2 = mpz_remove(den, den, two);
+    p2 -= dp2;
+    int dp5 = mpz_remove(den, den, five);
+    p5 -= dp5;
+
+#if 0
+    /* DEBUG */
+    {
+	char *ndstring = mpz_get_str(NULL, 10, den);
+	printf("Denominator %s --> %s X 2^%d X 5^%d\n", dstring, ndstring, dp2, dp5);
+	free(ndstring);
+    }
+#endif
+
+    if (mpz_cmp_ui(den, 1) != 0) {
+	printf("Denominator not unit\n");
+	/* Can't represent this number as a q25 */
+	mpz_clears(num, den, two, five, NULL);
+	return q25_invalid();
+    }
+    char *decimal = mpz_get_str(NULL, 10, num);
+
+#if 0
+    /* DEBUG */
+    {
+	printf("Decimal representation of numerator = %s\n", decimal);
+    }
+#endif
+    q25_ptr dval = q25_from_string(decimal);
+#if 0
+    /* DEBUG */
+    {
+	char *dvstring = q25_string(dval);
+	printf("  Converted to q25 %s\n", dvstring);
+	free(dvstring);
+    }
+#endif
+    q25_ptr result = q25_scale(dval, p2, p5);
+    if (is_negative) {
+#if 0
+	/* DEBUG */
+	{
+	    char *rstring = q25_string(result);
+	    printf("Trying to negate %s\n", rstring);
+	    free(rstring);
+	}
+#endif
+	q25_ptr nresult = q25_negate(result);
+	q25_free(result);
+	result = nresult;
+    }
+
+    {
+#if 0
+	/* DEBUG */
+	char *vstring = q25_string(dval);
+	char *rstring = q25_string(result);
+	printf("MPQ %s%s / %s --> Q25 %s X 2^%d X 5^%d = %s\n",
+	       is_negative ? "-" : "+", nstring, dstring, vstring, p2, p5, rstring);
+	free(nstring);
+	free(dstring);
+	free(vstring);
+	free(rstring);
+#endif
+    }
+
+    mpz_clears(num, den, two, five, NULL);
+    free(decimal);
+    q25_free(dval);
+    return result;
+}
+
+
+
+#endif /* ENABLE_GMP */
