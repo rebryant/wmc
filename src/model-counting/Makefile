@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
-#OPT=-O2
-OPT=-O0
+OPT=-O2
+#OPT=-O0
 CFLAGS=-g $(OPT) -Wno-nullability-completeness -I $(IDIR)
 IDIR = ../../include
 LDIR = ../../lib

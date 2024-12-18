@@ -166,18 +166,18 @@ private:
     // For evaluation
     std::unordered_map<int,mpq_class> evaluation_weights;
     std::unordered_map<int,mpq_class> smoothing_weights;
-    double rescale;
+    mpq_class rescale;
 
 public:
 
     Evaluator_mpq(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    bool evaluate(mpq_class &count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void clear_evaluation();
     
 private:
-    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    mpq_class evaluate_edge(Egraph_edge &e, bool smoothed);
+    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed);
 };
 
 

@@ -53,47 +53,105 @@ bool smooth = false;
 Cnf *cnf;
 
 void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
+    double start_time = tod();
+    double end_time;
     cnf = new Cnf();
     cnf->import_file(cnf_file, true, false);
     Egraph eg = Egraph(cnf->data_variables);
     eg.read_nnf(nnf_file);
     if (smooth)
 	eg.smooth();
+    lprintf("%s     Reading files and constructing graph required %.3f seconds\n",
+	    prefix, tod() - start_time);
     if (out_file)
 	eg.write_nnf(out_file);
-    // Regular count
-    long start_count = q25_operation_count();
-    Evaluator_q25 qev = Evaluator_q25(&eg);
-    q25_ptr count = qev.evaluate(NULL, smooth);
-    long unweighted_operations = q25_operation_count() - start_count;
-    char *scount = q25_string(count);
-    lprintf("%s   UNWEIGHTED COUNT = %s\n", prefix, scount);
-    lprintf("%s   Unweighted count required %ld q25 operations\n",
-	    prefix, unweighted_operations);
-    free(scount);
-    qev.clear_evaluation();
+    if (!cnf->is_weighted()) {
+	// Regular count
+	long start_count = q25_operation_count();
+	start_time = tod();
+	Evaluator_q25 qev = Evaluator_q25(&eg);
+	q25_ptr count = qev.evaluate(NULL, smooth);
+	end_time = tod();
+	long unweighted_operations = q25_operation_count() - start_count;
+	char *scount = q25_string(count);
+	lprintf("%s   UNWEIGHTED Q25 COUNT    = %s\n", prefix, scount);
+	lprintf("%s     Unweighted Q25 count required %ld q25 operations and %.3f seconds\n",
+		prefix, unweighted_operations, end_time - start_time);
+	free(scount);
+	qev.clear_evaluation();
 
-    Evaluator_double dev = Evaluator_double(&eg);
-    double dcount = dev.evaluate(NULL, smooth);
-    double err = digit_error_mix(count, dcount);
-    lprintf("%s   APPROX UNWEIGHTED COUNT = %.1f (err = %.2f)\n", prefix, dcount, err);
-    q25_free(count);
-    dev.clear_evaluation();
+	start_time = tod();
+	Evaluator_mpq mpqev = Evaluator_mpq(&eg);
+	mpq_class qcount = 0;
+	if (mpqev.evaluate(qcount, NULL, smooth)) {
+	    char *sqcount = mpq_get_str(NULL, 10, qcount.get_mpq_t());
+	    end_time = tod();
+	    q25_ptr ccount = q25_from_mpq(qcount.get_mpq_t());
+	    lprintf("%s   UNWEIGHTED MPQ COUNT    = %s\n", prefix, sqcount);
+	    if (q25_compare(count, ccount) != 0) 
+		err(false, "Q25 Count != MPQ Count\n");
+	    q25_free(ccount);
+	    lprintf("%s     Unweighted MPQ count required %.3f seconds\n",
+		    prefix, end_time - start_time);
+	    free(sqcount);
+	    mpqev.clear_evaluation();
+	} else {
+	    lprintf("%s Calculation of unweighted count using mpq failed\n", prefix);
+	}
 
-    if (cnf->is_weighted()) {
-	start_count = q25_operation_count();
+	start_time = tod();
+	Evaluator_double dev = Evaluator_double(&eg);
+	double dcount = dev.evaluate(NULL, smooth);
+	end_time = tod();
+	double precision = digit_error_mix(count, dcount);
+	lprintf("%s   APPROX UNWEIGHTED COUNT = %.1f (precision = %.3f)\n", prefix, dcount, precision);
+	lprintf("%s     Unweighted DBL count required %.3f seconds\n",
+		prefix, end_time - start_time);
+	q25_free(count);
+	dev.clear_evaluation();
+
+    } else {
+	long start_count = q25_operation_count();
+	start_time = tod();
+	Evaluator_q25 qev = Evaluator_q25(&eg);
 	q25_ptr wcount = qev.evaluate(cnf->input_weights, smooth);
+	end_time = tod();
 	long weighted_operations = q25_operation_count() - start_count;
 	char *swcount = q25_string(wcount);
-	lprintf("%s   WEIGHTED COUNT   = %s\n", prefix, swcount);
-	lprintf("%s   Weighted count required %ld q25 operations\n",
-		prefix, weighted_operations);
+	lprintf("%s   WEIGHTED Q25 COUNT    = %s\n", prefix, swcount);
+	lprintf("%s     Weighted Q25 count required %ld q25 operations and %.3f seconds\n",
+		prefix, weighted_operations, end_time - start_time);
 	free(swcount);
 	qev.clear_evaluation();
 
+	start_time = tod();
+	Evaluator_mpq mpqev = Evaluator_mpq(&eg);
+	mpq_class qwcount = 0;
+	if (mpqev.evaluate(qwcount, cnf->input_weights, smooth)) {
+	    end_time = tod();
+	    char *sqwcount = mpq_get_str(NULL, 10, qwcount.get_mpq_t());
+	    lprintf("%s   WEIGHTED MPQ COUNT    =   %s\n", prefix, sqwcount);
+	    q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
+	    char *scwcount = q25_string(cwcount);
+	    lprintf("%s                         = %s\n", prefix, scwcount);
+	    if (q25_compare(wcount, cwcount) != 0) 
+		err(false, "Q25 weighted count != MPQ weighted count\n");
+	    lprintf("%s     Weighted MPQ count required %.3f seconds\n",
+		    prefix, end_time - start_time);
+	    q25_free(cwcount);
+	    free(scwcount);
+	    free(sqwcount);
+	    mpqev.clear_evaluation();
+	} else {
+	    lprintf("%s Calculation of unweighted count using mpq failed\n", prefix);
+	}
+	start_time = tod();
+	Evaluator_double dev = Evaluator_double(&eg);
 	double dwcount = dev.evaluate(cnf->input_weights, smooth);
-	double werr = digit_error_mix(wcount, dwcount);
-	lprintf("%s   APPROX WEIGHTED COUNT = %.20g (err = %.2f)\n", prefix, dwcount, werr);
+	double wprecision = digit_error_mix(wcount, dwcount);
+	lprintf("%s   APPROX WEIGHTED COUNT = %.20g (precision = %.3f)\n", prefix, dwcount, wprecision);
+	lprintf("%s     Weighted DBL count required %.3f seconds\n",
+		prefix, tod() - start_time);
 	q25_free(wcount);
 	dev.clear_evaluation();
 

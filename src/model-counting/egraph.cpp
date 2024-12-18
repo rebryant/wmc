@@ -339,12 +339,12 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
 		pwt = q25_from_string((*literal_string_weights)[v]);
 		if (!q25_is_valid(pwt))
-		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		    err(true, "Q25: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
 	    }
 	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
 		nwt = q25_from_string((*literal_string_weights)[-v]);
 		if (!q25_is_valid(nwt))
-		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    err(true, "Q25: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
 	    }
 	    if (pwt) {
 		if (!nwt)
@@ -366,7 +366,7 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 	    q25_ptr recip = q25_mark(q25_recip(sum));
 	    if (!q25_is_valid(recip)) {
 		char *srecip = q25_string(sum);
-		err(true, "Could not get reciprocal of summed weights for variable %d.  Sum = s\n", v, sum);
+		err(true, "Q25: Could not get reciprocal of summed weights for variable %d.  Sum = s\n", v, sum);
 		free(srecip);
 	    }
 	    rescale = q25_mul(q25_mark(rescale), q25_mark(sum));
@@ -396,7 +396,7 @@ q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e, bool smoothed) {
     q25_leave(mark);
     if (verblevel >= 4) {
 	char *sresult = q25_string(result);
-	report(4, "Evaluating edge (%d <-- %d).  Value = %s\n", e.to_id, e.from_id, sresult);
+	report(4, "Q25: Evaluating edge (%d <-- %d).  Value = %s\n", e.to_id, e.from_id, sresult);
 	free(sresult);
     }
     return result;
@@ -432,7 +432,7 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_str
 	    char *sedge = q25_string(edge_val);
 	    char *sproduct = q25_string(product);
 	    char *snew_val = q25_string(new_val);
-	    report(4, "Density: Updating %d from %d.  %s * %s %c %s --> %s\n",
+	    report(4, "Q25: Density: Updating %d from %d.  %s * %s %c %s --> %s\n",
 		   e.to_id, e.from_id, sfrom, sedge, multiply ? '*' : '+', sold, snew_val);
 	    free(sfrom); free(sold); free(sedge); free(sproduct); free(snew_val);
 	}
@@ -452,12 +452,12 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_str
 	    char *srescale = q25_string(rescale);
 	    char *soresult = q25_string(oresult);
 	    char *sresult = q25_string(result);
-	    report(4, "Final result: Rescale = %s.  Density = %s.  Result = %s\n",
+	    report(4, "Q25: Final result: Rescale = %s.  Density = %s.  Result = %s\n",
 		   srescale, soresult, sresult);
 	    free(srescale); free(soresult), free(sresult);
 	} else if (verblevel >= 4) {
 	    char *sresult = q25_string(result);
-	    report(4, "Smoothed result = %s\n", sresult);
+	    report(4, "Q25: Smoothed result = %s\n", sresult);
 	    free(sresult);
 	}
 	q25_free(oresult);
@@ -496,12 +496,12 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 	} else {
 	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
 		if (sscanf((*literal_string_weights)[v], "%lf", &pwt) != 1)
-		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		    err(true, "DBL: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
 		have_pos = true;
 	    }
 	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
 		if (sscanf((*literal_string_weights)[-v], "%lf", &nwt) != 1)
-		    err(true, "Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    err(true, "DBL: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
 		have_neg = true;
 	    }
 	    if (have_pos) {
@@ -521,7 +521,7 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 	    smoothing_weights[v] = sum;
 	else {
 	    if (sum == 0) {
-		err(true, "Could not get reciprocal of summed weights for variable %d.  Sum = %f\n", v, sum);
+		err(true, "DBL: Could not get reciprocal of summed weights for variable %d.  Sum = %f\n", v, sum);
 	    }
 	    rescale *= sum;
 	    pwt = pwt/sum;
@@ -545,7 +545,7 @@ double Evaluator_double::evaluate_edge(Egraph_edge &e, bool smoothed) {
 	}
     }
     if (verblevel >= 4) {
-	report(4, "Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, result);
+	report(4, "DBL: Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, result);
     }
     return result;
 }
@@ -576,7 +576,7 @@ double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_s
 	if (verblevel >= 4) {
 	    double dfrom = operation_values[e.from_id-1];
 	    double dold = operation_values[e.to_id-1];
-	    report(4, "Density: Updating %d from %d.  %f * %f %c %f --> %f\n",
+	    report(4, "DBL: Density: Updating %d from %d.  %f * %f %c %f --> %f\n",
 		   e.to_id, e.from_id, dfrom, edge_val, multiply ? '*' : '+', dold, new_val);
 	}
 	operation_values[e.to_id-1] = new_val;
@@ -588,12 +588,186 @@ double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_s
 	double oresult = result;
 	result *= rescale;
 	if (verblevel >= 4) {
-	    report(4, "Final result: Rescale = %f.  Density = %f.  Result = %f\n",
+	    report(4, "DBL: Final result: Rescale = %f.  Density = %f.  Result = %f\n",
 		   rescale, oresult, result);
 	}
     } else
-	report(4, "Smoothed result = %f\n", result);
+	report(4, "DBL: Smoothed result = %f\n", result);
 
     return result;
 }
 
+/*******************************************************************************************************************
+Evaluation via Gnu multi-precision rational arithmetic
+*******************************************************************************************************************/
+
+
+Evaluator_mpq::Evaluator_mpq(Egraph *eg) { 
+    egraph = eg;
+    clear_evaluation();
+}
+    
+void Evaluator_mpq::clear_evaluation() {
+    //    for (auto iter : evaluation_weights)
+    //	mpq_clear(iter.second);
+    evaluation_weights.clear();
+    //    for (auto iter : smoothing_weights)
+    //	mpq_clear(iter.second);
+    smoothing_weights.clear();
+    rescale = 1;
+}
+
+static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
+    mpq_t one;
+    mpq_init(one);
+    mpq_set_ui(one, 1, 1);
+    mpq_neg(dest, val);
+    mpq_add(dest, dest, one);
+    mpq_clear(one);
+}
+
+// literal_string_weights == NULL for unweighted
+bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    clear_evaluation();
+    for (int v : *egraph->data_variables) {
+	mpq_class pwt = 1;
+	bool gotp = false;
+	mpq_class nwt = 1;
+	bool gotn = false;
+
+	if (literal_string_weights) {
+	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
+		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
+		if (!q25_is_valid(qpwt)) {
+		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		    return false;
+		}
+		if (!q25_to_mpq(pwt.get_mpq_t(), qpwt)) {
+		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
+		    return false;
+		}
+		q25_free(qpwt);
+		gotp = true;
+	    }
+	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
+		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
+		if (!q25_is_valid(qnwt)) {
+		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    return false;
+		}
+		if (!q25_to_mpq(nwt.get_mpq_t(), qnwt)) {
+		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    return false;
+		}
+		q25_free(qnwt);
+		gotn = true;
+	    }
+	    if (gotp) {
+		if (!gotn)
+		    mpq_one_minus(nwt.get_mpq_t(), pwt.get_mpq_t());
+	    } else {
+		if (gotn)
+		    mpq_one_minus(pwt.get_mpq_t(), nwt.get_mpq_t());
+	    }
+	}
+	mpq_class sum = nwt+pwt;
+	if (smoothed)
+	    smoothing_weights[v] = sum;
+	else {
+	    if (cmp(sum, mpq_class(0)) == 0) {
+		err(false, "MPQ: Weights for variable %d sum to 0\n", v);
+		return false;
+	    }
+	    rescale *= sum;
+	    pwt /= sum;
+	    nwt /= sum;
+	}
+	evaluation_weights[v] = pwt;
+	evaluation_weights[-v] = nwt;
+    }
+    return true;
+}
+
+void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed) {
+    value = 1;
+    for (int lit : e.literals)
+	value *= evaluation_weights[lit];
+    if (smoothed) {
+	for (int v : e.smoothing_variables)
+	    value *= smoothing_weights[v];
+    }
+    if (verblevel >= 4) {
+	char *svalue = mpq_get_str(NULL, 10, value.get_mpq_t());
+	report(4, "MPQ: Evaluating edge (%d <-- %d).  Value = %s\n", e.to_id, e.from_id, svalue);
+	free(svalue);
+    }
+}
+
+bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    if (!prepare_weights(literal_string_weights, smoothed))
+	return false;
+    std::vector<mpq_class> operation_values;
+    operation_values.resize(egraph->operations.size());
+    for (int id = 1; id <= egraph->operations.size(); id++) {
+	switch (egraph->operations[id-1].type) {
+	case NNF_TRUE:
+	case NNF_AND:
+	    operation_values[id-1] = 1;
+	    break;
+	case NNF_FALSE:
+	case NNF_OR:
+	default:
+	    operation_values[id-1] = 0;
+	}
+    }
+    for (Egraph_edge e : egraph->edges) {
+	char *sold = NULL;
+	char *sedge = NULL;
+
+	mpq_class product;
+	evaluate_edge(product, e, smoothed);
+
+	if (verblevel >= 4) {
+	    sedge = mpq_get_str(NULL, 10, product.get_mpq_t());
+	    sold = mpq_get_str(NULL, 10, operation_values[e.to_id-1].get_mpq_t());
+	}
+
+	product *= operation_values[e.from_id-1];
+	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
+	if (multiply)
+	    operation_values[e.to_id-1] *= product;
+	else
+	    operation_values[e.to_id-1] += product;
+	if (verblevel >= 4) {
+	    char *sfrom = mpq_get_str(NULL, 10, operation_values[e.from_id-1].get_mpq_t());
+	    char *sproduct = mpq_get_str(NULL, 10, product.get_mpq_t());
+	    char *snew_val = mpq_get_str(NULL, 10, operation_values[e.to_id-1].get_mpq_t());
+	    report(4, "MPQ: Density: Updating %d from %d.  %s * %s %c %s --> %s\n",
+		   e.to_id, e.from_id, sfrom, sedge, multiply ? '*' : '+', sold, snew_val);
+	    free(sfrom); free(sold); free(sedge); free(sproduct); free(snew_val);
+	}
+    }
+    count = operation_values[egraph->root_id-1];
+    //    for (int id = 1; id <= egraph->operations.size(); id++)
+    //	mpq_clear(operation_values[id-1]);
+    operation_values.clear();
+
+    if (!smoothed) {
+	char *socount = NULL;
+	if (verblevel >= 4)
+	    socount = mpq_get_str(NULL, 10, count.get_mpq_t());
+	count *= rescale;
+	if (verblevel >= 4) {
+	    char *srescale = mpq_get_str(NULL, 10, rescale.get_mpq_t());
+	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
+	    report(4, "MPQ: Final count: Rescale = %s.  Density = %s.  Count = %s\n",
+		   srescale, socount, scount);
+	    free(srescale); free(socount), free(scount);
+	} else if (verblevel >= 4) {
+	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
+	    report(4, "MPQ: Smoothed count = %s\n", scount);
+	    free(scount);
+	}
+    }
+    return true;
+}
