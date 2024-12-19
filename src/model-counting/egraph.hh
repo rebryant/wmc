@@ -180,4 +180,22 @@ private:
     void evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed);
 };
 
+/*******************************************************************************************************************
+Evaluation via Gnu multi-precision integer arithmetic (unweighted counting only)
+*******************************************************************************************************************/
+
+class Evaluator_mpz {
+private:
+    Egraph *egraph;
+
+public:
+
+    Evaluator_mpz(Egraph *egraph);
+    // Can indicate superset of those variables appearing in the NNF
+    bool evaluate(mpz_class &count, std::unordered_set<int> *data_variables);
+    void clear_evaluation();
+    
+private:
+    void evaluate_edge(mpz_class &value, Egraph_edge &e);
+};
 

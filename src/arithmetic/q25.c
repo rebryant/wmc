@@ -91,6 +91,27 @@ static void q25_show_internal(int id, FILE *outfile);
 
 /* Count of operations */
 static long operation_counter = 0;
+/* Count of number of active numbers (allocated - freed) */
+static long active_counter = 0;
+static long peak_active_counter = 0;
+/* Count of number of Q25 bytes allocated */
+static double active_bytes_q25 = 0;
+static double peak_active_bytes_q25 = 0;
+/* Approx bytes if had MPQ representation */
+static double active_bytes_mpq = 0;
+static double peak_active_bytes_mpq = 0;
+
+
+/* Factors used for computing MP sizes */
+static double mpf_bytes = 40;
+static double dbl_bytes = sizeof(double);
+/* Computed as log_2(10^9) * 32 / 8 */
+static double mpq_bytes_per_dcount = 3.737169106748283;
+/* 1/8 */
+static double mpq_bytes_per_p2 = 0.125;
+/* log_2(5) / 8 */
+static double mpq_bytes_per_p5 = 0.2902410118609203;
+
 
 /* Support for stack-based memory management */
 #define QSTACK_INIT_SIZE  100
@@ -98,15 +119,45 @@ static q25_ptr *qstack = NULL;
 static int qstack_size = 0;
 static int qstack_alloc_size = 0;
 
-
-
 /* Static functions */
+
+/**** Computing allocations ****/
+static double allocation_q25(q25_ptr q) {
+    return 4 * (4 + q->dcount);
+}
+
+static double allocation_mpq(q25_ptr q) {
+    double val = 32 +  mpq_bytes_per_dcount * q->dcount;
+    val += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
+    val += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
+    return val;
+}
+
+/* Update statistics when q newly allocated */
+static void q25_register(q25_ptr q) {
+    active_counter += 1;
+    if (active_counter > peak_active_counter)
+	peak_active_counter = active_counter;
+    active_bytes_q25 += allocation_q25(q);
+    if (active_bytes_q25 > peak_active_bytes_q25)
+	peak_active_bytes_q25 = active_bytes_q25;
+    active_bytes_mpq += allocation_mpq(q);
+    if (active_bytes_mpq > peak_active_bytes_mpq)
+	peak_active_bytes_mpq = active_bytes_mpq;
+}
+
+/* Update statistics when q newly allocated */
+static void q25_deregister(q25_ptr q) {
+    active_counter -= 1;
+    active_bytes_q25 -= allocation_q25(q);
+    active_bytes_mpq -= allocation_mpq(q);
+}
 
 /* Initialize data structures */
 static void q25_init() {
     if (initialized)
 	return;
-    operation_counter = 0;
+    q25_reset_counters();
     initialized = true;
     int id;
     for (id = 0; id < DCOUNT; id++) {
@@ -315,6 +366,7 @@ static q25_ptr q25_build(int id) {
     result->pwr2 = working_val[id].pwr2;
     result->pwr5 = working_val[id].pwr5;
     memcpy(result->digit, digit_buffer[id], working_val[id].dcount * sizeof(uint32_t));
+    q25_register(result);
     return result;
 }
 
@@ -416,12 +468,13 @@ static void q25_show_internal(int id, FILE *outfile) {
     fprintf(outfile, "]");
 }
 
-
 /**** Externally visible functions ****/
 
 void q25_free(q25_ptr q) {
-    if (q)
+    if (q) {
+	q25_deregister(q);
 	q->valid = false;
+    }
     free((void *) q);
 }
 
@@ -493,10 +546,21 @@ q25_ptr q25_scale(q25_ptr q, int32_t p2, int32_t p5) {
     return q25_build(WID);
 }
 
+void q25_inplace_scale(q25_ptr q, int32_t p2, int32_t p5) {
+    q25_deregister(q);
+    q->pwr2 += p2;
+    q->pwr5 += p5;
+    q25_register(q);
+}
+
 q25_ptr q25_negate(q25_ptr q) {
     q25_work(WID, q);
     working_val[WID].negative = !working_val[WID].negative;
     return q25_build(WID);
+}
+
+void q25_inplace_negate(q25_ptr q) {
+    q->negative = !q->negative;
 }
 
 // Can only compute reciprocal when d == 1
@@ -690,13 +754,10 @@ q25_ptr q25_one_minus(q25_ptr q) {
 	return q25_copy(q);
     if (q->infinite)
 	return q25_negate(q);
-    q25_ptr one = q25_from_32(1);
-    if (q25_is_zero(q))
-	return one;
-    q25_ptr mq = q25_negate(q);
-    q25_ptr sum = q25_add(one, mq);
-    q25_free(one);
-    q25_free(mq);
+    q25_ptr minus_one = q25_from_32(-1);
+    q25_ptr sum = q25_add(q, minus_one);
+    q25_inplace_negate(sum);
+    q25_free(minus_one);
     return sum;
 }
 
@@ -1300,9 +1361,32 @@ double q25_to_double(q25_ptr q) {
     return x;
 }
 
+void q25_reset_counters() {
+    operation_counter = 0;
+    active_counter = 0;
+    peak_active_counter = 0;
+    active_bytes_q25 = 0;
+    peak_active_bytes_q25 = 0;
+    active_bytes_mpq = 0;
+    peak_active_bytes_mpq = 0;
+}
+
 long q25_operation_count() {
     return operation_counter;
 }
+
+double q25_peak_allocation_fp(bool is_mpf) {
+    return peak_active_counter * (is_mpf ? mpf_bytes : dbl_bytes);
+}
+
+double q25_peak_allocation_q25() {
+    return peak_active_bytes_q25;
+}
+
+double q25_peak_allocation_mpq() {
+    return peak_active_bytes_mpq;
+}
+
 
 /* Stack management */
 int q25_enter() {
@@ -1339,14 +1423,6 @@ static void generate_p5_entry(uint32_t i) {
 	mpz_init(p5_table[0]);
 	mpz_set_ui(p5_table[0], 5);
 	p5_count++;
-#if 0
-	/* DEBUG */
-	{
-	    char *st = mpz_get_str(NULL, 10, p5_table[0]);
-	    printf("pcount = %d. 5^(2^%d) = %s\n", p5_count, 0, st);
-	    free(st);
-	}
-#endif
     }
     /* Fill with successive squares */
     while (p5_count <= i) {
@@ -1355,14 +1431,6 @@ static void generate_p5_entry(uint32_t i) {
 	p5_count++;
 	mpz_init(p5_table[toi]);
 	mpz_mul(p5_table[toi], p5_table[fromi], p5_table[fromi]);
-#if 0
-	/* DEBUG */
-	{
-	    char *st = mpz_get_str(NULL, 10, p5_table[toi]);
-	    printf("pcount = %d. 5^(2^%d) = %s\n", p5_count, toi, st);
-	    free(st);
-	}
-#endif
     }
 }
 
@@ -1370,34 +1438,14 @@ static void mpz_pow5(mpz_ptr z, uint32_t a) {
     mpz_init(z);
     mpz_set_ui(z, 1);
     uint32_t i = 0;
-#if 0
-    printf("Computing 5^%d\n", a);
-    uint32_t a_init = a;
-#endif 
     while (a > 0) {
 	if (a & 0x1) {
 	    generate_p5_entry(i);
-	    {
-#if 0
-		char *sz = mpz_get_str(NULL, 10, z);
-#endif
-		mpz_mul(z, z, p5_table[i]);
-#if 0
-		char *snz = mpz_get_str(NULL, 10, z);
-		printf("Bit %d.  %s --> %s\n", i, sz, snz);
-		free(sz); free(snz);
-#endif
-	    }
+	    mpz_mul(z, z, p5_table[i]);
 	}
 	a >>= 1;
 	i++;
     }
-#if 0
-    char *sz = mpz_get_str(NULL, 10, z);
-    printf("pow5(%u) --> %s\n", a_init, sz);
-    free(sz);
-#endif
-
 }
 
 bool q25_to_mpq(mpq_ptr dest, q25_ptr q) {
@@ -1415,110 +1463,35 @@ bool q25_to_mpq(mpq_ptr dest, q25_ptr q) {
     mpz_init(den);
     mpz_set_ui(num, q->digit[q->dcount-1]);
     mpz_set_ui(den, 1);
-#if 0
-    printf("Initial value = %u\n", q->digit[q->dcount-1]);
-#endif
-
     if (q->dcount > 1) {
 	mpz_t radix;
 	mpz_init(radix);
 	mpz_set_ui(radix, Q25_RADIX);
 	int d;
 	for (d = q->dcount-2; d >= 0; d--) {
-	    /* DEBUG */
-	    char *ns1 = mpz_get_str(NULL, 10, num);
-	    char *rs = mpz_get_str(NULL, 10, radix);
-
 	    mpz_mul(num, num, radix);
-
-	    char *ns2 = mpz_get_str(NULL, 10, num);
-
 	    mpz_add_ui(num, num, q->digit[d]);
-
-	    char *ns3 = mpz_get_str(NULL, 10, num);
-#if 0
-	    printf("d = %d.  Num %s * %s (=%s) + %u --> %s\n",
-		   d, ns1, rs, ns2, q->digit[d], ns3);
-#endif
-	    free(ns1); free(rs); free(ns2); free(ns3);
 	}
 	mpz_clear(radix);
     }
 
     /* Scale by powers of 2 & 5 */
-    /* DEBUG */
-#if 0
-    {
-	char *ns = mpz_get_str(NULL, 10, num);
-	char *ds = mpz_get_str(NULL, 10, den);
-	printf("  Scaling %s/%s by 2^%d X 5^%d\n", ns, ds, q->pwr2, q->pwr5);
-	free(ns); free(ds);
-    }
-#endif
-    if (q->pwr2 > 0) {
+    if (q->pwr2 > 0)
 	mpz_mul_2exp(num, num, q->pwr2);
-#if 0
-	/* DEBUG */
-	{
-	    char *ns = mpz_get_str(NULL, 10, num);
-	    printf("  Num * 2^%d --> %s\n", q->pwr2, ns);
-	    free(ns);
-	}
-#endif
-    }
-    else if (q->pwr2 < 0) {
+    else if (q->pwr2 < 0)
 	mpz_mul_2exp(den, den, -q->pwr2);
-#if 0
-	/* DEBUG */
-	{
-	    char *ds = mpz_get_str(NULL, 10, den);
-	    printf("  Den * 2^%d --> %s\n", -q->pwr2, ds);
-	    free(ds);
-	}
-#endif
-    }
+
     if (q->pwr5 > 0) {
 	mpz_t scale;
 	mpz_pow5(scale, q->pwr5);
 	mpz_mul(num, num, scale);
-#if 0
-	/* DEBUG */
-	{
-	    char *ns = mpz_get_str(NULL, 10, num);
-	    char *ss = mpz_get_str(NULL, 10, scale);
-	    printf("  Num * 5^%d (=%s) --> %s\n", q->pwr5, ss, ns);
-	    free(ss); free(ns);
-	}
-#endif
 	mpz_clear(scale);
     } else if (q->pwr5 < 0) {
 	mpz_t scale;
 	mpz_pow5(scale, -q->pwr5);
 	mpz_mul(den, den, scale);
-#if 0
-	/* DEBUG */
-	{
-	    char *ds = mpz_get_str(NULL, 10, den);
-	    char *ss = mpz_get_str(NULL, 10, scale);
-	    printf("  Den * 5^%d (=%s) --> %s\n", -q->pwr5, ss, ds);
-	    free(ss); free(ds);
-	}
-#endif
 	mpz_clear(scale);
     }
-
-#if 0
-    /* DEBUG */
-    {
-	char *qstring = q25_string(q);
-	char *nstring = mpz_get_str(NULL, 10, num);
-	char *dstring = mpz_get_str(NULL, 10, den);
-	printf("|Q25 %s| --> MPQ %s / %s\n", qstring, nstring, dstring);
-	free(qstring);
-	free(nstring);
-	free(dstring);
-    }
-#endif
 
     /* Assemble result */
     mpq_init(dest);
@@ -1528,14 +1501,6 @@ bool q25_to_mpq(mpq_ptr dest, q25_ptr q) {
     mpz_clear(den);
     if (q25_is_negative(q))
 	mpq_neg(dest, dest);
-
-#if 0
-    /* DEBUG */
-    {
-	char *rstring = mpq_get_str(NULL, 10, dest);
-	printf(" MPQ result = %s\n", rstring);
-    }
-#endif
 
     return true;
 }
@@ -1558,11 +1523,6 @@ q25_ptr q25_from_mpq(mpq_ptr z) {
     mpq_get_num(num, z);
     mpz_abs(num, num);
 
-#if 0
-    /* DEBUG */
-    char *nstring = mpz_get_str(NULL, 10, num);
-#endif
-
     mpz_t two;
     mpz_init(two);
     mpz_set_ui(two, 2);
@@ -1572,37 +1532,14 @@ q25_ptr q25_from_mpq(mpq_ptr z) {
 
     int p2 = mpz_remove(num, num, two);
     int p5 = mpz_remove(num, num, five);
-
-#if 0
-    /* DEBUG */
-    {
-	char *nnstring = mpz_get_str(NULL, 10, num);
-	printf("Numerator %s --> %s X 2^%d X 5^%d\n", nstring, nnstring, p2, p5);
-	free(nnstring);
-    }
-#endif
-
     mpz_t den;
     mpz_init(den);
     mpq_get_den(den, z);
-
-    /* DEBUG */
-    char *dstring = mpz_get_str(NULL, 10, den);
 
     int dp2 = mpz_remove(den, den, two);
     p2 -= dp2;
     int dp5 = mpz_remove(den, den, five);
     p5 -= dp5;
-
-#if 0
-    /* DEBUG */
-    {
-	char *ndstring = mpz_get_str(NULL, 10, den);
-	printf("Denominator %s --> %s X 2^%d X 5^%d\n", dstring, ndstring, dp2, dp5);
-	free(ndstring);
-    }
-#endif
-
     if (mpz_cmp_ui(den, 1) != 0) {
 	printf("Denominator not unit\n");
 	/* Can't represent this number as a q25 */
@@ -1610,57 +1547,60 @@ q25_ptr q25_from_mpq(mpq_ptr z) {
 	return q25_invalid();
     }
     char *decimal = mpz_get_str(NULL, 10, num);
-
-#if 0
-    /* DEBUG */
-    {
-	printf("Decimal representation of numerator = %s\n", decimal);
-    }
-#endif
-    q25_ptr dval = q25_from_string(decimal);
-#if 0
-    /* DEBUG */
-    {
-	char *dvstring = q25_string(dval);
-	printf("  Converted to q25 %s\n", dvstring);
-	free(dvstring);
-    }
-#endif
-    q25_ptr result = q25_scale(dval, p2, p5);
-    if (is_negative) {
-#if 0
-	/* DEBUG */
-	{
-	    char *rstring = q25_string(result);
-	    printf("Trying to negate %s\n", rstring);
-	    free(rstring);
-	}
-#endif
-	q25_ptr nresult = q25_negate(result);
-	q25_free(result);
-	result = nresult;
-    }
-
-    {
-#if 0
-	/* DEBUG */
-	char *vstring = q25_string(dval);
-	char *rstring = q25_string(result);
-	printf("MPQ %s%s / %s --> Q25 %s X 2^%d X 5^%d = %s\n",
-	       is_negative ? "-" : "+", nstring, dstring, vstring, p2, p5, rstring);
-	free(nstring);
-	free(dstring);
-	free(vstring);
-	free(rstring);
-#endif
-    }
-
+    q25_ptr result = q25_from_string(decimal);
+    q25_inplace_scale(result, p2, p5);
+    if (is_negative) 
+	q25_inplace_negate(result);
     mpz_clears(num, den, two, five, NULL);
     free(decimal);
-    q25_free(dval);
     return result;
 }
 
+/* Only fails for infinite and special values */
+bool q25_to_mpf(mpf_ptr dest, q25_ptr q) {
+    mpq_t mz;
+    mpq_init(mz);
+    if (!q25_to_mpq(mz, q)) {
+	mpq_clear(mz);
+	return false;
+    }
+    mpf_set_q(dest, mz);
+    mpq_clear(mz);
+    return true;
+}
+
+q25_ptr q25_from_mpf(mpf_ptr z) {
+    mpq_t mz;
+    mpq_init(mz);
+    mpq_set_f(mz, z);
+    q25_ptr result = q25_from_mpq(mz);
+    mpq_clear(mz);
+    return result;
+}
+
+/* Will return false if not integer when rounding disabled */
+bool q25_to_mpz(mpz_ptr dest, q25_ptr q, bool round) {
+    if (!round && (q->pwr2 < 0 || q->pwr5 < 0))
+	return false;
+    mpq_t mz;
+    mpq_init(mz);
+    if (!q25_to_mpq(mz, q)) {
+	mpq_clear(mz);
+	return false;
+    }
+    mpz_set_q(dest, mz);
+    mpq_clear(mz);
+    return true;
+}
+
+q25_ptr q25_from_mpz(mpz_ptr z) {
+    mpq_t mz;
+    mpq_init(mz);
+    mpq_set_z(mz, z);
+    q25_ptr result = q25_from_mpq(mz);
+    mpq_clear(mz);
+    return result;
+}
 
 
 #endif /* ENABLE_GMP */

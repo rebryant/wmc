@@ -67,16 +67,19 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	eg.write_nnf(out_file);
     if (!cnf->is_weighted()) {
 	// Regular count
-	long start_count = q25_operation_count();
+	q25_reset_counters();
 	start_time = tod();
 	Evaluator_q25 qev = Evaluator_q25(&eg);
 	q25_ptr count = qev.evaluate(NULL, smooth);
 	end_time = tod();
-	long unweighted_operations = q25_operation_count() - start_count;
+	long unweighted_operations = q25_operation_count();
+	double peak_dbl_bytes = q25_peak_allocation_fp(false);
+	double peak_q25_bytes = q25_peak_allocation_q25();
+	double peak_mpq_bytes = q25_peak_allocation_mpq();
 	char *scount = q25_string(count);
 	lprintf("%s   UNWEIGHTED Q25 COUNT    = %s\n", prefix, scount);
-	lprintf("%s     Unweighted Q25 count required %ld q25 operations and %.3f seconds\n",
-		prefix, unweighted_operations, end_time - start_time);
+	lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
+		prefix, unweighted_operations, end_time - start_time, peak_q25_bytes);
 	free(scount);
 	qev.clear_evaluation();
 
@@ -84,16 +87,15 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	Evaluator_mpq mpqev = Evaluator_mpq(&eg);
 	mpq_class qcount = 0;
 	if (mpqev.evaluate(qcount, NULL, smooth)) {
-	    char *sqcount = mpq_get_str(NULL, 10, qcount.get_mpq_t());
 	    end_time = tod();
 	    q25_ptr ccount = q25_from_mpq(qcount.get_mpq_t());
-	    lprintf("%s   UNWEIGHTED MPQ COUNT    = %s\n", prefix, sqcount);
-	    if (q25_compare(count, ccount) != 0) 
+	    if (q25_compare(count, ccount) == 0) 
+		lprintf("%s Q25 Count != MPQ Count\n", prefix);
+	    else
 		err(false, "Q25 Count != MPQ Count\n");
 	    q25_free(ccount);
-	    lprintf("%s     Unweighted MPQ count required %.3f seconds\n",
-		    prefix, end_time - start_time);
-	    free(sqcount);
+	    lprintf("%s     Unweighted MPQ count required %.3f seconds, %.0f peak bytes\n",
+		    prefix, end_time - start_time, peak_mpq_bytes);
 	    mpqev.clear_evaluation();
 	} else {
 	    lprintf("%s Calculation of unweighted count using mpq failed\n", prefix);
@@ -104,23 +106,26 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	double dcount = dev.evaluate(NULL, smooth);
 	end_time = tod();
 	double precision = digit_error_mix(count, dcount);
-	lprintf("%s   APPROX UNWEIGHTED COUNT = %.1f (precision = %.3f)\n", prefix, dcount, precision);
-	lprintf("%s     Unweighted DBL count required %.3f seconds\n",
-		prefix, end_time - start_time);
+	lprintf("%s   UNWEIGHTED DBL COUNT    = %.1f (precision = %.3f)\n", prefix, dcount, precision);
+	lprintf("%s     Unweighted DBL count required %.3f seconds, %.0f peak bytes\n",
+		prefix, end_time - start_time, peak_dbl_bytes);
 	q25_free(count);
 	dev.clear_evaluation();
 
     } else {
-	long start_count = q25_operation_count();
+	q25_reset_counters();
 	start_time = tod();
 	Evaluator_q25 qev = Evaluator_q25(&eg);
 	q25_ptr wcount = qev.evaluate(cnf->input_weights, smooth);
 	end_time = tod();
-	long weighted_operations = q25_operation_count() - start_count;
+	long weighted_operations = q25_operation_count();
+	double peak_dbl_bytes = q25_peak_allocation_fp(false);
+	double peak_q25_bytes = q25_peak_allocation_q25();
+	double peak_mpq_bytes = q25_peak_allocation_mpq();
 	char *swcount = q25_string(wcount);
 	lprintf("%s   WEIGHTED Q25 COUNT    = %s\n", prefix, swcount);
-	lprintf("%s     Weighted Q25 count required %ld q25 operations and %.3f seconds\n",
-		prefix, weighted_operations, end_time - start_time);
+	lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
+		prefix, weighted_operations, end_time - start_time, peak_q25_bytes);
 	free(swcount);
 	qev.clear_evaluation();
 
@@ -129,29 +134,25 @@ void run(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
 	mpq_class qwcount = 0;
 	if (mpqev.evaluate(qwcount, cnf->input_weights, smooth)) {
 	    end_time = tod();
-	    char *sqwcount = mpq_get_str(NULL, 10, qwcount.get_mpq_t());
-	    lprintf("%s   WEIGHTED MPQ COUNT    =   %s\n", prefix, sqwcount);
 	    q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
-	    char *scwcount = q25_string(cwcount);
-	    lprintf("%s                         = %s\n", prefix, scwcount);
-	    if (q25_compare(wcount, cwcount) != 0) 
+	    if (q25_compare(wcount, cwcount) == 0) 
+		lprintf("%s Q25 weighted count == MPQ weighted count\n", prefix);
+	    else
 		err(false, "Q25 weighted count != MPQ weighted count\n");
-	    lprintf("%s     Weighted MPQ count required %.3f seconds\n",
-		    prefix, end_time - start_time);
+	    lprintf("%s     Weighted MPQ count required %.3f seconds, %.0f peak bytes\n",
+		    prefix, end_time - start_time, peak_mpq_bytes);
 	    q25_free(cwcount);
-	    free(scwcount);
-	    free(sqwcount);
 	    mpqev.clear_evaluation();
 	} else {
-	    lprintf("%s Calculation of unweighted count using mpq failed\n", prefix);
+	    lprintf("%s Calculation of weighted count using mpq failed\n", prefix);
 	}
 	start_time = tod();
 	Evaluator_double dev = Evaluator_double(&eg);
 	double dwcount = dev.evaluate(cnf->input_weights, smooth);
 	double wprecision = digit_error_mix(wcount, dwcount);
-	lprintf("%s   APPROX WEIGHTED COUNT = %.20g (precision = %.3f)\n", prefix, dwcount, wprecision);
-	lprintf("%s     Weighted DBL count required %.3f seconds\n",
-		prefix, tod() - start_time);
+	lprintf("%s   WEIGHTED DBL COUNT    = %.20g (precision = %.3f)\n", prefix, dwcount, wprecision);
+	lprintf("%s     Weighted DBL count required %.3f seconds, %.0f peak bytes\n",
+		prefix, tod() - start_time, peak_dbl_bytes);
 	q25_free(wcount);
 	dev.clear_evaluation();
 
@@ -174,14 +175,16 @@ void report_stats() {
     lprintf("%s     Sums            : %d\n", prefix, sum_count);
     lprintf("%s     Edge products   : %d\n", prefix, edge_product_count);
     lprintf("%s     Node Products   : %d\n", prefix, node_product_count);
-    lprintf("%s     Smoothing prods : %d\n", prefix, smoothing_count);
+    lprintf("%s     Smooth prods    : %d\n", prefix, smoothing_count);
     lprintf("%s     Operations TOTAL: %d\n", prefix, sum_count + edge_product_count + node_product_count + smoothing_count);
     lprintf("%s   Binary Operations \n", prefix);
-    lprintf("%s     Sums            : %ld\n", prefix, sum_ops);
-    lprintf("%s     Edge products   : %ld\n", prefix, edge_product_ops);
-    lprintf("%s     Node Products   : %ld\n", prefix, node_product_ops);
-    lprintf("%s     Smoothing prods : %ld\n", prefix, smoothing_ops);
+    lprintf("%s     Sum ops         : %ld\n", prefix, sum_ops);
+    lprintf("%s     Edge product ops: %ld\n", prefix, edge_product_ops);
+    lprintf("%s     Node product ops: %ld\n", prefix, node_product_ops);
+    lprintf("%s     Smooth prod ops : %ld\n", prefix, smoothing_ops);
     lprintf("%s     Binops  TOTAL   : %ld\n", prefix, sum_ops + edge_product_ops + node_product_ops + smoothing_ops);
+    lprintf("%s   Graph bytes       : %ld\n", prefix,
+	    sum_count + node_product_count + 8 * edge_product_count + 4 * edge_product_ops + 4 * smoothing_ops);
 }
 
 int main(int argc, char *argv[]) {

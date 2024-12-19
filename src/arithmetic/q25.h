@@ -88,9 +88,11 @@ double q25_to_double(q25_ptr q);
 
 /* Scale by powers of 2 & 5 */
 q25_ptr q25_scale(q25_ptr q, int32_t p2, int32_t p5);
+void q25_inplace_scale(q25_ptr q, int32_t p2, int32_t p5);
 
 /* Negative value */
 q25_ptr q25_negate(q25_ptr q);
+void q25_inplace_negate(q25_ptr q);
 
 /* 
    Compute reciprocal 
@@ -141,6 +143,7 @@ q25_ptr q25_from_string(const char *sq);
 /* Generate dynamically allocated string.  Should free() when done */
 char *q25_string(q25_ptr q);
 
+/* Set max_digits to <= 0 to print entire representation */
 /* Show value in terms of its representation */
 void q25_show(q25_ptr q, FILE *outfile);
 
@@ -148,8 +151,15 @@ void q25_show(q25_ptr q, FILE *outfile);
 /* Fails if number out of range, or nonintegral */
 bool get_int64(q25_ptr q, int64_t *ip);
 
-/* Count of number of non-trivial operations since initialization */
+/* Reset all counters */
+void q25_reset_counters();
+/* Count of number of non-trivial operations since reset */
 long q25_operation_count();
+/* Get the peak allocated bytes since reset, according to different size models */
+double q25_peak_allocation_fp(bool is_mpf);
+double q25_peak_allocation_q25();
+double q25_peak_allocation_mpq();
+
 
 /* Stack-based memory management.  Call q25_enter() when enter context, q25_exit() when leave */
 int q25_enter();
@@ -166,6 +176,14 @@ q25_ptr q25_mark(q25_ptr q);
 */
 bool q25_to_mpq(mpq_ptr dest, q25_ptr q);
 q25_ptr q25_from_mpq(mpq_ptr z);
+
+/* Only fails for infinite and special values */
+bool q25_to_mpf(mpf_ptr dest, q25_ptr q);
+q25_ptr q25_from_mpf(mpf_ptr z);
+
+/* Will return false if rounding disabled and not integer */
+bool q25_to_mpz(mpz_ptr dest, q25_ptr q, bool round);
+q25_ptr q25_from_mpz(mpz_ptr z);
 
 #endif /* INCLUDE_GMP */
 
