@@ -140,20 +140,17 @@ private:
     std::unordered_map<int,mpf_class> evaluation_weights;
     std::unordered_map<int,mpf_class> smoothing_weights;
     mpf_class rescale;
-    mp_bitcnt_t precision;
 
 public:
 
     Evaluator_mpf(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    bool evaluate(mpf_class &count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void clear_evaluation();
-    
-    void set_precision(mp_bitcnt_t p) { precision = p; }
 
 private:
-    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    mpf_class evaluate_edge(Egraph_edge &e, bool smoothed);
+    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void evaluate_edge(mpf_class &value, Egraph_edge &e, bool smoothed);
 };
 
 /*******************************************************************************************************************

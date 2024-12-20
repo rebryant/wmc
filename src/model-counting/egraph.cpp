@@ -598,6 +598,188 @@ double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_s
 }
 
 /*******************************************************************************************************************
+Evaluation via Gnu multi-precision floating-point arithmetic
+*******************************************************************************************************************/
+
+
+Evaluator_mpf::Evaluator_mpf(Egraph *eg) { 
+    egraph = eg;
+    clear_evaluation();
+}
+    
+void Evaluator_mpf::clear_evaluation() {
+    //    for (auto iter : evaluation_weights)
+    //	mpf_clear(iter.second);
+    evaluation_weights.clear();
+    //    for (auto iter : smoothing_weights)
+    //	mpf_clear(iter.second);
+    smoothing_weights.clear();
+    rescale = 1;
+}
+
+static void mpf_one_minus(mpf_ptr dest, mpf_srcptr val) {
+    mpf_t one;
+    mpf_init(one);
+    mpf_set_ui(one, 1);
+    mpf_neg(dest, val);
+    mpf_add(dest, dest, one);
+    mpf_clear(one);
+}
+
+// literal_string_weights == NULL for unweighted
+bool Evaluator_mpf::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    clear_evaluation();
+    for (int v : *egraph->data_variables) {
+	mpf_class pwt = 1;
+	bool gotp = false;
+	mpf_class nwt = 1;
+	bool gotn = false;
+
+	if (literal_string_weights) {
+	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
+		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
+		if (!q25_is_valid(qpwt)) {
+		    err(false, "MPF: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		    return false;
+		}
+		if (!q25_to_mpf(pwt.get_mpf_t(), qpwt)) {
+		    err(false, "MPF: Couldn't convert from q25 to mpf for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
+		    return false;
+		}
+		q25_free(qpwt);
+		gotp = true;
+	    }
+	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
+		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
+		if (!q25_is_valid(qnwt)) {
+		    err(false, "MPF: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    return false;
+		}
+		if (!q25_to_mpf(nwt.get_mpf_t(), qnwt)) {
+		    err(false, "MPF: Couldn't convert from q25 to mpf for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    return false;
+		}
+		q25_free(qnwt);
+		gotn = true;
+	    }
+	    if (gotp) {
+		if (!gotn)
+		    mpf_one_minus(nwt.get_mpf_t(), pwt.get_mpf_t());
+	    } else {
+		if (gotn)
+		    mpf_one_minus(pwt.get_mpf_t(), nwt.get_mpf_t());
+	    }
+	}
+	mpf_class sum = nwt+pwt;
+	if (smoothed)
+	    smoothing_weights[v] = sum;
+	else {
+	    if (cmp(sum, mpf_class(0)) == 0) {
+		err(false, "MPF: Weights for variable %d sum to 0\n", v);
+		return false;
+	    }
+	    rescale *= sum;
+	    pwt /= sum;
+	    nwt /= sum;
+	}
+	evaluation_weights[v] = pwt;
+	evaluation_weights[-v] = nwt;
+    }
+    return true;
+}
+
+void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e, bool smoothed) {
+    value = 1;
+    for (int lit : e.literals)
+	value *= evaluation_weights[lit];
+    if (smoothed) {
+	for (int v : e.smoothing_variables)
+	    value *= smoothing_weights[v];
+    }
+    if (verblevel >= 4) {
+	mp_exp_t exp;
+	char *svalue = mpf_get_str(NULL, &exp, 10, 40, value.get_mpf_t());
+	report(4, "MPF: Evaluating edge (%d <-- %d).  Value = 0.%se%ld\n", e.to_id, e.from_id, svalue, exp);
+	free(svalue);
+    }
+}
+
+bool Evaluator_mpf::evaluate(mpf_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+    if (!prepare_weights(literal_string_weights, smoothed))
+	return false;
+    std::vector<mpf_class> operation_values;
+    operation_values.resize(egraph->operations.size());
+    for (int id = 1; id <= egraph->operations.size(); id++) {
+	switch (egraph->operations[id-1].type) {
+	case NNF_TRUE:
+	case NNF_AND:
+	    operation_values[id-1] = 1;
+	    break;
+	case NNF_FALSE:
+	case NNF_OR:
+	default:
+	    operation_values[id-1] = 0;
+	}
+    }
+    for (Egraph_edge e : egraph->edges) {
+	char *sold = NULL;
+	char *sedge = NULL;
+	mp_exp_t eold, eedge, efrom, eproduct, enew_val;	
+	mpf_class product;
+
+	evaluate_edge(product, e, smoothed);
+
+	if (verblevel >= 4) {
+	    sedge = mpf_get_str(NULL, &eedge, 10, 40, product.get_mpf_t());
+	    sold = mpf_get_str(NULL, &eold, 10, 40, operation_values[e.to_id-1].get_mpf_t());
+	}
+
+	product *= operation_values[e.from_id-1];
+	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
+	if (multiply)
+	    operation_values[e.to_id-1] *= product;
+	else
+	    operation_values[e.to_id-1] += product;
+	if (verblevel >= 4) {
+	    char *sfrom = mpf_get_str(NULL, &efrom, 10, 40, operation_values[e.from_id-1].get_mpf_t());
+	    char *sproduct = mpf_get_str(NULL, &eproduct, 10, 40, product.get_mpf_t());
+	    char *snew_val = mpf_get_str(NULL, &enew_val, 10, 40, operation_values[e.to_id-1].get_mpf_t());
+	    report(4, "MPF: Density: Updating %d from %d.  0.%se%ld * 0.%se%ld %c 0.%se%ld --> 0.%se%ld\n",
+		   e.to_id, e.from_id, sfrom, efrom, sedge, eedge, multiply ? '*' : '+', sold, eold, snew_val, enew_val);
+	    free(sfrom); free(sold); free(sedge); free(sproduct); free(snew_val);
+	}
+    }
+    count = operation_values[egraph->root_id-1];
+    //    for (int id = 1; id <= egraph->operations.size(); id++)
+    //	mpf_clear(operation_values[id-1]);
+    operation_values.clear();
+
+    if (smoothed) {
+	if (verblevel >= 4) {
+	    mp_exp_t ecount;
+	    char *scount = mpf_get_str(NULL, &ecount, 10, 40, count.get_mpf_t());
+	    report(4, "MPF: Smoothed count = 0.%se%ld\n", scount, ecount);
+	    free(scount);
+	}
+    } else {
+	char *socount = NULL;
+	mp_exp_t eocount, erescale, ecount;
+	if (verblevel >= 4)
+	    socount = mpf_get_str(NULL, &eocount, 10, 40, count.get_mpf_t());
+	count *= rescale;
+	if (verblevel >= 4) {
+	    char *srescale = mpf_get_str(NULL, &erescale, 10, 40, rescale.get_mpf_t());
+	    char *scount = mpf_get_str(NULL, &ecount, 10, 40, count.get_mpf_t());
+	    report(4, "MPF: Final count: Rescale = 0.%se%ld.  Density = 0.%se%ld.  Count = 0.%se%ld\n",
+		   srescale, socount, scount);
+	    free(srescale); free(socount), free(scount);
+	}
+    }
+    return true;
+}
+
+
+/*******************************************************************************************************************
 Evaluation via Gnu multi-precision rational arithmetic
 *******************************************************************************************************************/
 
@@ -752,7 +934,13 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
     //	mpq_clear(operation_values[id-1]);
     operation_values.clear();
 
-    if (!smoothed) {
+    if (smoothed) {
+	if (verblevel >= 4) {
+	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
+	    report(4, "MPQ: Smoothed count = %s\n", scount);
+	    free(scount);
+	}
+    } else {
 	char *socount = NULL;
 	if (verblevel >= 4)
 	    socount = mpq_get_str(NULL, 10, count.get_mpq_t());
@@ -763,11 +951,8 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
 	    report(4, "MPQ: Final count: Rescale = %s.  Density = %s.  Count = %s\n",
 		   srescale, socount, scount);
 	    free(srescale); free(socount), free(scount);
-	} else if (verblevel >= 4) {
-	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
-	    report(4, "MPQ: Smoothed count = %s\n", scount);
-	    free(scount);
 	}
     }
     return true;
 }
+

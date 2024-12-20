@@ -98,6 +98,10 @@ const char *find_program_path(const char *progname) {
 //  Logging information
 // Establish a log file
 void set_logname(const char *fname) {
+    if (fname == NULL) {
+	logfile_name = NULL;
+	return;
+    }
     logfile_name = archive_string(fname);
     // Clear out whatever was there
     FILE *logfile = fopen(logfile_name, "w");
