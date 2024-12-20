@@ -70,6 +70,10 @@ bool initialized = false;
 static q25_t working_val[DCOUNT];
 static uint32_t *digit_buffer[DCOUNT];
 static unsigned digit_allocated[DCOUNT];
+#if RATIONAL
+static uint32_t *ddigit_buffer[DCOUNT];
+static unsigned ddigit_allocated[DCOUNT];
+#endif
 
 /* Lookup table for powers */
 static uint32_t power2[Q25_DIGITS+1];
@@ -123,11 +127,18 @@ static int qstack_alloc_size = 0;
 
 /**** Computing allocations ****/
 static double allocation_q25(q25_ptr q) {
+#if RATIONAL    
+    return 4 * (5 + q->dcount + q->ddcount);
+#else
     return 4 * (4 + q->dcount);
+#endif
 }
 
 static double allocation_mpq(q25_ptr q) {
     double val = 32 +  mpq_bytes_per_dcount * q->dcount;
+#if RATIONAL
+    val += mpq_bytes_per_dcount * q->ddcount;
+#endif
     val += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
     val += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
     return val;
@@ -135,6 +146,7 @@ static double allocation_mpq(q25_ptr q) {
 
 /* Update statistics when q newly allocated */
 static void q25_register(q25_ptr q) {
+#if METRIC
     active_counter += 1;
     if (active_counter > peak_active_counter)
 	peak_active_counter = active_counter;
@@ -144,13 +156,16 @@ static void q25_register(q25_ptr q) {
     active_bytes_mpq += allocation_mpq(q);
     if (active_bytes_mpq > peak_active_bytes_mpq)
 	peak_active_bytes_mpq = active_bytes_mpq;
+#endif
 }
 
 /* Update statistics when q newly allocated */
 static void q25_deregister(q25_ptr q) {
+#if METRIC
     active_counter -= 1;
     active_bytes_q25 -= allocation_q25(q);
     active_bytes_mpq -= allocation_mpq(q);
+#endif
 }
 
 /* Initialize data structures */
@@ -169,6 +184,12 @@ static void q25_init() {
 	working_val[id].pwr2 = 0;
 	working_val[id].pwr5 = 0;
 	working_val[id].dcount = 1;
+#if RATIONAL
+	ddigit_allocated[id] = INIT_DIGITS;
+	ddigit_buffer[id] = (uint32_t *) calloc(INIT_DIGITS, sizeof(uint32_t));	
+	ddigit_buffer[id][0] = 0;
+	working_val[id].ddcount = 0;
+#endif
     }
     int i;
     uint64_t p2 = 1;
@@ -193,6 +214,9 @@ static void q25_set(int id, uint32_t x) {
     working_val[id].pwr2 = 0;
     working_val[id].pwr5 = 0;
     working_val[id].dcount = 1;
+#if RATIONAL
+    working_val[id].ddcount = 0;
+#endif
     digit_buffer[id][0] = x;
     q25_canonize(id);
 }
@@ -207,6 +231,11 @@ static void q25_work(int id, q25_ptr q) {
     working_val[id].pwr2 = q->pwr2;
     working_val[id].pwr5 = q->pwr5;
     memcpy(digit_buffer[id], q->digit, working_val[id].dcount * sizeof(uint32_t));
+#if RATIONAL
+    working_val[id].ddcount = q->ddcount;
+    if (q->ddcount > 0)
+	memcpy(ddigit_buffer[id], q->digit+q->dcount, working_val[id].ddcount * sizeof(uint32_t));
+#endif
 }
 
 // Make sure enough digits in working space
@@ -226,6 +255,26 @@ static void q25_clear_digits(int id, unsigned len) {
     memset(digit_buffer[WID], 0, len * sizeof(uint32_t));
     working_val[id].dcount = len;
 }
+
+#if RATIONAL
+// Make sure enough digits in working space
+static void q25_dcheck(int id, unsigned ddcount) {
+    q25_init();
+    if (ddcount <= ddigit_allocated[id])
+	return;
+    ddigit_allocated[id] *= 2;
+    if (ddcount > ddigit_allocated[id])
+	ddigit_allocated[id] = ddcount;
+    ddigit_buffer[id] = (uint32_t *) realloc(ddigit_buffer[id], ddigit_allocated[id] * sizeof(uint32_t));
+}
+
+// Clear specified number of digits in workspace.  And set as length
+static void q25_clear_ddigits(int id, unsigned len) {
+    q25_dcheck(id, len);
+    memset(ddigit_buffer[WID], 0, len * sizeof(uint32_t));
+    working_val[id].ddcount = len;
+}
+#endif
 
 
 // Divide by a number < RADIX
@@ -366,6 +415,11 @@ static q25_ptr q25_build(int id) {
     result->pwr2 = working_val[id].pwr2;
     result->pwr5 = working_val[id].pwr5;
     memcpy(result->digit, digit_buffer[id], working_val[id].dcount * sizeof(uint32_t));
+#if RATIONAL
+    result->ddcount = working_val[id].ddcount;
+    if (working_val[id].ddcount > 0)
+	memcpy(result->digit+working_val[id].dcount, digit_buffer[id], working_val[id].ddcount * sizeof(uint32_t));
+#endif 
     q25_register(result);
     return result;
 }
@@ -465,6 +519,15 @@ static void q25_show_internal(int id, FILE *outfile) {
 	fprintf(outfile, "|");
 	fprintf(outfile, "%u", digit_buffer[id][d]);
     }
+#if RATIONAL    
+    if (working_val[id].ddcount > 0) {
+	int d;
+	fprintf(outfile, "/");
+	for (d = working_val[id].ddcount-1; d >= 0; d--) {
+	    fprintf(outfile, "%u", ddigit_buffer[id][d]);
+	}
+    }
+#endif
     fprintf(outfile, "]");
 }
 
@@ -541,15 +604,42 @@ q25_ptr q25_copy(q25_ptr q) {
 
 q25_ptr q25_scale(q25_ptr q, int32_t p2, int32_t p5) {
     q25_work(WID, q);
-    working_val[WID].pwr2 += p2;
-    working_val[WID].pwr5 += p5;
+    int64_t np2 = (int64_t) p2 + working_val[WID].pwr2;
+    if (np2 != (int64_t) (int32_t) np2) {
+	return p2 > 0 ? q25_infinity(q->negative) : q25_invalid();
+    }
+    int64_t np5 = (int64_t) p5 + working_val[WID].pwr5;
+    if (np5 != (int64_t) (int32_t) np5) {
+	return p5 > 0 ? q25_infinity(q->negative) : q25_invalid();
+    }
+    working_val[WID].pwr2 = np2;
+    working_val[WID].pwr5 = np5;
     return q25_build(WID);
 }
 
 void q25_inplace_scale(q25_ptr q, int32_t p2, int32_t p5) {
     q25_deregister(q);
-    q->pwr2 += p2;
-    q->pwr5 += p5;
+    q25_work(WID, q);
+    int64_t np2 = (int64_t) p2 + q->pwr2;
+    if (np2 != (int64_t) (int32_t) np2) {
+	/* This will mess up the allocation */
+	if (p2 > 0)
+	    q->infinite = true;
+	else
+	    q->valid = false;
+	return;
+    }
+    int64_t np5 = (int64_t) p5 + q->pwr5;
+    if (np5 != (int64_t) (int32_t) np5) {
+	/* This will mess up the allocation */
+	if (p5 > 0)
+	    q->infinite = true;
+	else
+	    q->valid = false;
+	return;
+    }
+    q->pwr2 = np2;
+    q->pwr5 = np5;
     q25_register(q);
 }
 
