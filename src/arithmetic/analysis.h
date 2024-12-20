@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /* Upper threshold for digit error metric */
-#define MAX_DIGIT_ERROR 20
+#define MAX_DIGIT_ERROR 40
 
 /* Returns number between 0 and MAX_DIGIT_ERRROR */
 double digit_error_q25(q25_ptr qx, q25_ptr y);
