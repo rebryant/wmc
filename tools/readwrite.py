@@ -353,10 +353,8 @@ class CnfWriter(Writer):
         elif self.mcClass == "wmc":
             self.mcClass = "pwmc"
 
-
-
     def addWeight(self, lit, weight):
-        self.doComment("p show %d %s 0" % (lit, str(weight)))
+        self.doComment("p weight %d %s 0" % (lit, str(weight)))
         if self.mcClass == "mc":
             self.mcClass = "wmc"
         elif self.mcClass == "pmc":

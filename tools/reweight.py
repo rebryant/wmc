@@ -9,7 +9,7 @@ import getopt
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] [-v VLEVEL] -i INCNF [-s SEED] [-n COUNT] [-d DIGITS]" % name)
+    print("Usage: %s [-h] -i INCNF [-s SEED] [-n COUNT] [-d DIGITS]" % name)
     
 def getRoot(path):
     fields = path.split("/")
@@ -77,7 +77,6 @@ def redoWeights(root, inputCnf, seed=123456, digits=9):
         w.uniformSubsetProbabilities(inputCnf.showVariables, digits)
     else:
         w.uniformAllProbabilities(inputCnf.nvar, digits)
-    print("Got weights %s" % (w.wdict))
     cwriter.addWeights(w.wdict)
     cwriter.finish()
     print("Generated file '%s'" % outName)
