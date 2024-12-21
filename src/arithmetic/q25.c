@@ -242,6 +242,7 @@ static void q25_work(int id, q25_ptr q) {
 static void q25_check(int id, unsigned dcount) {
     q25_init();
     if (dcount <= digit_allocated[id])
+
 	return;
     digit_allocated[id] *= 2;
     if (dcount > digit_allocated[id])
@@ -506,6 +507,23 @@ static unsigned q25_get_digit10(int id, int index) {
     uint32_t word = digit_buffer[id][digit];
     return (word / power) % 10;
 }
+
+/* Truncate number by setting lower-order digits to 0 */
+static void q25_clear_digit10s(int id, int count) {
+    int digit = (count-1) / Q25_DIGITS;
+    if (digit < 0 || digit >= working_val[id].dcount)
+	return;
+    int offset = (count-1) % Q25_DIGITS;
+    if (offset > 0) {
+	uint32_t power = power10[offset];
+	digit_buffer[id][digit] = (digit_buffer[id][digit] / power) * power;
+    }
+    int i;
+    for (i = digit-1; i >= 0; i--) {
+	digit_buffer[id][i] = 0;
+    }
+}
+
 
 /* Show internal representation */
 static void q25_show_internal(int id, FILE *outfile) {
@@ -1139,6 +1157,60 @@ q25_ptr q25_from_string(const char *sq) {
     return q25_build(WID);
 }
 
+q25_ptr q25_round(q25_ptr q, int digits) {
+    if (!q->valid || q->infinite || q25_is_zero(q))
+	return q25_copy(q);
+    q25_work(WID, q);
+    int pwr10 = working_val[WID].pwr5;
+    // Scale so that pwr2 = pwr5
+    int diff = working_val[WID].pwr2 - working_val[WID].pwr5;
+    if (diff > 0) {
+	q25_scale_digits(WID, true, diff);
+	pwr10 = working_val[WID].pwr5;
+    } else if (diff < 0) {
+	q25_scale_digits(WID, false, -diff);
+	pwr10 = working_val[WID].pwr2;
+    }
+    int n10 = q25_length10(WID);
+    if (n10 <= digits)
+	return q25_build(WID);
+    bool roundup = false;
+    int rounding_digit = q25_get_digit10(WID, n10-digits-1);
+    //  printf("    Got pwr10 = %d, n10 = %d, rounding digit[%d] = %d\n", pwr10, n10, n10-digits-1, rounding_digit);
+    if (n10-digits == 1) {
+	/* Round to even happens only if only have one digit being rounded */
+	if (rounding_digit == 5) {
+	    int last_digit = q25_get_digit10(WID, 1);
+	    //	    printf("      RTE: Checking last digit[1] = %d\n", last_digit);
+	    roundup = last_digit % 2 == 1;
+	} else
+	    roundup = rounding_digit > 5;
+    } else {
+	roundup = rounding_digit >= 5;
+    }
+    /* Zero out the lower digits */
+    q25_clear_digit10s(WID, n10-digits+1);
+    q25_ptr interim = q25_build(WID);
+#if 0
+    /* DEBUG */
+    char *si = q25_string(interim);
+    printf("      Before rounding up: %s\n", si);
+    free(si);
+    /* DEBUG */
+#endif
+
+    if (roundup) {
+	q25_ptr rval = q25_from_32(1);
+	int scale = pwr10+n10-digits;
+	q25_inplace_scale(rval, scale, scale);
+	//	printf("      Round up by adding 10^%d\n", scale);
+	q25_ptr result = q25_add(interim, rval);
+	q25_free(interim); q25_free(rval);
+	return result;
+    } else
+	return interim;
+}
+
 
 void q25_write(q25_ptr q, FILE *outfile) {
     if (!q->valid) {
@@ -1149,9 +1221,14 @@ void q25_write(q25_ptr q, FILE *outfile) {
 	fprintf(outfile, "0");
 	return;
     }    
-
     if (q->negative)
 	fputc('-', outfile);
+
+    if (q->infinite) {
+	fprintf(outfile, "INF");
+	return;
+    }
+
     q25_work(WID, q);
 
     // Scale so that pwr2 = pwr5
@@ -1236,6 +1313,29 @@ static void string_append_string(char *s) {
 	string_append_char(c);
 }
 
+static void string_append_number(int val) {
+    if (val == 0) {
+	string_append_char('0');
+	return;
+    }
+    if (val < 0) {
+	string_append_char('-');
+	val = -val;
+    }
+    int pos = Q25_DIGITS;
+    while (power10[pos] > val)
+	pos--;
+    while (pos > 0) {
+	int digit = val / power10[pos];
+	char d = digit + '0';
+	string_append_char(d);
+	val = val % power10[pos];
+	pos--;
+    }
+    char d = val + '0';
+    string_append_char(d);
+}
+
 char *q25_string(q25_ptr q) {
     string_init();
     if (!q->valid) {
@@ -1249,6 +1349,11 @@ char *q25_string(q25_ptr q) {
 
     if (q->negative)
 	string_append_char('-');
+
+    if (q->infinite) {
+	string_append_string("INF");
+	return string_buffer;
+    }
 
     q25_work(WID, q);
     // Scale so that pwr2 = pwr5
@@ -1292,6 +1397,71 @@ char *q25_string(q25_ptr q) {
     }
     return string_buffer;
 }
+
+char *q25_scientific_string(q25_ptr q) {
+    string_init();
+    if (!q->valid) {
+	string_append_string("INVALID");
+	return string_buffer;
+    }
+    if (q->dcount == 1 && q->digit[0] == 0) {
+	string_append_string("0.0");
+	return string_buffer;
+    }    
+
+    if (q->negative)
+	string_append_char('-');
+
+    if (q->infinite) {
+	string_append_string("INF");
+	return string_buffer;
+    }
+
+    q25_work(WID, q);
+    // Scale so that pwr2 = pwr5
+    int diff = working_val[WID].pwr2 - working_val[WID].pwr5;
+    if (diff > 0) {
+	q25_scale_digits(WID, true, diff);
+    } else if (diff < 0) {
+	q25_scale_digits(WID, false, -diff);
+    }
+    int n10 = q25_length10(WID);
+    int p10 = working_val[WID].pwr2 + n10 - 1;
+    
+    /* Leading digit */
+    int d10 = q25_get_digit10(WID, n10-1);
+    char d = '0' + d10;
+    string_append_char(d);
+    string_append_char('.');
+    int i;
+    if (n10 == 1) {
+	string_append_char('0');
+	return string_buffer;
+    }
+    for (i = n10-2; i >= 0; i--) {
+	int d10 = q25_get_digit10(WID, i);
+	char d = '0' + d10;
+	string_append_char(d);
+    }
+    if (p10 != 0) {
+	string_append_char('e');
+	string_append_number(p10);
+    }
+    return string_buffer;
+}
+
+char *q25_best_string(q25_ptr q) {
+    char *fs = q25_string(q);
+    char *ss = q25_scientific_string(q);
+    if (strlen(ss)+2 <= strlen(fs)) {
+	free(fs);
+	return ss;
+    } else {
+	free(ss);
+	return fs;
+    }
+}
+
 
 
 /* Show value in terms of its representation */

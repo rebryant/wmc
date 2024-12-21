@@ -32,6 +32,9 @@ $(LFILE): $(OFILES)
 dtest: dtest.c q25.o
 	$(CC) $(CFLAGS) -o dtest dtest.c q25.o
 
+rtest: rtest.c q25.o
+	$(CC) $(CFLAGS) -o rtest rtest.c q25.o $(GLIB)
+
 atest: atest.c q25.o analysis.o
 	$(CC) $(CFLAGS) -o atest atest.c q25.o analysis.o
 

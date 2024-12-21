@@ -138,10 +138,13 @@ q25_ptr q25_one_minus(q25_ptr q);
 /* Multiplication */
 q25_ptr q25_mul(q25_ptr q1, q25_ptr q2);
 
+/* Round to specified number of decimal digits */
+q25_ptr q25_round(q25_ptr q, int digits);
+
 /* Read from file */
 q25_ptr q25_read(FILE *infile);
 
-/* Write to file */
+/* Write decimal representation to file */
 void q25_write(q25_ptr q, FILE *outfile);
 
 /* Read from string */
@@ -149,6 +152,13 @@ q25_ptr q25_from_string(const char *sq);
 
 /* Generate dynamically allocated string.  Should free() when done */
 char *q25_string(q25_ptr q);
+
+/* Generate string representation of form D.DD....DeNNN */
+char *q25_scientific_string(q25_ptr q);
+
+/* Choose shorter of 2 sring representations */
+char *q25_best_string(q25_ptr q);
+
 
 /* Set max_digits to <= 0 to print entire representation */
 /* Show value in terms of its representation */
