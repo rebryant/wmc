@@ -9,7 +9,7 @@ import getopt
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] -i INCNF [-s SEED] [-n COUNT] [-d DIGITS]" % name)
+    print("Usage: %s [-h] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
     
 def getRoot(path):
     fields = path.split("/")
@@ -19,6 +19,12 @@ def getRoot(path):
     parts = fname.split(".")
     parts = parts[:-1]
     return ".".join(parts)
+
+def replaceExtension(path, ext):
+    fields = path.split(".")
+    fields[-1] = ext
+    return ".".join(fields)
+    
 
 def weightString(scaled, sigDigitCount):
     wstring = ""
@@ -83,9 +89,10 @@ def redoWeights(root, inputCnf, seed=123456, digits=9):
         
 def process(inPath, seed, digits, count):
     try:
-        inputCnf = readwrite.CnfReader(inPath, 2, False)
+        inCnfName = replaceExtension(inPath, "cnf")
+        inputCnf = readwrite.CnfReader(inCnfName, 2, False)
     except Exception as ex:
-        print("Couldn't read input file '%s'.  (%s)" % (inPath, str(ex)))
+        print("Couldn't read input file '%s'.  (%s)" % (inCnfName, str(ex)))
         return
     root = getRoot(inPath)
     for i in range(count):
@@ -95,25 +102,19 @@ def run(name, args):
     seed = 123456
     digits = 9
     count = 1
-    inPath = None
     optList, args = getopt.getopt(args, "hi:s:d:n:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
-        elif opt == "-i":
-            inPath = val
         elif opt == "-s":
             seed = int(val)
         elif opt == "-d":
             digits = int(val)
         elif opt == "-n":
             count = int(val)
-    if inPath is None:
-        print("Need input file name")
-        usage(name)
-        return
-    process(inPath, seed, digits, count)
+    for inPath in args:
+        process(inPath, seed, digits, count)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
