@@ -112,8 +112,11 @@ void run(const char *cnf_name) {
 	double peak_mpf_bytes = q25_peak_allocation_fp(true);
 	double peak_q25_bytes = q25_peak_allocation_q25();
 	double peak_mpq_bytes = q25_peak_allocation_mpq();
-	char *scount = q25_string(count);
-	lprintf("%s   UNWEIGHTED Q25 COUNT    = %s\n", prefix, scount);
+	q25_ptr rcount = q25_round(count, 50);
+	char *scount = q25_best_string(rcount);
+	char cmp = q25_compare(count, rcount) == 0 ? ' ' : '~';
+	q25_free(rcount);
+	lprintf("%s   UNWEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, scount);
 	lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
 		prefix, unweighted_operations, end_time - start_time, peak_q25_bytes);
 	free(scount);
@@ -146,7 +149,10 @@ void run(const char *cnf_name) {
 	    double precision = digit_error_q25(count, fccount);
 	    mp_exp_t ecount;
 	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    lprintf("%s   UNWEIGHTED MPF COUNT    = 0.%se%ld (precision = %.3f)\n", prefix, sfcount, ecount, precision);
+	    if (ecount == 0) 
+		lprintf("%s   UNWEIGHTED MPF COUNT    = 0.%s (precision = %.3f)\n", prefix, sfcount, precision);
+	    else
+		lprintf("%s   UNWEIGHTED MPF COUNT    = 0.%se%ld (precision = %.3f)\n", prefix, sfcount, ecount, precision);
 	    lprintf("%s     Unweighted MPF count required %.3f seconds, %.0f peak bytes\n",
 		    prefix, end_time - start_time, peak_mpf_bytes);
 	    q25_free(fccount);
@@ -179,8 +185,11 @@ void run(const char *cnf_name) {
 	double peak_mpf_bytes = q25_peak_allocation_fp(true);
 	double peak_q25_bytes = q25_peak_allocation_q25();
 	double peak_mpq_bytes = q25_peak_allocation_mpq();
-	char *swcount = q25_string(wcount);
-	lprintf("%s   WEIGHTED Q25 COUNT    = %s\n", prefix, swcount);
+	q25_ptr rwcount = q25_round(wcount, 50);
+	char *swcount = q25_best_string(rwcount);
+	char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
+	q25_free(rwcount);
+	lprintf("%s   WEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, swcount);
 	lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
 		prefix, weighted_operations, end_time - start_time, peak_q25_bytes);
 	free(swcount);
@@ -213,7 +222,10 @@ void run(const char *cnf_name) {
 	    double precision = digit_error_q25(wcount, fccount);
 	    mp_exp_t ecount;
 	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    lprintf("%s   WEIGHTED MPF COUNT    = 0.%se%ld (precision = %.3f)\n", prefix, sfcount, ecount, precision);
+	    if (ecount == 0)
+		lprintf("%s   WEIGHTED MPF COUNT    = 0.%s (precision = %.3f)\n", prefix, sfcount, precision);
+	    else
+		lprintf("%s   WEIGHTED MPF COUNT    = 0.%se%ld (precision = %.3f)\n", prefix, sfcount, ecount, precision);
 	    lprintf("%s     Weighted MPF count required %.3f seconds, %.0f peak bytes\n",
 		    prefix, end_time - start_time, peak_mpf_bytes);
 	    q25_free(fccount);
@@ -267,6 +279,7 @@ void report_stats() {
 
 int main(int argc, char *argv[]) {
     int c;
+    int mpf_precision = 128;
     FILE *out_file = NULL;
     while ((c = getopt(argc, argv, "hsv:o:")) != -1) {
 	switch(c) {
@@ -313,6 +326,8 @@ int main(int argc, char *argv[]) {
     FILE *cnf_file = fopen(cnf_name, "r");
     if (!cnf_file)
 	err(true, "Couldn't open CNF file '%s'\n", cnf_name);
+
+    mpf_set_default_prec(mpf_precision);
 
     double start = tod();
     setup(cnf_file, nnf_file, out_file);
