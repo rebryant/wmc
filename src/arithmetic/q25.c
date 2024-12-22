@@ -1203,6 +1203,8 @@ q25_ptr q25_round(q25_ptr q, int digits) {
 	q25_ptr rval = q25_from_32(1);
 	int scale = pwr10+n10-digits;
 	q25_inplace_scale(rval, scale, scale);
+	if (q25_is_negative(q))
+	    q25_inplace_negate(rval);
 	//	printf("      Round up by adding 10^%d\n", scale);
 	q25_ptr result = q25_add(interim, rval);
 	q25_free(interim); q25_free(rval);
