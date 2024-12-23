@@ -1,0 +1,37 @@
+CC=gcc
+CXX=g++
+OPT = -O2
+#OPT = -O0
+CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
+CXXFLAGS=-std=c++11
+INC = -I..
+LDIR = ../../lib
+IDIR = ../../include
+
+LFILE = wmc_arithmetic_arm.a
+
+OFILES = q25.o analysis.o
+IFILES = q25.h analysis.h
+
+# ARM specific things
+LOCAL=/opt/homebrew
+
+ACFLAGS=$(CFLAGS) -I $(LOCAL)/include
+
+
+all: $(LFILE) $(IFILES)
+	cp -p $(LFILE) $(LDIR)
+	cp -p $(IFILES) $(IDIR)
+
+$(LFILE): $(OFILES)
+	ar cr $(LFILE) $(OFILES)
+
+.c.o:
+	$(CC) $(ACFLAGS) $(INC) -c $<
+
+.cxx.o:
+	$(CXX) $(CFLAGS) $(INC) -c $<
+
+
+clean:
+	 rm -f *.a *.o *~
