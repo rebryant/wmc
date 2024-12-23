@@ -79,7 +79,7 @@ def getRoot(fname):
 def runCommand(cmd):
     p.print("Running '%s'" % " ".join(cmd))
     try:
-        cp = subprocess.run(cmd, capture_output = True, text=True)
+        cp = subprocess.run(cmd)
     except Exception as ex:
         p.print("Exception encountered (%s)" % str(ex))
         p.print("Output on stderr")
@@ -90,7 +90,6 @@ def runCommand(cmd):
         p.print("Command failed.  Return code = %d" % cp.returncode)
         p.print("Output on stderr")
         p.print(cp.stderr)
-    p.print(cp.stdout)
     return ok
 
 def runJob(nnfPath):
