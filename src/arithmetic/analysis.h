@@ -39,15 +39,15 @@
 extern "C" {
 #endif
 
-/* Upper threshold for digit error metric */
-#define MAX_DIGIT_ERROR 40
+/* Upper threshold for digit precision metric */
+#define MAX_DIGIT_PRECISION 40
 
-/* Returns number between 0 and MAX_DIGIT_ERRROR */
-double digit_error_q25(q25_ptr qx, q25_ptr y);
+/* Returns number between 0 and MAX_DIGIT_PRECISION */
+double digit_precision_q25(q25_ptr qx, q25_ptr y);
 
-double digit_error_mix(q25_ptr qx, double y);
+double digit_precision_mix(q25_ptr qx, double y);
 
-double digit_error(double x, double y);
+double digit_precision(double x, double y);
 
 #ifdef CPLUSPLUS
 }
