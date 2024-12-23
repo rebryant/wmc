@@ -179,6 +179,9 @@ long q25_operation_count();
 double q25_peak_allocation_fp(bool is_mpf);
 double q25_peak_allocation_q25();
 double q25_peak_allocation_mpq();
+/* Get the largest allocation */
+double q25_max_allocation_q25();
+double q25_max_allocation_mpq();
 
 
 /* Stack-based memory management.  Call q25_enter() when enter context, q25_exit() when leave */

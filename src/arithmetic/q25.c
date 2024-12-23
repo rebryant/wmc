@@ -27,8 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "q25.h"
 #include <limits.h>
+#include <math.h>
+
+#include "q25.h"
 
 /*
    Declarations.  The program assumes that computation is performed in decimal.
@@ -102,9 +104,11 @@ static long peak_active_counter = 0;
 /* Count of number of Q25 bytes allocated */
 static double active_bytes_q25 = 0;
 static double peak_active_bytes_q25 = 0;
+static double max_bytes_q25 = 0;
 /* Approx bytes if had MPQ representation */
 static double active_bytes_mpq = 0;
 static double peak_active_bytes_mpq = 0;
+static double max_bytes_mpq = 0;
 
 
 /* Factors used for computing MP sizes */
@@ -136,12 +140,16 @@ static double allocation_q25(q25_ptr q) {
 }
 
 static double allocation_mpq(q25_ptr q) {
-    double val = 32 +  mpq_bytes_per_dcount * q->dcount;
+    double val = mpq_bytes_per_dcount * q->dcount;
 #if RATIONAL
     val += mpq_bytes_per_dcount * q->ddcount;
 #endif
     val += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
     val += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
+    /* Round up to multiple of 8 */
+    val = 8 * ceil(0.125 * val);
+    /* Add overhead */
+    val += 32;
     return val;
 }
 
@@ -151,10 +159,16 @@ static void q25_register(q25_ptr q) {
     active_counter += 1;
     if (active_counter > peak_active_counter)
 	peak_active_counter = active_counter;
-    active_bytes_q25 += allocation_q25(q);
+    double bytes = allocation_q25(q);
+    if (bytes > max_bytes_q25)
+	max_bytes_q25 = bytes;
+    active_bytes_q25 += bytes;
     if (active_bytes_q25 > peak_active_bytes_q25)
 	peak_active_bytes_q25 = active_bytes_q25;
-    active_bytes_mpq += allocation_mpq(q);
+    bytes = allocation_mpq(q);
+    if (bytes > max_bytes_mpq)
+	max_bytes_mpq = bytes;
+    active_bytes_mpq += bytes;
     if (active_bytes_mpq > peak_active_bytes_mpq)
 	peak_active_bytes_mpq = active_bytes_mpq;
 #endif
@@ -1655,6 +1669,8 @@ void q25_reset_counters() {
     peak_active_bytes_q25 = 0;
     active_bytes_mpq = 0;
     peak_active_bytes_mpq = 0;
+    max_bytes_q25 = 0;
+    max_bytes_mpq = 0;
 }
 
 long q25_operation_count() {
@@ -1671,6 +1687,14 @@ double q25_peak_allocation_q25() {
 
 double q25_peak_allocation_mpq() {
     return peak_active_bytes_mpq;
+}
+
+double q25_max_allocation_q25() {
+    return max_bytes_q25;
+}
+
+double q25_max_allocation_mpq() {
+    return max_bytes_mpq;
 }
 
 

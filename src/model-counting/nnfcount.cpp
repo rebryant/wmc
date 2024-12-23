@@ -112,13 +112,15 @@ void run(const char *cnf_name) {
 	double peak_mpf_bytes = q25_peak_allocation_fp(true);
 	double peak_q25_bytes = q25_peak_allocation_q25();
 	double peak_mpq_bytes = q25_peak_allocation_mpq();
+	double max_q25_bytes = q25_max_allocation_q25();
+	double max_mpq_bytes = q25_max_allocation_mpq();
 	q25_ptr rcount = q25_round(count, 50);
 	char *scount = q25_best_string(rcount);
 	char cmp = q25_compare(count, rcount) == 0 ? ' ' : '~';
 	q25_free(rcount);
 	lprintf("%s   UNWEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, scount);
-	lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
-		prefix, unweighted_operations, end_time - start_time, peak_q25_bytes);
+	lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		prefix, unweighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
 	free(scount);
 	qev.clear_evaluation();
 
@@ -132,8 +134,8 @@ void run(const char *cnf_name) {
 		lprintf("%s   MPQ Count == Q25 Count\n", prefix);
 	    else
 		err(false, "MPQ Count != Q25 Count\n");
-	    lprintf("%s     Unweighted MPQ count required %.3f seconds, %.0f peak bytes\n",
-		    prefix, end_time - start_time, peak_mpq_bytes);
+	    lprintf("%s     Unweighted MPQ count required %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		    prefix, end_time - start_time, peak_mpq_bytes, max_mpq_bytes);
 	    mpqev.clear_evaluation();
 	    q25_free(ccount);
 	} else {
@@ -192,13 +194,15 @@ void run(const char *cnf_name) {
 	double peak_mpf_bytes = q25_peak_allocation_fp(true);
 	double peak_q25_bytes = q25_peak_allocation_q25();
 	double peak_mpq_bytes = q25_peak_allocation_mpq();
+	double max_q25_bytes = q25_max_allocation_q25();
+	double max_mpq_bytes = q25_max_allocation_mpq();
 	q25_ptr rwcount = q25_round(wcount, 50);
 	char *swcount = q25_best_string(rwcount);
 	char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
 	q25_free(rwcount);
 	lprintf("%s   WEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, swcount);
-	lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak bytes\n",
-		prefix, weighted_operations, end_time - start_time, peak_q25_bytes);
+	lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		prefix, weighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
 	free(swcount);
 	qev.clear_evaluation();
 
@@ -212,8 +216,8 @@ void run(const char *cnf_name) {
 		lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
 	    else
 		err(false, "Q25 weighted count != MPQ weighted count\n");
-	    lprintf("%s     Weighted MPQ count required %.3f seconds, %.0f peak bytes\n",
-		    prefix, end_time - start_time, peak_mpq_bytes);
+	    lprintf("%s     Weighted MPQ count required %.3f seconds, %.0f (%.0f max) peak bytes\n",
+		    prefix, end_time - start_time, peak_mpq_bytes, max_mpq_bytes);
 	    q25_free(cwcount);
 	    mpqev.clear_evaluation();
 	} else {
