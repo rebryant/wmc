@@ -82,14 +82,16 @@ def runCommand(cmd):
         cp = subprocess.run(cmd)
     except Exception as ex:
         p.print("Exception encountered (%s)" % str(ex))
-        p.print("Output on stderr")
-        p.print(cp.stderr)
+        if cp.stderr is not None:
+            p.print("Output on stderr")
+            p.print(cp.stderr)
         return False
     ok = cp.returncode == 0
     if not ok:
         p.print("Command failed.  Return code = %d" % cp.returncode)
-        p.print("Output on stderr")
-        p.print(cp.stderr)
+        if cp.stderr is not None:
+            p.print("Output on stderr")
+            p.print(cp.stderr)
     return ok
 
 def runJob(nnfPath):
