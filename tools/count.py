@@ -101,8 +101,9 @@ def runJob(nnfPath):
             cname = getRoot(name) + (".scount" if smooth else ".count")
             if not os.path.exists(cname):
                 newNames.append(name)
+        cnfNames = newNames
     if len(cnfNames) == 0:
-        p.print("No CNF files for NNF file %s" % nnfPath)
+        p.print("No new CNF files for NNF file %s" % nnfPath)
     else:
         cmd = [genProgramPath("nnfcount")]
         if smooth:
