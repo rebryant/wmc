@@ -28,6 +28,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "q25.h"
+#include <limits.h>
 
 /*
    Declarations.  The program assumes that computation is performed in decimal.
@@ -1155,6 +1156,29 @@ q25_ptr q25_from_string(const char *sq) {
     printf("\n");
 #endif
     return q25_build(WID);
+}
+
+/* Get approx log10 */
+int q25_magnitude(q25_ptr q) {
+    if (!q->valid)
+	return INT_MAX;
+    if (q->infinite)
+	return q->negative ? INT_MIN : INT_MAX;
+    if (q25_is_zero(q))
+	return 0;
+    q25_work(WID, q);
+    int pwr10 = working_val[WID].pwr5;
+    // Scale so that pwr2 = pwr5
+    int diff = working_val[WID].pwr2 - working_val[WID].pwr5;
+    if (diff > 0) {
+	q25_scale_digits(WID, true, diff);
+	pwr10 = working_val[WID].pwr5;
+    } else if (diff < 0) {
+	q25_scale_digits(WID, false, -diff);
+	pwr10 = working_val[WID].pwr2;
+    }
+    int n10 = q25_length10(WID);
+    return pwr10+n10-1;
 }
 
 q25_ptr q25_round(q25_ptr q, int digits) {

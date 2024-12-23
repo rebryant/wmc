@@ -138,6 +138,9 @@ q25_ptr q25_one_minus(q25_ptr q);
 /* Multiplication */
 q25_ptr q25_mul(q25_ptr q1, q25_ptr q2);
 
+/* Get approx log10 of number */
+int q25_magnitude(q25_ptr q);
+
 /* Round to specified number of decimal digits */
 q25_ptr q25_round(q25_ptr q, int digits);
 
