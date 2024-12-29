@@ -49,7 +49,7 @@ threadCount = None
 # Use smoothing?
 smooth = False
 # instrumentation level
-instrumentationLevel = 1
+instrumentationLevel = None
 
 # Pathnames
 def genProgramPath(progName, subdirectory = "bin"):
@@ -114,7 +114,8 @@ def runJob(nnfPath):
         cmd = [genProgramPath("nnfcount")]
         if smooth:
             cmd += ['-s']
-        cmd += ['-I', str(instrumentationLevel)]
+        if instrumentationLevel is not None:
+            cmd += ['-I', str(instrumentationLevel)]
         cmd += [nnfPath] + cnfNames
         ok = runCommand(cmd)
         if not ok:

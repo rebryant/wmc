@@ -74,7 +74,7 @@ bool smooth = false;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
-int instrumentation_level = 2;
+int instrumentation_level = 1;
 
 void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
