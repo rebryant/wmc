@@ -92,6 +92,13 @@ static void q25_set(int id, uint32_t x);
 static void q25_check(int id, unsigned dcount);
 static void q25_show_internal(int id, FILE *outfile);
 
+/* 
+   Instrumentation level:
+   0     None
+   1     Estimate MPQ sizes
+   2     Find exact MPQ sizes
+*/
+static int instrumentation_level = 0;
 /* Count of operations */
 static long operation_counter = 0;
 /* Count of number of active numbers (allocated - freed) */
@@ -131,20 +138,45 @@ static double allocation_q25(q25_ptr q) {
     return 4 * (4 + q->dcount);
 }
 
+/* Variables to represent mp values */
+static mpq_t mp_val;
+static mpz_t mp_num;
+static mpz_t mp_den;
+static bool mp_init = false;
+
 static double allocation_mpq(q25_ptr q) {
-    double val = mpq_bytes_per_dcount * q->dcount;
-    val += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
-    val += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
-    /* Round up to multiple of 8 */
-    val = 8 * ceil(0.125 * val);
-    /* Add overhead */
-    val += 32;
+    /* Overhead */
+    double val = 32;
+    bool done = false;
+    if (instrumentation_level > 1) {
+	if (!mp_init) {
+	    mpq_init(mp_val);
+	    mpz_init(mp_num);
+	    mpz_init(mp_den);
+	}
+	done = q25_to_mpq(mp_val, q);
+	if (done) {
+	    mpq_get_num(mp_num, mp_val);
+	    val += mpz_size(mp_num) * sizeof(mp_limb_t);
+	    mpq_get_den(mp_den, mp_val);
+	    val += mpz_size(mp_den) * sizeof(mp_limb_t);
+	}
+    }
+    if (!done) {
+	double bytes = 0.0;
+	bytes += mpq_bytes_per_dcount * q->dcount;
+	bytes += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
+	bytes += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
+	/* Round up to multiple of 8 */
+	val += 8 * ceil(0.125 * bytes);
+    }
     return val;
 }
 
 /* Update statistics when q newly allocated */
 static void q25_register(q25_ptr q) {
-#if METRIC
+    if (instrumentation_level == 0)
+	return;
     active_counter += 1;
     if (active_counter > peak_active_counter)
 	peak_active_counter = active_counter;
@@ -160,24 +192,23 @@ static void q25_register(q25_ptr q) {
     active_bytes_mpq += bytes;
     if (active_bytes_mpq > peak_active_bytes_mpq)
 	peak_active_bytes_mpq = active_bytes_mpq;
-#endif
 }
 
 /* Update statistics when q newly allocated */
 static void q25_deregister(q25_ptr q) {
-#if METRIC
+    if (instrumentation_level == 0)
+	return;
     active_counter -= 1;
     active_bytes_q25 -= allocation_q25(q);
     active_bytes_mpq -= allocation_mpq(q);
-#endif
 }
 
 /* Initialize data structures */
 static void q25_init() {
     if (initialized)
 	return;
-    q25_reset_counters();
     initialized = true;
+    q25_reset_counters(instrumentation_level);
     int id;
     for (id = 0; id < DCOUNT; id++) {
 	digit_allocated[id] = INIT_DIGITS;
@@ -1601,7 +1632,14 @@ double q25_to_double(q25_ptr q) {
     return x;
 }
 
-void q25_reset_counters() {
+/* 
+   Reset all instrumentation counters and set future level:
+   0     None
+   1     Estimate MPQ sizes
+   2     Find exact MPQ sizes
+ */
+void q25_reset_counters(int level) {
+    instrumentation_level = level;
     operation_counter = 0;
     active_counter = 0;
     peak_active_counter = 0;

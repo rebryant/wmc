@@ -40,11 +40,13 @@
 #include "analysis.h"
 
 void usage(const char *name) {
-    lprintf("Usage: %s [-h] [-s] [-v VERB] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
+    lprintf("Usage: %s [-h] [-s] [-v VERB] [-I ILEVEL] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
     lprintf("  -h          Print this information\n");
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
-    lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
     lprintf("  -v VERB     Set verbosity level\n");
+    lprintf("  -I ILEVEL   Set instrumentation level: 0=none, 1=estimate, 2=exact\n");
+    lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
+
 }
 
 #define BUFLEN 1024
@@ -72,6 +74,7 @@ bool smooth = false;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
+int instrumentation_level = 2;
 
 void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
@@ -102,25 +105,50 @@ void run(const char *cnf_name) {
     fclose(cnf_file);
     if (!local_cnf->is_weighted()) {
 	// Regular count
-	q25_reset_counters();
-	start_time = tod();
 	Evaluator_q25 qev = Evaluator_q25(eg);
+	long unweighted_operations = 0;
+	double peak_dbl_bytes = 0;
+	double peak_mpf_bytes = 0;
+	double peak_q25_bytes = 0;
+	double peak_mpq_bytes = 0;
+	double max_q25_bytes = 0;
+	double max_mpq_bytes = 0;
+	q25_reset_counters(instrumentation_level);
+	if (instrumentation_level > 1) {
+	    qev.evaluate(NULL, smooth);
+	    unweighted_operations = q25_operation_count();
+	    peak_dbl_bytes = q25_peak_allocation_fp(false);
+	    peak_mpf_bytes = q25_peak_allocation_fp(true);
+	    peak_q25_bytes = q25_peak_allocation_q25();
+	    peak_mpq_bytes = q25_peak_allocation_mpq();
+	    max_q25_bytes = q25_max_allocation_q25();
+	    max_mpq_bytes = q25_max_allocation_mpq();
+	    q25_reset_counters(0);
+	}
+	start_time = tod();
 	q25_ptr count = qev.evaluate(NULL, smooth);
 	end_time = tod();
-	long unweighted_operations = q25_operation_count();
-	double peak_dbl_bytes = q25_peak_allocation_fp(false);
-	double peak_mpf_bytes = q25_peak_allocation_fp(true);
-	double peak_q25_bytes = q25_peak_allocation_q25();
-	double peak_mpq_bytes = q25_peak_allocation_mpq();
-	double max_q25_bytes = q25_max_allocation_q25();
-	double max_mpq_bytes = q25_max_allocation_mpq();
+	if (instrumentation_level <= 1) {
+	    unweighted_operations = q25_operation_count();
+	    peak_dbl_bytes = q25_peak_allocation_fp(false);
+	    peak_mpf_bytes = q25_peak_allocation_fp(true);
+	    peak_q25_bytes = q25_peak_allocation_q25();
+	    peak_mpq_bytes = q25_peak_allocation_mpq();
+	    max_q25_bytes = q25_max_allocation_q25();
+	    max_mpq_bytes = q25_max_allocation_mpq();
+	}
 	q25_ptr rcount = q25_round(count, 50);
 	char *scount = q25_best_string(rcount);
 	char cmp = q25_compare(count, rcount) == 0 ? ' ' : '~';
 	q25_free(rcount);
 	lprintf("%s   UNWEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, scount);
-	lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
-		prefix, unweighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
+	if (instrumentation_level == 0) {
+	    lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds\n",
+		    prefix, unweighted_operations, end_time - start_time);
+	} else {
+	    lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		    prefix, unweighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
+	}
 	free(scount);
 	qev.clear_evaluation();
 
@@ -134,8 +162,14 @@ void run(const char *cnf_name) {
 		lprintf("%s   MPQ Count == Q25 Count\n", prefix);
 	    else
 		err(false, "MPQ Count != Q25 Count\n");
-	    lprintf("%s     Unweighted MPQ count required %.3f seconds, %.0f peak (%.0f max) bytes\n",
-		    prefix, end_time - start_time, peak_mpq_bytes, max_mpq_bytes);
+	    if (instrumentation_level == 0) {
+		lprintf("%s     Unweighted MPQ count required %.3f seconds\n",
+			prefix, end_time - start_time);
+	    } else {
+		const char *astring = instrumentation_level > 1 ? "" : "~";
+		lprintf("%s     Unweighted MPQ count required %.3f seconds, %s%.0f peak (%s%.0f max) bytes\n",
+			prefix, end_time - start_time, astring, peak_mpq_bytes, astring, max_mpq_bytes);
+	    }
 	    mpqev.clear_evaluation();
 	    q25_free(ccount);
 	} else {
@@ -184,25 +218,51 @@ void run(const char *cnf_name) {
 	dev.clear_evaluation();
 
     } else {
-	q25_reset_counters();
-	start_time = tod();
 	Evaluator_q25 qev = Evaluator_q25(eg);
+	long weighted_operations = 0;
+	double peak_dbl_bytes = 0;
+	double peak_mpf_bytes = 0;
+	double peak_q25_bytes = 0;
+	double peak_mpq_bytes = 0;
+	double max_q25_bytes = 0;
+	double max_mpq_bytes = 0;
+	q25_reset_counters(instrumentation_level);
+	if (instrumentation_level > 1) {
+	    qev.evaluate(local_cnf->input_weights, smooth);
+	    weighted_operations = q25_operation_count();
+	    peak_dbl_bytes = q25_peak_allocation_fp(false);
+	    peak_mpf_bytes = q25_peak_allocation_fp(true);
+	    peak_q25_bytes = q25_peak_allocation_q25();
+	    peak_mpq_bytes = q25_peak_allocation_mpq();
+	    max_q25_bytes = q25_max_allocation_q25();
+	    max_mpq_bytes = q25_max_allocation_mpq();
+	    q25_reset_counters(0);
+	}
+	start_time = tod();
 	q25_ptr wcount = qev.evaluate(local_cnf->input_weights, smooth);
 	end_time = tod();
-	long weighted_operations = q25_operation_count();
-	double peak_dbl_bytes = q25_peak_allocation_fp(false);
-	double peak_mpf_bytes = q25_peak_allocation_fp(true);
-	double peak_q25_bytes = q25_peak_allocation_q25();
-	double peak_mpq_bytes = q25_peak_allocation_mpq();
-	double max_q25_bytes = q25_max_allocation_q25();
-	double max_mpq_bytes = q25_max_allocation_mpq();
+	if (instrumentation_level <= 1) {
+	    weighted_operations = q25_operation_count();
+	    peak_dbl_bytes = q25_peak_allocation_fp(false);
+	    peak_mpf_bytes = q25_peak_allocation_fp(true);
+	    peak_q25_bytes = q25_peak_allocation_q25();
+	    peak_mpq_bytes = q25_peak_allocation_mpq();
+	    max_q25_bytes = q25_max_allocation_q25();
+	    max_mpq_bytes = q25_max_allocation_mpq();
+	}
 	q25_ptr rwcount = q25_round(wcount, 50);
 	char *swcount = q25_best_string(rwcount);
 	char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
 	q25_free(rwcount);
 	lprintf("%s   WEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, swcount);
-	lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
-		prefix, weighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
+	if (instrumentation_level == 0) {
+	    lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds\n",
+		    prefix, weighted_operations, end_time - start_time);
+	} else {
+	    lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		    prefix, weighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
+
+	}
 	free(swcount);
 	qev.clear_evaluation();
 
@@ -216,8 +276,14 @@ void run(const char *cnf_name) {
 		lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
 	    else
 		err(false, "Q25 weighted count != MPQ weighted count\n");
-	    lprintf("%s     Weighted MPQ count required %.3f seconds, %.0f (%.0f max) peak bytes\n",
-		    prefix, end_time - start_time, peak_mpq_bytes, max_mpq_bytes);
+	    if (instrumentation_level == 0) {
+		lprintf("%s     Weighted MPQ count required %.3f seconds\n",
+			prefix, end_time - start_time);
+	    } else {
+		const char *astring = instrumentation_level > 1 ? "" : "~";
+		lprintf("%s     Weighted MPQ count required %.3f seconds, %s%.0f (%s%.0f max) peak bytes\n",
+			prefix, end_time - start_time, astring, peak_mpq_bytes, astring,  max_mpq_bytes);
+	    }
 	    q25_free(cwcount);
 	    mpqev.clear_evaluation();
 	} else {
@@ -297,7 +363,7 @@ int main(int argc, char *argv[]) {
     int c;
     int mpf_precision = 128;
     FILE *out_file = NULL;
-    while ((c = getopt(argc, argv, "hsv:o:")) != -1) {
+    while ((c = getopt(argc, argv, "hsv:I:o:")) != -1) {
 	switch(c) {
 	case 'h':
 	    usage(argv[0]);
@@ -307,6 +373,9 @@ int main(int argc, char *argv[]) {
 	    break;
 	case 'v':
 	    set_verblevel(atoi(optarg));
+	    break;
+	case 'I':
+	    instrumentation_level = atoi(optarg);
 	    break;
 	case 'o':
 	    out_file = fopen(optarg, "w");

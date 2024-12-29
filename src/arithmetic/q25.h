@@ -28,10 +28,6 @@
 /* Allow functions that make use of the Gnu Multiprecision (GMP) library */
 #define ENABLE_GMP 1
 
-/* Compute allocations for different representations */
-#define METRIC 1
-
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -39,7 +35,6 @@
 #if ENABLE_GMP
 #include <gmp.h>
 #endif
-
 
 /* Allow this headerfile to define C++ constructs if requested */
 #ifdef __cplusplus
@@ -167,8 +162,13 @@ void q25_show(q25_ptr q, FILE *outfile);
 /* Fails if number out of range, or nonintegral */
 bool get_int64(q25_ptr q, int64_t *ip);
 
-/* Reset all counters */
-void q25_reset_counters();
+/* 
+   Reset all instrumentation counters and set future level:
+   0     None
+   1     Estimate MPQ sizes
+   2     Find exact MPQ sizes
+ */
+void q25_reset_counters(int level);
 /* Count of number of non-trivial operations since reset */
 long q25_operation_count();
 /* Get the peak allocated bytes since reset, according to different size models */

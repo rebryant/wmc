@@ -33,10 +33,12 @@ import parallel
 p = parallel.Printer()
 
 def usage(name):
-    p.print("Usage: %s [-f] [-h] [-s] [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
+    p.print("Usage: %s [-f] [-h] [-s] [-I ILEVEL] [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
     p.print("  -h       Print this message")
     p.print("  -f       Force regeneration of all files")
-    p.print("  -D SPATH  Directory for source NNF files")
+    p.print("  -s       Use smoothing")
+    p.print("  -I ILVL  Set instrumentation level")
+    p.print("  -D SPATH Directory for source NNF files")
     p.print("  -N THRDS Run N threads concurrently")
     p.print("  -t TIME  Limit time for each of the programs")
 
@@ -46,6 +48,8 @@ force = False
 threadCount = None
 # Use smoothing?
 smooth = False
+# instrumentation level
+instrumentationLevel = 1
 
 # Pathnames
 def genProgramPath(progName, subdirectory = "bin"):
@@ -110,6 +114,7 @@ def runJob(nnfPath):
         cmd = [genProgramPath("nnfcount")]
         if smooth:
             cmd += ['-s']
+        cmd += ['-I', str(instrumentationLevel)]
         cmd += [nnfPath] + cnfNames
         ok = runCommand(cmd)
         if not ok:
@@ -143,8 +148,9 @@ def run(name, args):
     global force
     global threadCount
     global smooth
+    global instrumentationLevel
     home = None
-    optList, args = getopt.getopt(args, "hfsD:N:")
+    optList, args = getopt.getopt(args, "hfsI:D:N:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -153,6 +159,8 @@ def run(name, args):
             force = True
         elif opt == '-s':
             smooth = True
+        elif opt == '-I':
+            instrumentationLevel = int(val)
         elif opt == '-D':
             home = val
         elif opt == '-N':

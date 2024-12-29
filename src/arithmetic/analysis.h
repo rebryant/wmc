@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /* Upper threshold for digit precision metric */
-#define MAX_DIGIT_PRECISION 40
+#define MAX_DIGIT_PRECISION 1000
 
 /* Returns number between 0 and MAX_DIGIT_PRECISION */
 double digit_precision_q25(q25_ptr qx, q25_ptr y);
