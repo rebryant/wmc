@@ -27,8 +27,7 @@
 
 /* Allow functions that make use of the Gnu Multiprecision (GMP) library */
 #define ENABLE_GMP 1
-/* Include explicit denominator */
-#define RATIONAL 0
+
 /* Compute allocations for different representations */
 #define METRIC 1
 
@@ -69,9 +68,6 @@ typedef struct {
     bool negative: 1;     // Is it negative
     bool infinite: 1;     // Is it + or - infinity
     unsigned dcount : 29; // How many digits does it have (must be at least 1)
-#if RATIONAL
-    unsigned ddcount;     // How many digits are in the denominator (=0 when den = 1)
-#endif 
     int32_t pwr2;         // Power of 2
     int32_t pwr5;         // Power of 5
     uint32_t digit[1];    // Sequence of digits, each between 0 and RADIX-1

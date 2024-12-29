@@ -73,10 +73,6 @@ bool initialized = false;
 static q25_t working_val[DCOUNT];
 static uint32_t *digit_buffer[DCOUNT];
 static unsigned digit_allocated[DCOUNT];
-#if RATIONAL
-static uint32_t *ddigit_buffer[DCOUNT];
-static unsigned ddigit_allocated[DCOUNT];
-#endif
 
 /* Lookup table for powers */
 static uint32_t power2[Q25_DIGITS+1];
@@ -132,18 +128,11 @@ static int qstack_alloc_size = 0;
 
 /**** Computing allocations ****/
 static double allocation_q25(q25_ptr q) {
-#if RATIONAL    
-    return 4 * (5 + q->dcount + q->ddcount);
-#else
     return 4 * (4 + q->dcount);
-#endif
 }
 
 static double allocation_mpq(q25_ptr q) {
     double val = mpq_bytes_per_dcount * q->dcount;
-#if RATIONAL
-    val += mpq_bytes_per_dcount * q->ddcount;
-#endif
     val += mpq_bytes_per_p2 * (q->pwr2 > 0 ? q->pwr2 : -q->pwr2);
     val += mpq_bytes_per_p5 * (q->pwr5 > 0 ? q->pwr5 : -q->pwr5);
     /* Round up to multiple of 8 */
@@ -199,12 +188,6 @@ static void q25_init() {
 	working_val[id].pwr2 = 0;
 	working_val[id].pwr5 = 0;
 	working_val[id].dcount = 1;
-#if RATIONAL
-	ddigit_allocated[id] = INIT_DIGITS;
-	ddigit_buffer[id] = (uint32_t *) calloc(INIT_DIGITS, sizeof(uint32_t));	
-	ddigit_buffer[id][0] = 0;
-	working_val[id].ddcount = 0;
-#endif
     }
     int i;
     uint64_t p2 = 1;
@@ -229,9 +212,6 @@ static void q25_set(int id, uint32_t x) {
     working_val[id].pwr2 = 0;
     working_val[id].pwr5 = 0;
     working_val[id].dcount = 1;
-#if RATIONAL
-    working_val[id].ddcount = 0;
-#endif
     digit_buffer[id][0] = x;
     q25_canonize(id);
 }
@@ -246,11 +226,6 @@ static void q25_work(int id, q25_ptr q) {
     working_val[id].pwr2 = q->pwr2;
     working_val[id].pwr5 = q->pwr5;
     memcpy(digit_buffer[id], q->digit, working_val[id].dcount * sizeof(uint32_t));
-#if RATIONAL
-    working_val[id].ddcount = q->ddcount;
-    if (q->ddcount > 0)
-	memcpy(ddigit_buffer[id], q->digit+q->dcount, working_val[id].ddcount * sizeof(uint32_t));
-#endif
 }
 
 // Make sure enough digits in working space
@@ -271,27 +246,6 @@ static void q25_clear_digits(int id, unsigned len) {
     memset(digit_buffer[WID], 0, len * sizeof(uint32_t));
     working_val[id].dcount = len;
 }
-
-#if RATIONAL
-// Make sure enough digits in working space
-static void q25_dcheck(int id, unsigned ddcount) {
-    q25_init();
-    if (ddcount <= ddigit_allocated[id])
-	return;
-    ddigit_allocated[id] *= 2;
-    if (ddcount > ddigit_allocated[id])
-	ddigit_allocated[id] = ddcount;
-    ddigit_buffer[id] = (uint32_t *) realloc(ddigit_buffer[id], ddigit_allocated[id] * sizeof(uint32_t));
-}
-
-// Clear specified number of digits in workspace.  And set as length
-static void q25_clear_ddigits(int id, unsigned len) {
-    q25_dcheck(id, len);
-    memset(ddigit_buffer[WID], 0, len * sizeof(uint32_t));
-    working_val[id].ddcount = len;
-}
-#endif
-
 
 // Divide by a number < RADIX
 // Assume dividend is valid, finite, and nonzero, and divisor is nonzero
@@ -431,11 +385,6 @@ static q25_ptr q25_build(int id) {
     result->pwr2 = working_val[id].pwr2;
     result->pwr5 = working_val[id].pwr5;
     memcpy(result->digit, digit_buffer[id], working_val[id].dcount * sizeof(uint32_t));
-#if RATIONAL
-    result->ddcount = working_val[id].ddcount;
-    if (working_val[id].ddcount > 0)
-	memcpy(result->digit+working_val[id].dcount, digit_buffer[id], working_val[id].ddcount * sizeof(uint32_t));
-#endif 
     q25_register(result);
     return result;
 }
@@ -552,15 +501,6 @@ static void q25_show_internal(int id, FILE *outfile) {
 	fprintf(outfile, "|");
 	fprintf(outfile, "%u", digit_buffer[id][d]);
     }
-#if RATIONAL    
-    if (working_val[id].ddcount > 0) {
-	int d;
-	fprintf(outfile, "/");
-	for (d = working_val[id].ddcount-1; d >= 0; d--) {
-	    fprintf(outfile, "%u", ddigit_buffer[id][d]);
-	}
-    }
-#endif
     fprintf(outfile, "]");
 }
 
