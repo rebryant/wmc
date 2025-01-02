@@ -14,7 +14,7 @@ def usage(name):
     print("  -h          Print this message")
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
-    print("  -D DIST     Specify distribution: uniform (u) or exponential (e)")
+    print("  -D DIST     Specify distribution: uniform (u), single exponential (e)")
     print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX")
     print("  -N NMETHOD  What show be relation between W(x) and W(-x): sum-to-one (u), negation (n) or indepedent (i)")
     print("  -d DIGITS Number of significant digits")
@@ -62,6 +62,9 @@ class IntegerGenerator:
             return sval
         else:
             return random.randint(self.minValue, self.maxValue)
+
+    def randomBool(self):
+        return random.randint(0,1) == 1
 
 class Negator:
     codes = ['i', 'c', 'u']
@@ -130,18 +133,22 @@ class Range:
 
 
 class Weighter:
-    valid = True
-    message = ""
     digits = 9
     ranger = None
     negator = None
     generator = None
     wdict = None
     docString = ""
+    bilateral = False
 
     def __init__(self, digits, rangeArg, negationMethod, isExponential):
         self.digits = digits
         self.ranger = Range(rangeArg)
+        self.bilateral = False
+        if isExponential and self.ranger.minValue == -self.ranger.maxValue:
+            self.bilateral = True
+            self.ranger.minValue = 0
+            self.ranger.leftOpen = True
         self.negator = Negator(negationMethod, digits)
         scale = 10**self.digits
         minInteger = int(self.ranger.minValue * scale)
@@ -154,6 +161,8 @@ class Weighter:
         self.wdict = {}
         nname = self.negator.name()
         distribution = "exponential" if isExponential else "uniform"
+        if self.bilateral:
+            distribution += " (bilateral)"
         rstring = self.ranger.rangeString
         self.docString = "Digits: %d, Range: %s, Distribution: %s, Negation: %s, Seed: " % (digits, rstring, distribution, nname)
 
@@ -177,11 +186,15 @@ class Weighter:
 
     def assignVariable(self, var):
         ival = self.generator.generate()
+        if self.bilateral and self.generator.randomBool():
+            ival = -ival
         sval = self.stringify(ival)
         self.wdict[var] = sval
         nival = self.negator.negate(ival)
         if nival is None:
             nival = self.generator.generate()
+            if self.bilateral and self.generator.randomBool():
+                nival = -nival
         snval = self.stringify(nival)
         self.wdict[-var] = snval
 
