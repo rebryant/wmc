@@ -3,7 +3,7 @@
 # Generate CNF file that maximizes required precision
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-h] [-d DIGITS] -n COUNT -r ROOT\n" % name)
+    sys.stderr.write("Usage: %s [-h] [-d DIGITS] -n COUNT -N LOGCOUNT -r ROOT\n" % name)
 
 import sys
 import getopt
@@ -115,13 +115,16 @@ def run(name, args):
     n = None
     sigdigs = 9
     root = None
-    optList, args = getopt.getopt(args, "hn:d:r:")
+    optList, args = getopt.getopt(args, "hn:N:d:r:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
         elif opt == '-n':
             n = int(val)
+        elif opt == '-N':
+            pwr = int(val)
+            n = int(10**pwr)
         elif opt == '-d':
             sigdigs = int(val)
         elif opt == '-r':
