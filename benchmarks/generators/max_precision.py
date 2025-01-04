@@ -21,7 +21,8 @@ def weightString(scaled, sigdigs):
     wstring = str(scaled) + "." + wstring
     return wstring
 
-def generateCnf(root, n, sigdigs):
+# Attempt at encoding as CNF.  Not quite right.
+def generateWrongCnf(root, n, sigdigs):
     cnfName = root + ".cnf"
     cnf = readwrite.CnfWriter(n+4, fname=cnfName, verbLevel=2)
     cnf.doHeaderComment("Problem requiring very high precision")
@@ -47,23 +48,40 @@ def generateCnf(root, n, sigdigs):
         wdict[x] = weightString(int(100**sigdigs), sigdigs)
         wdict[-x] = weightString(1, sigdigs)
     cnf.addWeights(wdict)
-#    Skip clause generation
-#    cnf.doComment("  t1 <--> /\\ x_i")
-#    cnf.doClause([t1] + nxvars)
-#    for x in xvars:
-#        cnf.doClause([-t1, x])
-#    cnf.doComment("t2 <--> /\\ !x_i")
-#    cnf.doClause([t2] + xvars)
-#    for nx in nxvars:
-#        cnf.doClause([-t2, nx])
-#    cnf.doComment("t3 <--> t1 \\/ t2")
-#    cnf.doClause([-t3, t1, t2])
-#    cnf.doClause([t3, -t1])
-#    cnf.doClause([t3, -t2])
-#    cnf.doComment("ITE(z, t3, t1)")
-#    cnf.doClause([-z, t3])
-#    cnf.doClause([z, t1])
+    cnf.doComment("  t1 <--> /\\ x_i")
+    cnf.doClause([t1] + nxvars)
+    for x in xvars:
+        cnf.doClause([-t1, x])
+    cnf.doComment("t2 <--> /\\ !x_i")
+    cnf.doClause([t2] + xvars)
+    for nx in nxvars:
+        cnf.doClause([-t2, nx])
+    cnf.doComment("t3 <--> t1 \\/ t2")
+    cnf.doClause([-t3, t1, t2])
+    cnf.doClause([t3, -t1])
+    cnf.doClause([t3, -t2])
+    cnf.doComment("ITE(z, t3, t1)")
+    cnf.doClause([-z, t3])
+    cnf.doClause([z, t1])
     cnf.finish()
+
+def generateWeightedCnf(root, n, sigdigs):
+    cnfName = root + ".cnf"
+    cnf = readwrite.CnfWriter(n+1, fname=cnfName, verbLevel=2)
+    cnf.doHeaderComment("Problem requiring very high precision")
+    cnf.doHeaderComment("Variables: %d+1, Max weight 10e%d, Minimum weight 10e-%d" % (n, sigdigs, sigdigs))
+    xvars = list(range(2, n+2))
+    nxvars = [-x for x in xvars]
+    wdict = {}
+    z  = 1
+    wdict[z]   =  "1.0"
+    wdict[-z]  = "-1.0"
+    for x in xvars:
+        wdict[x] = weightString(int(100**sigdigs), sigdigs)
+        wdict[-x] = weightString(1, sigdigs)
+    cnf.addWeights(wdict)
+    cnf.finish()
+
 
 def writeList(file, ls):
     slist = [str(v) for v in ls]
@@ -85,9 +103,9 @@ def generateNnf(root, n):
     writeList(nfile, ['o', 2, 0])
     writeList(nfile, ['o', 3, 0])
     writeList(nfile, ['t', 4, 0])
-    writeList(nfile, [2, 3, z, 0])
     writeList(nfile, [3, 4] + xlist + [0])
     writeList(nfile, [3, 4] + nxlist + [0])
+    writeList(nfile, [2, 3, z, 0])
     writeList(nfile, [2, 4, -z] + xlist + [0])
     writeList(nfile, [1, 2, 0])
     nfile.close()
@@ -116,7 +134,7 @@ def run(name, args):
         sys.stderr.write("Need root name\n")
         usage(name)
         return
-    generateCnf(root, n, sigdigs)
+    generateWeightedCnf(root, n, sigdigs)
     generateNnf(root, n)
     
 if __name__ == "__main__":
