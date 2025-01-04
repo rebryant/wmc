@@ -1447,12 +1447,12 @@ char *q25_scientific_string(q25_ptr q) {
     int i;
     if (n10 == 1) {
 	string_append_char('0');
-	return string_buffer;
-    }
-    for (i = n10-2; i >= 0; i--) {
-	int d10 = q25_get_digit10(WID, i);
-	char d = '0' + d10;
-	string_append_char(d);
+    } else {
+	for (i = n10-2; i >= 0; i--) {
+	    int d10 = q25_get_digit10(WID, i);
+	    char d = '0' + d10;
+	    string_append_char(d);
+	}
     }
     if (p10 != 0) {
 	string_append_char('e');
