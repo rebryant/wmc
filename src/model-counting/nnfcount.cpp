@@ -185,17 +185,25 @@ void run(const char *cnf_name) {
 	    double precision = digit_precision_q25(count, fccount);
 	    mp_exp_t ecount;
 	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    char leading = '0';
+	    bool zero = sfcount[0] == 0 || sfcount[0] == '0';
+	    bool neg = sfcount[0] == '-';
+	    const char *nstring = neg ? "-" : "";
 	    int offset = 0;
-	    if (sfcount[0] != '0') {
+	    if (neg)
+		offset++;
+	    char leading = '0';
+	    if (zero) {
 		ecount--;
 		leading = sfcount[0];
 		offset++;
 	    }
-	    if (ecount == 0)
-		lprintf("%s   UNWEIGHTED MPF COUNT    = %c.%s (precision = %.3f)\n", prefix, leading, &sfcount[offset], precision);
-	    else
-		lprintf("%s   UNWEIGHTED MPF COUNT    = %c.%se%ld (precision = %.3f)\n", prefix, leading, &sfcount[offset], ecount, precision);
+	    if (ecount == 0) {
+		if (zero)
+		    lprintf("%s   UNWEIGHTED MPF COUNT    = 0.0 (precision = %.3f)\n", prefix, precision);
+		else
+		    lprintf("%s   UNWEIGHTED MPF COUNT    = %s%c.%s (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], precision);
+	    } else
+		lprintf("%s   UNWEIGHTED MPF COUNT    = %s%c.%se%ld (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], ecount, precision);
 	    lprintf("%s     Unweighted MPF count required %.3f seconds, %.0f peak bytes\n",
 		    prefix, end_time - start_time, peak_mpf_bytes);
 	    q25_free(fccount);
@@ -299,17 +307,25 @@ void run(const char *cnf_name) {
 	    double precision = digit_precision_q25(wcount, fccount);
 	    mp_exp_t ecount;
 	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    char leading = '0';
+	    bool zero = sfcount[0] == 0 || sfcount[0] == '0';
+	    bool neg = sfcount[0] == '-';
+	    const char *nstring = neg ? "-" : "";
 	    int offset = 0;
-	    if (sfcount[0] != '0') {
+	    if (neg)
+		offset++;
+	    char leading = '0';
+	    if (!zero) {
 		ecount--;
 		leading = sfcount[0];
 		offset++;
 	    }
-	    if (ecount == 0)
-		lprintf("%s   WEIGHTED MPF COUNT    = %c.%s (precision = %.3f)\n", prefix, leading, &sfcount[offset], precision);
-	    else
-		lprintf("%s   WEIGHTED MPF COUNT    = %c.%se%ld (precision = %.3f)\n", prefix, leading, &sfcount[offset], ecount, precision);
+	    if (ecount == 0) {
+		if (zero)
+		    lprintf("%s   WEIGHTED MPF COUNT    = 0.0 (precision = %.3f)\n", prefix, precision);
+		else
+		    lprintf("%s   WEIGHTED MPF COUNT    = %s%c.%s (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], precision);
+	    } else
+		lprintf("%s   WEIGHTED MPF COUNT    = %s%c.%se%ld (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], ecount, precision);
 	    lprintf("%s     Weighted MPF count required %.3f seconds, %.0f peak bytes\n",
 		    prefix, end_time - start_time, peak_mpf_bytes);
 	    q25_free(fccount);
