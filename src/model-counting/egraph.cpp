@@ -887,12 +887,22 @@ bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal
 }
 
 void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed) {
-    value = 1;
+    // Use breadth-first evaluation to form balanced binary tree
+    std::vector<mpq_class> eval_queue;
     for (int lit : e.literals)
-	value *= evaluation_weights[lit];
-    if (smoothed) {
+	eval_queue.push_back(evaluation_weights[lit]);
+    if (smoothed)
 	for (int v : e.smoothing_variables)
-	    value *= smoothing_weights[v];
+	    eval_queue.push_back(smoothing_weights[v]);
+    if (eval_queue.size() == 0)
+	value = 1;
+    else {
+	size_t index = 0;
+	while (index < eval_queue.size()-1) {
+	    eval_queue.push_back(eval_queue[index] * eval_queue[index+1]);
+	    index += 2;
+	}
+	value = eval_queue[index];
     }
     if (verblevel >= 4) {
 	char *svalue = mpq_get_str(NULL, 10, value.get_mpq_t());
