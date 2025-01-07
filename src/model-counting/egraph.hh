@@ -198,6 +198,8 @@ private:
 Evaluation via MPFI interval floating point
 *******************************************************************************************************************/
 
+double mpfi_digit_precision(mpfi_srcptr v);
+
 class Evaluator_mpfi {
 private:
     Egraph *egraph;
@@ -217,8 +219,8 @@ public:
     void clear_evaluation();
     
     // Instrumentation
-    int min_digit_precision;
-    unsigned precision_failure_count;
+    double min_digit_precision;
+    long precision_failure_count;
 
 private:
     bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);

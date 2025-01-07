@@ -168,32 +168,6 @@ void run(const char *cnf_name) {
 	    q25_ptr fccount = q25_from_mpf(fcount.get_mpf_t());
 	    double precision = digit_precision_q25(count, fccount);
 	    q25_free(fccount);
-#if  0
-	    mp_exp_t ecount;
-	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    bool zero = sfcount[0] == 0 || sfcount[0] == '0';
-	    bool neg = sfcount[0] == '-';
-	    const char *nstring = neg ? "-" : "";
-	    int offset = 0;
-	    if (neg)
-		offset++;
-	    char leading = '0';
-	    if (zero) {
-		ecount--;
-		leading = sfcount[0];
-		offset++;
-	    }
-	    if (ecount == 0) {
-		if (zero)
-		    lprintf("%s   UNWEIGHTED MPF COUNT    = 0.0 (precision = %.3f)\n", prefix, precision);
-		else
-		    lprintf("%s   UNWEIGHTED MPF COUNT    = %s%c.%s (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], precision);
-	    } else
-		lprintf("%s   UNWEIGHTED MPF COUNT    = %s%c.%se%ld (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], ecount, precision);
-	    lprintf("%s     Unweighted MPF count required %.3f seconds\n",
-		    prefix, end_time - start_time);
-	    free(sfcount);
-#endif
 	    const char *sfcount = mpf_string(fcount.get_mpf_t());
 	    lprintf("%s   UNWEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
 	    mpfev.clear_evaluation();
@@ -277,6 +251,8 @@ void run(const char *cnf_name) {
 	    q25_free(fccount);
 	    const char *sfcount = mpf_string(fcount.get_mpf_t());
 	    lprintf("%s   WEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
+	    lprintf("%s     Weighted MPF count required %.3f seconds\n",
+		    prefix, end_time - start_time);
 	    mpfev.clear_evaluation();
 	} else {
 	    lprintf("%s Calculation of weighted count using mpf failed\n", prefix);
@@ -284,12 +260,35 @@ void run(const char *cnf_name) {
 	start_time = tod();
 	Evaluator_double dev = Evaluator_double(eg);
 	double dwcount = dev.evaluate(local_cnf->input_weights, smooth);
+	end_time = tod();
 	double wprecision = digit_precision_mix(wcount, dwcount);
 	lprintf("%s   WEIGHTED DBL COUNT    = %.20g (precision = %.3f)\n", prefix, dwcount, wprecision);
 	lprintf("%s     Weighted DBL count required %.3f seconds\n",
-		prefix, tod() - start_time);
+		prefix, end_time - start_time);
 	q25_free(wcount);
 	dev.clear_evaluation();
+
+	start_time = tod();
+	Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, 20, false);
+	mpfi_t icount;
+	mpfi_init(icount);
+	if (mpfiev.evaluate(icount, local_cnf->input_weights, smooth)) {
+	    end_time = tod();
+	    double dp = mpfi_digit_precision(icount);
+	    mpfr_t mid;
+	    mpfr_init(mid);
+	    mpfi_mid(mid, icount);
+	    const char *sicount = mpfr_string(mid);
+	    lprintf("%s   WEIGHTED MPFI COUNT   = %s (precision = %.3f)\n", prefix, sicount, dp);
+	    lprintf("%s     Weighted MPFI count required %.3f seconds\n",
+		    prefix, end_time - start_time);
+	    lprintf("%s     Weighted MPFI had %ld precision failures and a minimum precision of %.3f\n",
+		    prefix, mpfiev.precision_failure_count, mpfiev.min_digit_precision);
+	    mpfiev.clear_evaluation();
+	} else {
+	    lprintf("%s Calculation of weighted count using mpfi failed\n", prefix);
+	}
+
     }
     delete local_cnf;
 }
@@ -379,6 +378,7 @@ int main(int argc, char *argv[]) {
 	err(true, "Couldn't open CNF file '%s'\n", cnf_name);
 
     mpf_set_default_prec(mpf_precision);
+    mpfr_set_default_prec(mpf_precision);
 
     double start = tod();
     setup(cnf_file, nnf_file, out_file);
