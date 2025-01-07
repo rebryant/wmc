@@ -784,6 +784,21 @@ Evaluation via Gnu multi-precision rational arithmetic
 *******************************************************************************************************************/
 
 
+static size_t mpq_bytes(mpq_srcptr val) {
+    /* Overhead */
+    size_t size = 32;
+    mpz_t mp_num, mp_den;
+    mpz_init(mp_num); mpz_init(mp_den);
+    mpq_get_num(mp_num, val);
+    size += mpz_size(mp_num) * sizeof(mp_limb_t);
+    mpq_get_den(mp_den, val);
+    size += mpz_size(mp_den) * sizeof(mp_limb_t);
+    size += 8 * ceil(0.125 * size);
+    mpz_clear(mp_num); mpz_clear(mp_den);
+    return size;
+}
+
+
 Evaluator_mpq::Evaluator_mpq(Egraph *eg) { 
     egraph = eg;
     clear_evaluation();
@@ -797,6 +812,7 @@ void Evaluator_mpq::clear_evaluation() {
     //	mpq_clear(iter.second);
     smoothing_weights.clear();
     rescale = 1;
+    max_bytes = 0;
 }
 
 static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
@@ -883,6 +899,10 @@ void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothe
 	report(4, "MPQ: Evaluating edge (%d <-- %d).  Value = %s\n", e.to_id, e.from_id, svalue);
 	free(svalue);
     }
+    size_t bytes = mpq_bytes(value.get_mpq_t());
+    if (bytes > max_bytes)
+	max_bytes = bytes;
+
 }
 
 bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
@@ -920,6 +940,10 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
 	    operation_values[e.to_id-1] *= product;
 	else
 	    operation_values[e.to_id-1] += product;
+	size_t bytes = mpq_bytes(operation_values[e.to_id-1].get_mpq_t());
+	if (bytes > max_bytes)
+	    max_bytes = bytes;
+				 
 	if (verblevel >= 4) {
 	    char *sfrom = mpq_get_str(NULL, 10, operation_values[e.from_id-1].get_mpq_t());
 	    char *sproduct = mpq_get_str(NULL, 10, product.get_mpq_t());

@@ -98,6 +98,8 @@ public:
     // literal_weights == NULL for unweighted
     q25_ptr evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void clear_evaluation();
+    int max_size;
+
     
 private:
     void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
@@ -171,6 +173,8 @@ public:
     // literal_weights == NULL for unweighted
     bool evaluate(mpq_class &count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void clear_evaluation();
+    // Maximum number of bytes in MPQ representation of any generated value
+    size_t max_bytes;
     
 private:
     bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
