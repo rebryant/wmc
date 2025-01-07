@@ -33,8 +33,62 @@
 
 #include "report.h"
 #include "counters.h"
+#include "analysis.h"
 #include "egraph.hh"
 #include "cnf_info.hh"
+
+/*
+  Useful functions
+
+ */
+
+const char *mpf_string(mpf_srcptr val) {
+    char buf[2048];
+    char boffset = 0;
+    mp_exp_t ecount;
+    char *sval = mpf_get_str(NULL, &ecount, 10, 40, val);
+    if (!sval || strlen(sval) == 0 || sval[0] == '0') {
+	strcpy(buf, "0.0");
+    } else {
+	int voffset = 0;
+	bool neg = sval[0] == '-';
+	if (neg) {
+	    voffset++;
+	    buf[boffset++] = '-';
+	}
+	if (ecount == 0) {
+	    buf[boffset++] = '0';
+	    buf[boffset++] = '.';
+	} else {
+	    buf[boffset++] = sval[voffset++];
+	    buf[boffset++] = '.';
+	    ecount--;
+	}
+	if (sval[voffset] == 0)
+	    buf[boffset++] = '0';
+	else {
+	    while(sval[voffset] != 0)
+		buf[boffset++] = sval[voffset++];
+	}
+	if (ecount != 0) {
+	    buf[boffset++] = 'e';
+	    snprintf(&buf[boffset], 24, "%ld", (long) ecount);
+	}
+    }
+    free(sval);
+    return archive_string(buf);
+}
+
+
+const char *mpfr_string(mpfr_srcptr val) {
+    mpf_t fval;
+    mpf_init(fval);
+    mpfr_get_f(fval, val, MPFR_RNDN);
+    const char* result = mpf_string(fval);
+    mpf_clear(fval);
+    return result;
+}
+
 
 /*******************************************************************************************************************
  Graph representing NNF formula
@@ -990,3 +1044,38 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
     return true;
 }
 
+/*******************************************************************************************************************
+Evaluation via MPFI
+*******************************************************************************************************************/
+
+static double mpfi_digit_precsision(mpfi_srcptr v) {
+    mpfr_t diam;
+    mpfr_init(diam);
+    mpfi_diam_abs(diam, v);
+    if (mpfr_sgn(diam) == 0) {
+	mpfr_clear(diam);
+	return MAX_DIGIT_PRECISION;
+    }
+
+    mpfr_t avg;
+    mpfr_init(avg);
+    mpfi_mid(avg, v);
+    int asign = mpfr_sgn(avg);
+    if (asign == 0) {
+	mpfr_clears(diam, avg, NULL);
+	return 0.0;
+    } else if (asign < 0)
+	mpfr_neg(avg, avg, MPFR_RNDN);
+
+    mpfr_t div;
+    mpfr_init(div);
+    mpfr_div(div, diam, avg, MPFR_RNDN);
+    double ddiv = mpfr_get_d(div, MPFR_RNDN);
+    double result = -log10(ddiv);
+    if (result < 0.0)
+	result = 0.0;
+    if (result > MAX_DIGIT_PRECISION)
+	result = MAX_DIGIT_PRECISION;
+    mpfr_clears(diam, avg, div, NULL);
+    return result;
+}

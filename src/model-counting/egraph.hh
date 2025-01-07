@@ -30,13 +30,26 @@
 
 #include <cstdio>
 #include <cstdlib>
+
+#include <stdint.h>
+#include <stdarg.h>
+
 #include <vector>
 #include <unordered_set>
 
+#include <gmp.h>
 #include <gmpxx.h>
+
+#include <mpfr.h>
+#include <mpfi.h>
 
 
 #include "q25.h"
+
+/* Some useful utility functions */
+
+const char *mpf_string(mpf_srcptr val);
+const char *mpfr_string(mpfr_srcptr val);
 
 /*******************************************************************************************************************
  Graph representing NNF formula
@@ -182,8 +195,42 @@ private:
 };
 
 /*******************************************************************************************************************
+Evaluation via MPFI interval floating point
+*******************************************************************************************************************/
+
+class Evaluator_mpfi {
+private:
+    Egraph *egraph;
+    // For evaluation.  Use MPQ to store weights precisely
+    std::unordered_map<int,mpq_class> evaluation_weights;
+    std::unordered_map<int,mpq_class> smoothing_weights;
+    mpfi_t rescale;
+    int target_digit_precision;
+    /* Use recomputation to achieve desired precision */
+    bool refine;
+
+public:
+
+    Evaluator_mpfi(Egraph *egraph, int target_digit_precision, bool refine);
+    // literal_weights == NULL for unweighted
+    bool evaluate(mpfi_ptr count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void clear_evaluation();
+    
+    // Instrumentation
+    int min_digit_precision;
+    unsigned precision_failure_count;
+
+private:
+    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void evaluate_edge(mpfi_ptr value, Egraph_edge &e, bool smoothed);
+};
+
+
+/*******************************************************************************************************************
 Evaluation via Gnu multi-precision integer arithmetic (unweighted counting only)
 *******************************************************************************************************************/
+
+/** NOT IMPLEMENTED **/
 
 class Evaluator_mpz {
 private:

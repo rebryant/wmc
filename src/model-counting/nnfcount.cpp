@@ -167,6 +167,8 @@ void run(const char *cnf_name) {
 	    end_time = tod();
 	    q25_ptr fccount = q25_from_mpf(fcount.get_mpf_t());
 	    double precision = digit_precision_q25(count, fccount);
+	    q25_free(fccount);
+#if  0
 	    mp_exp_t ecount;
 	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
 	    bool zero = sfcount[0] == 0 || sfcount[0] == '0';
@@ -190,8 +192,10 @@ void run(const char *cnf_name) {
 		lprintf("%s   UNWEIGHTED MPF COUNT    = %s%c.%se%ld (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], ecount, precision);
 	    lprintf("%s     Unweighted MPF count required %.3f seconds\n",
 		    prefix, end_time - start_time);
-	    q25_free(fccount);
 	    free(sfcount);
+#endif
+	    const char *sfcount = mpf_string(fcount.get_mpf_t());
+	    lprintf("%s   UNWEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
 	    mpfev.clear_evaluation();
 	} else {
 	    lprintf("%s Calculation of unweighted count using mpf failed\n", prefix);
@@ -270,31 +274,9 @@ void run(const char *cnf_name) {
 	    end_time = tod();
 	    q25_ptr fccount = q25_from_mpf(fcount.get_mpf_t());
 	    double precision = digit_precision_q25(wcount, fccount);
-	    mp_exp_t ecount;
-	    char *sfcount = mpf_get_str(NULL, &ecount, 10, 40, fcount.get_mpf_t());
-	    bool zero = sfcount[0] == 0 || sfcount[0] == '0';
-	    bool neg = sfcount[0] == '-';
-	    const char *nstring = neg ? "-" : "";
-	    int offset = 0;
-	    if (neg)
-		offset++;
-	    char leading = '0';
-	    if (!zero) {
-		ecount--;
-		leading = sfcount[0];
-		offset++;
-	    }
-	    if (ecount == 0) {
-		if (zero)
-		    lprintf("%s   WEIGHTED MPF COUNT    = 0.0 (precision = %.3f)\n", prefix, precision);
-		else
-		    lprintf("%s   WEIGHTED MPF COUNT    = %s%c.%s (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], precision);
-	    } else
-		lprintf("%s   WEIGHTED MPF COUNT    = %s%c.%se%ld (precision = %.3f)\n", prefix, nstring, leading, &sfcount[offset], ecount, precision);
-	    lprintf("%s     Weighted MPF count required %.3f seconds\n",
-		    prefix, end_time - start_time);
 	    q25_free(fccount);
-	    free(sfcount);
+	    const char *sfcount = mpf_string(fcount.get_mpf_t());
+	    lprintf("%s   WEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
 	    mpfev.clear_evaluation();
 	} else {
 	    lprintf("%s Calculation of weighted count using mpf failed\n", prefix);

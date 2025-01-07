@@ -8,7 +8,7 @@ LDIR = ../../lib
 CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11 -I $(IDIR)
 
 MYLIBS =  $(LDIR)/wmc_arithmetic.a $(LDIR)/wmc_util.a 
-LIBS = $(MYLIBS) -lz -lgmpxx -lgmp
+LIBS = $(MYLIBS) -lz -lgmpxx -lgmp -lmpfr -lmpfi
 
 # ARM specific things
 LOCAL=/opt/homebrew
