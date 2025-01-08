@@ -165,7 +165,7 @@ void run(const char *cnf_name) {
 	end_time = tod();
 	double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
 	const char *sfcount = mpf_string(fcount.get_mpf_t());
-	lprintf("%s   %s MPF COUNT    = %s (precision = %.3f )\n", prefix, wlabel, sfcount, precision);
+	lprintf("%s   %s MPF COUNT    = %s   precision = %.3f\n", prefix, wlabel, sfcount, precision);
 	lprintf("%s     MPF required %.3f seconds\n",
 		prefix, end_time - start_time);
 	mpfev.clear_evaluation();
@@ -177,7 +177,7 @@ void run(const char *cnf_name) {
     double dwcount = dev.evaluate(input_weights, smooth);
     end_time = tod();
     double wprecision = digit_precision_d(dwcount, qwcount.get_mpq_t());
-    lprintf("%s   %s DBL COUNT    = %.20g (precision = %.3f )\n", prefix, wlabel, dwcount, wprecision);
+    lprintf("%s   %s DBL COUNT    = %.20g   precision = %.3f\n", prefix, wlabel, dwcount, wprecision);
     lprintf("%s     DBL required %.3f seconds\n",
 	    prefix, end_time - start_time);
     dev.clear_evaluation();
@@ -193,7 +193,7 @@ void run(const char *cnf_name) {
 	mpfr_init(mid);
 	mpfi_mid(mid, icount);
 	const char *sicount = mpfr_string(mid);
-	lprintf("%s   %s MPFI COUNT   = %s (precision = %.3f)\n", prefix, wlabel, sicount, dp);
+	lprintf("%s   %s MPFI COUNT   = %s   precision = %.3f\n", prefix, wlabel, sicount, dp);
 	lprintf("%s     MPFI required %.3f seconds\n",
 		prefix, end_time - start_time);
 	lprintf("%s     MPFI had %ld precision failures and a minimum precision of %.3f\n",
