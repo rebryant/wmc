@@ -90,6 +90,92 @@ const char *mpfr_string(mpfr_srcptr val) {
     return result;
 }
 
+double digit_precision_mpfi(mpfi_srcptr v) {
+    mpfr_t diam;
+    mpfr_init(diam);
+    mpfi_diam_abs(diam, v);
+    if (mpfr_sgn(diam) == 0) {
+	mpfr_clear(diam);
+	return MAX_DIGIT_PRECISION;
+    }
+
+    mpfr_t avg;
+    mpfr_init(avg);
+    mpfi_mid(avg, v);
+    mpfr_abs(avg, avg, MPFR_RNDN);
+
+    mpfr_t div;
+    mpfr_init(div);
+    mpfr_div(div, diam, avg, MPFR_RNDN);
+    double ddiv = mpfr_get_d(div, MPFR_RNDN);
+    double result = -log10(ddiv);
+    if (result < 0.0)
+	result = 0.0;
+    if (result > MAX_DIGIT_PRECISION)
+	result = MAX_DIGIT_PRECISION;
+    mpfr_clears(diam, avg, div, NULL);
+    return result;
+}
+
+double digit_precision_mpfr(mpfr_srcptr val, mpq_srcptr ref) {
+    mpfr_prec_t save_prec = mpfr_get_default_prec();
+    mpfr_t fref;
+    mpfr_prec_t vprec = 3*mpfr_get_prec(val);
+    mpfr_set_default_prec(vprec);
+    mpfr_init_set_q(fref, ref, MPFR_RNDN);
+    if (mpfr_cmp(val, fref) == 0) {
+	mpfr_clear(fref);
+	mpfr_set_default_prec(save_prec);
+	return (double) MAX_DIGIT_PRECISION;
+    }
+
+    mpfr_t num;
+    mpfr_init_set(num, val, MPFR_RNDN);
+    mpfr_sub(num, num, fref, MPFR_RNDN);
+    mpfr_abs(num, num, MPFR_RNDN);
+
+    mpfr_t den;
+    mpfr_init_set(den, val, MPFR_RNDN);
+    mpfr_abs(den, den, MPFR_RNDN);
+    mpfr_abs(fref, fref, MPFR_RNDN);
+    mpfr_add(den, den, fref, MPFR_RNDN);
+
+    mpfr_mul_d(den, den, 0.5, MPFR_RNDN);
+    mpfr_div(num, num, den, MPFR_RNDN);
+    mpfr_log10(num, num, MPFR_RNDN);
+    double result = -mpfr_get_d(num, MPFR_RNDN);
+    if (result < 0)
+	result = 0.0;
+    if (result > MAX_DIGIT_PRECISION)
+	result = MAX_DIGIT_PRECISION;
+    mpfr_clears(fref, num, den, NULL);
+    mpfr_set_default_prec(save_prec);
+    return result;
+    
+}
+
+double digit_precision_mpf(mpf_srcptr val, mpq_srcptr ref) {
+    mpfr_t rval;
+    int prec = mpf_get_prec(val);
+    mpfr_init2(rval, prec);
+    mpfr_set_f(rval, val, MPFR_RNDN);
+    double result = digit_precision_mpfr(rval, ref);
+    mpfr_clear(rval);
+    return result;
+}
+
+double digit_precision_d(double val, mpq_srcptr ref) {
+    mpfr_t rval;
+    int prec = 64;
+    mpfr_init2(rval, prec);
+    mpfr_set_d(rval, val, MPFR_RNDN);
+    double result = digit_precision_mpfr(rval, ref);
+    mpfr_clear(rval);
+    return result;
+}
+
+
+
 
 /*******************************************************************************************************************
  Graph representing NNF formula
@@ -1049,38 +1135,6 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
 Evaluation via MPFI
 *******************************************************************************************************************/
 
-double mpfi_digit_precision(mpfi_srcptr v) {
-    mpfr_t diam;
-    mpfr_init(diam);
-    mpfi_diam_abs(diam, v);
-    if (mpfr_sgn(diam) == 0) {
-	mpfr_clear(diam);
-	return MAX_DIGIT_PRECISION;
-    }
-
-    mpfr_t avg;
-    mpfr_init(avg);
-    mpfi_mid(avg, v);
-    int asign = mpfr_sgn(avg);
-    if (asign == 0) {
-	mpfr_clears(diam, avg, NULL);
-	return 0.0;
-    } else if (asign < 0)
-	mpfr_neg(avg, avg, MPFR_RNDN);
-
-    mpfr_t div;
-    mpfr_init(div);
-    mpfr_div(div, diam, avg, MPFR_RNDN);
-    double ddiv = mpfr_get_d(div, MPFR_RNDN);
-    double result = -log10(ddiv);
-    if (result < 0.0)
-	result = 0.0;
-    if (result > MAX_DIGIT_PRECISION)
-	result = MAX_DIGIT_PRECISION;
-    mpfr_clears(diam, avg, div, NULL);
-    return result;
-}
-
 Evaluator_mpfi::Evaluator_mpfi(Egraph *eg, int tdp, bool ref) { 
     egraph = eg;
     target_digit_precision = tdp;
@@ -1198,7 +1252,7 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
 	else {
 	    mpfi_add(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
 	}
-	double dp = mpfi_digit_precision(operation_values[e.to_id-1]);
+	double dp = digit_precision_mpfi(operation_values[e.to_id-1]);
 	if (dp < min_digit_precision)
 	    min_digit_precision = dp;
 	if (dp < target_digit_precision)

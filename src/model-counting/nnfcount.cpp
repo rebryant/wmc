@@ -75,7 +75,6 @@ bool use_q25 = false;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
-int instrumentation_level = 1;
 
 void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
@@ -104,191 +103,104 @@ void run(const char *cnf_name) {
     Cnf *local_cnf = new Cnf();
     local_cnf->import_file(cnf_file, true, false);
     fclose(cnf_file);
-    if (!local_cnf->is_weighted()) {
-	// Regular count
-	Evaluator_q25 qev = Evaluator_q25(eg);
-	long unweighted_operations = 0;
-	double peak_q25_bytes = 0;
-	double max_q25_bytes = 0;
-	q25_ptr count = q25_from_32(0);
-	if (use_q25) {
-	    start_time = tod();
-	    count = qev.evaluate(NULL, smooth);
-	    end_time = tod();
-	    if (instrumentation_level <= 1) {
-		unweighted_operations = q25_operation_count();
-		peak_q25_bytes = q25_peak_allocation_q25();
-		max_q25_bytes = q25_max_allocation_q25();
-	    }
-	    q25_ptr rcount = q25_round(count, 50);
-	    char *scount = q25_best_string(rcount);
-	    char cmp = q25_compare(count, rcount) == 0 ? ' ' : '~';
-	    q25_free(rcount);
-	    lprintf("%s   UNWEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, scount);
-	    lprintf("%s     Unweighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
-		    prefix, unweighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
-	    free(scount);
-	    qev.clear_evaluation();
-	}
+    
+    std::unordered_map<int,const char*> *input_weights = NULL;
+    const char *wlabel = "UNWEIGHTED";
+    if (local_cnf->is_weighted()) {
+	input_weights = local_cnf->input_weights;
+	wlabel = "WEIGHTED";
+    }
 
-	mpq_class qcount = 0;
-	start_time = tod();
-	Evaluator_mpq mpqev = Evaluator_mpq(eg);
-	if (mpqev.evaluate(qcount, NULL, smooth)) {
-	    end_time = tod();
-	    q25_ptr ccount = q25_from_mpq(qcount.get_mpq_t());
-	    if (use_q25) {
-		if (q25_compare(count, ccount) == 0) 
-		    lprintf("%s   MPQ Count == Q25 Count\n", prefix);
-		else
-		    err(false, "MPQ Count != Q25 Count\n");
-		q25_free(ccount);
-	    } else {
-		q25_free(count);
-		count = ccount;
-		q25_ptr rcount = q25_round(count, 50);
-		char *scount = q25_best_string(rcount);
-		char cmp = q25_compare(count, rcount) == 0 ? ' ' : '~';
-		q25_free(rcount);
-		lprintf("%s   UNWEIGHTED MPQ COUNT   %c= %s\n", prefix, cmp, scount);
-
-	    }
-	    lprintf("%s     Unweighted MPQ count required %.3f seconds, %d max bytes\n",
-		    prefix, end_time - start_time, (int) mpqev.max_bytes);
-	    mpqev.clear_evaluation();
-	} else {
-	    lprintf("%s Calculation of unweighted count using mpq failed\n", prefix);
-	}
-
-	start_time = tod();
-	Evaluator_mpf mpfev = Evaluator_mpf(eg);
-	mpf_class fcount = 0;
-	if (mpfev.evaluate(fcount, NULL, smooth)) {
-	    end_time = tod();
-	    q25_ptr fccount = q25_from_mpf(fcount.get_mpf_t());
-	    double precision = digit_precision_q25(count, fccount);
-	    q25_free(fccount);
-	    const char *sfcount = mpf_string(fcount.get_mpf_t());
-	    lprintf("%s   UNWEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
-	    mpfev.clear_evaluation();
-	} else {
-	    lprintf("%s Calculation of unweighted count using mpf failed\n", prefix);
-	}
-
-
-	start_time = tod();
-	Evaluator_double dev = Evaluator_double(eg);
-	double dcount = dev.evaluate(NULL, smooth);
-	end_time = tod();
-	double precision = digit_precision_mix(count, dcount);
-	lprintf("%s   UNWEIGHTED DBL COUNT    = %.1f (precision = %.3f)\n", prefix, dcount, precision);
-	lprintf("%s     Unweighted DBL count required %.3f seconds\n",
-		prefix, end_time - start_time);
-	q25_free(count);
-	dev.clear_evaluation();
-
-    } else {
+    q25_ptr wcount = q25_from_32(0);
+    mpq_class qwcount = 0;
+    if (use_q25) {
 	Evaluator_q25 qev = Evaluator_q25(eg);
 	long weighted_operations = 0;
 	double peak_q25_bytes = 0;
 	double max_q25_bytes = 0;
-	q25_ptr wcount = q25_from_32(0);
-	if (use_q25) {
-	    start_time = tod();
-	    wcount = qev.evaluate(local_cnf->input_weights, smooth);
-	    end_time = tod();
-	    if (instrumentation_level <= 1) {
-		weighted_operations = q25_operation_count();
-		peak_q25_bytes = q25_peak_allocation_q25();
-		max_q25_bytes = q25_max_allocation_q25();
-	    }
-	    q25_ptr rwcount = q25_round(wcount, 50);
-	    char *swcount = q25_best_string(rwcount);
-	    char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
-	    q25_free(rwcount);
-	    lprintf("%s   WEIGHTED Q25 COUNT   %c= %s\n", prefix, cmp, swcount);
-	    lprintf("%s     Weighted Q25 count required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
-		    prefix, weighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
-	    free(swcount);
-	    qev.clear_evaluation();
-	}
-
 	start_time = tod();
-	Evaluator_mpq mpqev = Evaluator_mpq(eg);
-	mpq_class qwcount = 0;
-	if (mpqev.evaluate(qwcount, local_cnf->input_weights, smooth)) {
-	    end_time = tod();
-	    q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
-	    if (use_q25) {
-		if (q25_compare(wcount, cwcount) == 0) 
-		    lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
-		else
-		    err(false, "Q25 weighted count != MPQ weighted count\n");
-		q25_free(cwcount);
-	    } else {
-		q25_free(wcount);
-		wcount = cwcount;
-		q25_ptr rwcount = q25_round(wcount, 50);
-		char *swcount = q25_best_string(rwcount);
-		char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
-		q25_free(rwcount);
-		lprintf("%s   WEIGHTED MPQ COUNT   %c= %s\n", prefix, cmp, swcount);
-	    }
-	    lprintf("%s     Weighted MPQ count required %.3f seconds, %d max bytes\n",
-		    prefix, end_time - start_time, mpqev.max_bytes);
-	    mpqev.clear_evaluation();
-	} else {
-	    lprintf("%s Calculation of weighted count using mpq failed\n", prefix);
-	}
-
-	start_time = tod();
-	Evaluator_mpf mpfev = Evaluator_mpf(eg);
-	mpf_class fcount = 0;
-	if (mpfev.evaluate(fcount, local_cnf->input_weights, smooth)) {
-	    end_time = tod();
-	    q25_ptr fccount = q25_from_mpf(fcount.get_mpf_t());
-	    double precision = digit_precision_q25(wcount, fccount);
-	    q25_free(fccount);
-	    const char *sfcount = mpf_string(fcount.get_mpf_t());
-	    lprintf("%s   WEIGHTED MPF COUNT    = %s (precision = %.3f)\n", prefix, sfcount, precision);
-	    lprintf("%s     Weighted MPF count required %.3f seconds\n",
-		    prefix, end_time - start_time);
-	    mpfev.clear_evaluation();
-	} else {
-	    lprintf("%s Calculation of weighted count using mpf failed\n", prefix);
-	}
-	start_time = tod();
-	Evaluator_double dev = Evaluator_double(eg);
-	double dwcount = dev.evaluate(local_cnf->input_weights, smooth);
+	wcount = qev.evaluate(input_weights, smooth);
 	end_time = tod();
-	double wprecision = digit_precision_mix(wcount, dwcount);
-	lprintf("%s   WEIGHTED DBL COUNT    = %.20g (precision = %.3f)\n", prefix, dwcount, wprecision);
-	lprintf("%s     Weighted DBL count required %.3f seconds\n",
-		prefix, end_time - start_time);
-	q25_free(wcount);
-	dev.clear_evaluation();
-
-	start_time = tod();
-	Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, 20, false);
-	mpfi_t icount;
-	mpfi_init(icount);
-	if (mpfiev.evaluate(icount, local_cnf->input_weights, smooth)) {
-	    end_time = tod();
-	    double dp = mpfi_digit_precision(icount);
-	    mpfr_t mid;
-	    mpfr_init(mid);
-	    mpfi_mid(mid, icount);
-	    const char *sicount = mpfr_string(mid);
-	    lprintf("%s   WEIGHTED MPFI COUNT   = %s (precision = %.3f)\n", prefix, sicount, dp);
-	    lprintf("%s     Weighted MPFI count required %.3f seconds\n",
-		    prefix, end_time - start_time);
-	    lprintf("%s     Weighted MPFI had %ld precision failures and a minimum precision of %.3f\n",
-		    prefix, mpfiev.precision_failure_count, mpfiev.min_digit_precision);
-	    mpfiev.clear_evaluation();
+	q25_ptr rwcount = q25_round(wcount, 50);
+	char *swcount = q25_best_string(rwcount);
+	char cmp = q25_compare(wcount, rwcount) == 0 ? ' ' : '~';
+	q25_free(rwcount);
+	lprintf("%s   %s Q25 COUNT   %c= %s\n", prefix, wlabel, cmp, swcount);
+	lprintf("%s     Q25 required %ld q25 operations, %.3f seconds, %.0f peak (%.0f max) bytes\n",
+		prefix, weighted_operations, end_time - start_time, peak_q25_bytes, max_q25_bytes);
+	free(swcount);
+	qev.clear_evaluation();
+    }
+    start_time = tod();
+    Evaluator_mpq mpqev = Evaluator_mpq(eg);
+    if (mpqev.evaluate(qwcount, input_weights, smooth)) {
+	end_time = tod();
+	if (use_q25) {
+	    q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
+	    if (q25_compare(wcount, cwcount) == 0) 
+		lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
+	    else
+		err(false, "Q25 weighted count != MPQ weighted count\n");
+	    q25_free(cwcount);
 	} else {
-	    lprintf("%s Calculation of weighted count using mpfi failed\n", prefix);
+	    mpf_t fw;
+	    mpf_init(fw);
+	    mpf_set_q(fw, qwcount.get_mpq_t());
+	    const char *swcount = mpf_string(fw);
+	    lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
+	    mpf_clear(fw);
 	}
+	lprintf("%s     MPQ required %.3f seconds, %d max bytes\n",
+		prefix, end_time - start_time, mpqev.max_bytes);
+	mpqev.clear_evaluation();
+    } else {
+	lprintf("%s Calculation of weighted count using mpq failed\n", prefix);
+    }
+    q25_free(wcount);
 
+    start_time = tod();
+    Evaluator_mpf mpfev = Evaluator_mpf(eg);
+    mpf_class fcount = 0;
+    if (mpfev.evaluate(fcount, input_weights, smooth)) {
+	end_time = tod();
+	double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
+	const char *sfcount = mpf_string(fcount.get_mpf_t());
+	lprintf("%s   %s MPF COUNT    = %s (precision = %.3f )\n", prefix, wlabel, sfcount, precision);
+	lprintf("%s     MPF required %.3f seconds\n",
+		prefix, end_time - start_time);
+	mpfev.clear_evaluation();
+    } else {
+	lprintf("%s Calculation of weighted count using mpf failed\n", prefix);
+    }
+    start_time = tod();
+    Evaluator_double dev = Evaluator_double(eg);
+    double dwcount = dev.evaluate(input_weights, smooth);
+    end_time = tod();
+    double wprecision = digit_precision_d(dwcount, qwcount.get_mpq_t());
+    lprintf("%s   %s DBL COUNT    = %.20g (precision = %.3f )\n", prefix, wlabel, dwcount, wprecision);
+    lprintf("%s     DBL required %.3f seconds\n",
+	    prefix, end_time - start_time);
+    dev.clear_evaluation();
+
+    start_time = tod();
+    Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, 20, false);
+    mpfi_t icount;
+    mpfi_init(icount);
+    if (mpfiev.evaluate(icount, input_weights, smooth)) {
+	end_time = tod();
+	double dp = digit_precision_mpfi(icount);
+	mpfr_t mid;
+	mpfr_init(mid);
+	mpfi_mid(mid, icount);
+	const char *sicount = mpfr_string(mid);
+	lprintf("%s   %s MPFI COUNT   = %s (precision = %.3f)\n", prefix, wlabel, sicount, dp);
+	lprintf("%s     MPFI required %.3f seconds\n",
+		prefix, end_time - start_time);
+	lprintf("%s     MPFI had %ld precision failures and a minimum precision of %.3f\n",
+		prefix, mpfiev.precision_failure_count, mpfiev.min_digit_precision);
+	mpfiev.clear_evaluation();
+    } else {
+	lprintf("%s Calculation of weighted count using mpfi failed\n", prefix);
     }
     delete local_cnf;
 }
@@ -325,7 +237,7 @@ int main(int argc, char *argv[]) {
     int c;
     int mpf_precision = 128;
     FILE *out_file = NULL;
-    while ((c = getopt(argc, argv, "hQsv:I:o:")) != -1) {
+    while ((c = getopt(argc, argv, "hQsv:o:")) != -1) {
 	switch(c) {
 	case 'h':
 	    usage(argv[0]);
@@ -338,9 +250,6 @@ int main(int argc, char *argv[]) {
 	    break;
 	case 'v':
 	    set_verblevel(atoi(optarg));
-	    break;
-	case 'I':
-	    instrumentation_level = atoi(optarg);
 	    break;
 	case 'o':
 	    out_file = fopen(optarg, "w");

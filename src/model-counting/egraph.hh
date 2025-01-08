@@ -51,6 +51,11 @@
 const char *mpf_string(mpf_srcptr val);
 const char *mpfr_string(mpfr_srcptr val);
 
+double digit_precision_mpfr(mpfr_srcptr val, mpq_srcptr ref);
+double digit_precision_mpf(mpf_srcptr val, mpq_srcptr ref);
+double digit_precision_d(double val, mpq_srcptr ref);
+double digit_precision_mpfi(mpfi_srcptr v);
+
 /*******************************************************************************************************************
  Graph representing NNF formula
 *******************************************************************************************************************/
@@ -197,8 +202,6 @@ private:
 /*******************************************************************************************************************
 Evaluation via MPFI interval floating point
 *******************************************************************************************************************/
-
-double mpfi_digit_precision(mpfi_srcptr v);
 
 class Evaluator_mpfi {
 private:
