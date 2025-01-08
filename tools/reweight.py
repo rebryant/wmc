@@ -15,8 +15,9 @@ def usage(name):
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
     print("  -D DIST     Specify distribution: uniform (u), single exponential (e)")
-    print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX")
-    print("  -N NMETHOD  What show be relation between W(x) and W(-x): sum-to-one (u), negation (n) or indepedent (i)")
+    print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX ('o' for open, 'c' for closed)")
+    print("  -N NMETHOD  What should be relation between W(x) and W(-x):")
+    print("     sum-to-one (u), complementary (c), independent (i), or reciprocal (r)")
     print("  -d DIGITS Number of significant digits")
     
 def getRoot(path):
@@ -67,9 +68,9 @@ class IntegerGenerator:
         return random.randint(0,1) == 1
 
 class Negator:
-    codes = ['i', 'c', 'u']
-    names = ["independent", "complementary", "sum-to-one"]
-    independent, complementary, sumOne = range(3)
+    codes = ['i', 'c', 'u', 'r']
+    names = ["independent", "complementary", "sum-to-one", "reciprocal"]
+    independent, complementary, sumOne, reciprocal = range(4)
     method = None
     digits = 9
 
@@ -77,7 +78,7 @@ class Negator:
         self.digits = digits
         if method not in self.codes:
             raise Exception("Invalid negation code '%s'" % method)
-        for n in range(3):
+        for n in range(len(self.codes)):
             if method == self.codes[n]:
                 self.method = n
                 break
@@ -90,6 +91,13 @@ class Negator:
             return -value
         if self.method == self.sumOne:
             return int(10**self.digits) - value
+        if self.method == self.reciprocal:
+            if value == 0:
+                return 0
+            fval = float(value) * 10**-self.digits
+            rval = (1.0/fval)
+            ival = int(10**self.digits * rval)
+            return ival
         return None
 
 class Range:
