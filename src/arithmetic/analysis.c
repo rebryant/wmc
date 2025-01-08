@@ -38,8 +38,7 @@ double digit_precision_q25(q25_ptr qx, q25_ptr qy) {
 	return -1.0;
     if (q25_compare(qx, qy) == 0)
 	return MAX_DIGIT_PRECISION;
-    if (q25_is_zero(qx) || q25_is_zero(qy))
-	return 0.0;
+
     int pos = q25_enter();
     q25_ptr aqx = q25_is_negative(qx) ? q25_mark(q25_negate(qx)) : qx;
     q25_ptr aqy = q25_is_negative(qy) ? q25_mark(q25_negate(qy)) : qy;
