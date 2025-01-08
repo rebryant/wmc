@@ -164,7 +164,25 @@ double digit_precision_mpf(mpf_srcptr val, mpq_srcptr ref) {
     return result;
 }
 
+static uint64_t double2bits(double x) {
+    union {
+	double dx;
+	uint64_t bx;
+    } u;
+    u.dx = x;
+    return u.bx;
+}    
+
+static bool double_is_special(double x) {
+    uint64_t bits = double2bits(x);
+    int  biased_exp = (bits >> 52) & 0x7FF;
+    return biased_exp == 0x7FF;
+}
+
+
 double digit_precision_d(double val, mpq_srcptr ref) {
+    if (double_is_special(val))
+	return 0.0;
     mpfr_t rval;
     int prec = 64;
     mpfr_init2(rval, prec);
