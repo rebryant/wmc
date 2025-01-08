@@ -14,9 +14,9 @@ LIBS = $(MYLIBS) -lz -lgmpxx -lgmp -lmpfr -lmpfi
 LOCAL=/opt/homebrew
 MYALIBS = $(LDIR)/wmc_arithmetic_arm.a $(LDIR)/wmc_util.a
 
-ALIBS = $(MYALIBS) -lz $(LOCAL)/lib/libgmpxx.a $(LOCAL)/lib/libgmp.a
+ALIBS = $(MYALIBS) -lz $(LOCAL)/lib/libgmpxx.a $(LOCAL)/lib/libgmp.a $(LOCAL)/lib/libmpfr.a $(LOCAL)/lib/libmpfi.a
 ACPPFLAGS=$(CPPFLAGS) -I $(LOCAL)/include
-
+ 
 all:  nnfcount
 
 arm: nnfcount-arm
