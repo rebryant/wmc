@@ -10,14 +10,15 @@ import math
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] [-D u|e] [-R RANGE] [-N u|n|i] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
+    print("Usage: %s [-h] [-D u|e|b] [-R RANGE] [-C u|n|i|r] [N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
     print("  -h          Print this message")
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
-    print("  -D DIST     Specify distribution: uniform (u), single exponential (e)")
+    print("  -D DIST     Specify distribution: uniform (u), single exponential (e), or boundary values (b)")
     print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX ('o' for open, 'c' for closed)")
-    print("  -N NMETHOD  What should be relation between W(x) and W(-x):")
-    print("     sum-to-one (u), complementary (c), independent (i), or reciprocal (r)")
+    print("  -C CMETHOD  What should be relation between W(x) and W(-x):")
+    print("     sum-to-one (u), negated (n), independent (i), or reciprocal (r)")
+    print("  -N NMETHOD  How should negative weights be generated: none (n), random (r)")         
     print("  -d DIGITS Number of significant digits")
     
 def getRoot(path):
@@ -34,26 +35,38 @@ def replaceExtension(path, ext):
     fields[-1] = ext
     return ".".join(fields)
     
-class IntegerGenerator:
+class ValueGenerator:
+    codes = ['u', 'e', 'b']
+    names = ["uniform", "exponential", "boundary"]
+    uniform, exponential, boundary = range(3)
     seed = 123456
     minValue = 1
     maxValue = 1000*1000*1000-1
-    isExponential = False
+    method = None
 
-    def __init__(self, minValue, maxValue, isExponential=False):
+    def __init__(self, minValue, maxValue, code):
         self.minValue = minValue
         self.maxValue = maxValue
-        self.isExponential = isExponential
+
+        if code not in self.codes:
+            raise Exception("Invalid value generator code '%s'" % method)
+        for n in range(len(self.codes)):
+            if code == self.codes[n]:
+                self.method = n
+                break
         random.seed(self.seed)
-        if self.isExponential and self.minValue <= 0:
-            raise Exception("Invalid generator.  Can't have exponential distribution over nonnegative range")
+        if self.method == self.exponential and self.minValue <= 0:
+            raise Exception("Invalid generator.  Can't have exponential distribution with zero or negative values")
+
+    def name(self):
+        return self.names[self.method]
 
     def reseed(self, seed):
         self.seed = seed
         random.seed(seed)
 
     def generate(self):
-        if self.isExponential:
+        if self.method == self.exponential:
             lmin = math.log10(self.minValue)
             lmax = math.log10(self.maxValue)
             lval = random.uniform(lmin, lmax)
@@ -61,44 +74,90 @@ class IntegerGenerator:
             sval = max(self.minValue, sval)
             sval = min(self.maxValue, sval)
             return sval
-        else:
+        elif self.method == self.uniform:
             return random.randint(self.minValue, self.maxValue)
+        elif self.method == self.boundary:
+            return self.minValue if self.randomBool() else self.maxValue
+        else:
+            raise Exception("Invalid value generation method %d" % (self.method))
 
     def randomBool(self):
         return random.randint(0,1) == 1
 
-class Negator:
-    codes = ['i', 'c', 'u', 'r']
-    names = ["independent", "complementary", "sum-to-one", "reciprocal"]
-    independent, complementary, sumOne, reciprocal = range(4)
+class ComplementHandler:
+    codes = ['i', 'n', 'u', 'r']
+    names = ["independent", "negative", "sum-to-one", "reciprocal"]
+    independent, negative, sumOne, reciprocal = range(4)
     method = None
     digits = 9
+    minValue = None
+    maxValue = None
 
-    def __init__(self, method, digits):
+    def __init__(self, code, digits, minValue, maxValue):
         self.digits = digits
-        if method not in self.codes:
-            raise Exception("Invalid negation code '%s'" % method)
+        self.minValue = minValue
+        self.maxValue = maxValue
+        if code not in self.codes:
+            raise Exception("Invalid complement code '%s'" % code)
         for n in range(len(self.codes)):
-            if method == self.codes[n]:
+            if code == self.codes[n]:
                 self.method = n
                 break
 
     def name(self):
         return self.names[self.method]
 
-    def negate(self, value):
-        if self.method == self.complementary:
+    def complement(self, value):
+        if self.method == self.negative:
             return -value
         if self.method == self.sumOne:
             return int(10**self.digits) - value
         if self.method == self.reciprocal:
             if value == 0:
                 return 0
+            negative = value < 0
+            value = abs(value)
             fval = float(value) * 10**-self.digits
             rval = (1.0/fval)
             ival = int(10**self.digits * rval)
+            if ival < self.minValue:
+                ival = self.minValue
+            if ival > self.maxValue:
+                ival = self.maxValue
+            if negative:
+                ival = -ival
             return ival
         return None
+
+class NegationHandler:
+    codes = ['n', 'r']
+    names = ["none", "random"]
+    none, random = range(2)
+    method = None
+    boolGenerator = None
+
+
+    # Require method for generating random Booleans
+    # Provide by generators randomBool method
+    def __init__(self, code, boolGenerator):
+        self.boolGenerator = boolGenerator
+        if code not in self.codes:
+            raise Exception("Invalid negation code '%s'" % code)
+        for n in range(len(self.codes)):
+            if code == self.codes[n]:
+                self.method = n
+                break
+
+    def name(self):
+        return self.names[self.method]
+
+    def modify(self, value):
+        if self.method == self.none:
+            return value
+        elif self.method == self.random:
+            return -value if self.boolGenerator() else value
+        else:
+            raise Exception("Invalid negation generation method %d" % self.method)
 
 class Range:
     minValue = 0
@@ -143,21 +202,16 @@ class Range:
 class Weighter:
     digits = 9
     ranger = None
-    negator = None
     generator = None
+    complementor = None
+    negator = None
+
     wdict = None
     docString = ""
-    bilateral = False
 
-    def __init__(self, digits, rangeArg, negationMethod, isExponential):
+    def __init__(self, digits, rangeArg, distributionCode, complementCode, negationCode):
         self.digits = digits
         self.ranger = Range(rangeArg)
-        self.bilateral = False
-        if isExponential and self.ranger.minValue == -self.ranger.maxValue:
-            self.bilateral = True
-            self.ranger.minValue = 0
-            self.ranger.leftOpen = True
-        self.negator = Negator(negationMethod, digits)
         scale = 10**self.digits
         minInteger = int(self.ranger.minValue * scale)
         if self.ranger.leftOpen:
@@ -165,14 +219,15 @@ class Weighter:
         maxInteger = int(self.ranger.maxValue * scale)
         if self.ranger.rightOpen:
             maxInteger -= 1
-        self.generator = IntegerGenerator(minInteger, maxInteger, isExponential)
+        self.generator = ValueGenerator(minInteger, maxInteger, distributionCode)
+        self.negator = NegationHandler(negationCode, self.generator.randomBool)
+        self.complementor = ComplementHandler(complementCode, digits, minInteger, maxInteger)
         self.wdict = {}
+        cname = self.complementor.name()
         nname = self.negator.name()
-        distribution = "exponential" if isExponential else "uniform"
-        if self.bilateral:
-            distribution += " (bilateral)"
+        dname = self.generator.name()
         rstring = self.ranger.rangeString
-        self.docString = "Digits: %d, Range: %s, Distribution: %s, Negation: %s, Seed: " % (digits, rstring, distribution, nname)
+        self.docString = "Digits: %d, Range: %s, Distribution: %s, Complements: %s, Negation: %s, Seed: " % (digits, rstring, dname, cname, nname)
 
     def reseed(self, seed):
         self.generator.reseed(seed)
@@ -190,19 +245,19 @@ class Weighter:
         slower = str(lower)
         while len(slower) < self.digits:
             slower = '0' + slower
+        while len(slower) > 1 and slower[-1] == '0':
+            slower = slower[:-1]
         return ("-" if negative else "") + supper + "." + slower
 
     def assignVariable(self, var):
         ival = self.generator.generate()
-        if self.bilateral and self.generator.randomBool():
-            ival = -ival
+        ival = self.negator.modify(ival)
         sval = self.stringify(ival)
         self.wdict[var] = sval
-        nival = self.negator.negate(ival)
+        nival = self.complementor.complement(ival)
         if nival is None:
             nival = self.generator.generate()
-            if self.bilateral and self.generator.randomBool():
-                nival = -nival
+            nival = self.negator.modify(nival)
         snval = self.stringify(nival)
         self.wdict[-var] = snval
 
@@ -243,10 +298,12 @@ def run(name, args):
     seed = 123456
     digits = 9
     count = 1
-    isExponential = False
     rangeArg = "o0,1o"
-    negationMethod = "u"
-    optList, args = getopt.getopt(args, "hs:n:D:R:N:d:")
+    complementCode = "u"
+    distributionCode = "u"
+    negationCode = "n"
+    
+    optList, args = getopt.getopt(args, "hs:n:D:R:C:N:d:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -254,25 +311,19 @@ def run(name, args):
         elif opt == "-s":
             seed = int(val)
         elif opt == "-D":
-            if val == 'u':
-                isExponential = False
-            elif val == 'e':
-                isExponential = True
-            else:
-                print("Invalid distribution '%s'" % val)
-                usage(name)
-                return
+            distributionCode = val
         elif opt == '-R':
             rangeArg = val
+        elif opt == '-C':
+            complementCode = val
         elif opt == '-N':
-            negationMethod = val
+            negationCode = val
         elif opt == "-d":
             digits = int(val)
         elif opt == "-n":
             count = int(val)
-    print("Range = %s.  Negation = %s" % (rangeArg, negationMethod))
     try:
-        weighter = Weighter(digits, rangeArg, negationMethod, isExponential)
+        weighter = Weighter(digits, rangeArg, distributionCode, complementCode, negationCode)
     except Exception as ex:
         print("Invalid parameters: %s" % str(ex))
         return
