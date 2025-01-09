@@ -188,12 +188,14 @@ void run(const char *cnf_name) {
     mpfi_init(icount);
     if (mpfiev.evaluate(icount, input_weights, smooth)) {
 	end_time = tod();
-	double dp = digit_precision_mpfi(icount);
+	double est_precision = digit_precision_mpfi(icount);
 	mpfr_t mid;
 	mpfr_init(mid);
 	mpfi_mid(mid, icount);
+	double actual_precision = digit_precision_mpfr(mid, qwcount.get_mpq_t());
 	const char *sicount = mpfr_string(mid);
-	lprintf("%s   %s MPFI COUNT   = %s   precision = %.3f\n", prefix, wlabel, sicount, dp);
+	lprintf("%s   %s MPFI COUNT   = %s   precision est = %.3f actual = %.3f\n", prefix, wlabel, sicount,
+		est_precision, actual_precision);
 	lprintf("%s     MPFI required %.3f seconds\n",
 		prefix, end_time - start_time);
 	lprintf("%s     MPFI had %ld precision failures and a minimum precision of %.3f\n",
