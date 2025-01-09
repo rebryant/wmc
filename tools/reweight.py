@@ -10,14 +10,14 @@ import math
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] [-D u|e|b] [-R RANGE] [-C u|n|i|r] [N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
+    print("Usage: %s [-h] [-D u|e|b] [-R RANGE] [-C u|n|r|i|I] [N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
     print("  -h          Print this message")
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
     print("  -D DIST     Specify distribution: uniform (u), single exponential (e), or boundary values (b)")
     print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX ('o' for open, 'c' for closed)")
     print("  -C CMETHOD  What should be relation between W(x) and W(-x):")
-    print("     sum-to-one (u), negated (n), independent (i), or reciprocal (r)")
+    print("     sum-to-one (u), negated (n), reciprocal (r), independent (i), or independent with a nonzero sum (I)")
     print("  -N NMETHOD  How should negative weights be generated: none (n), random (r)")         
     print("  -d DIGITS Number of significant digits")
     
@@ -85,9 +85,9 @@ class ValueGenerator:
         return random.randint(0,1) == 1
 
 class ComplementHandler:
-    codes = ['i', 'n', 'u', 'r']
-    names = ["independent", "negative", "sum-to-one", "reciprocal"]
-    independent, negative, sumOne, reciprocal = range(4)
+    codes = ['n', 'u', 'r', 'i', 'I']
+    names = ["negative", "sum-to-one", "reciprocal", "independent", "independent-nonzero-sum"]
+    negative, sumOne, reciprocal, independent, independentNonzero = range(5)
     method = None
     digits = 9
     minValue = None
@@ -106,6 +106,9 @@ class ComplementHandler:
 
     def name(self):
         return self.names[self.method]
+
+    def allowZeroSum(self):
+        return self.method != self.independentNonzero
 
     def complement(self, value):
         if self.method == self.negative:
@@ -127,6 +130,7 @@ class ComplementHandler:
             if negative:
                 ival = -ival
             return ival
+        # Independents
         return None
 
 class NegationHandler:
@@ -258,6 +262,9 @@ class Weighter:
         if nival is None:
             nival = self.generator.generate()
             nival = self.negator.modify(nival)
+            while not self.complementor.allowZeroSum() and nival == -ival:
+                nival = self.generator.generate()
+                nival = self.negator.modify(nival)
         snval = self.stringify(nival)
         self.wdict[-var] = snval
 
