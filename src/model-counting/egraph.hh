@@ -88,6 +88,11 @@ public:
 
     void smooth();
 
+    // Ability to do partial smoothing
+    // Remove all smoothing variables
+    void unsmooth();
+    void smooth_single(int var);
+
     bool is_data_variable(int var) { return data_variables->find(var) != data_variables->end(); }
     bool is_literal(int lit) { return lit < 0 ? is_data_variable(-lit) : is_data_variable(lit); }
     bool is_operation(int id) { return id > 0 && id <= operations.size(); }

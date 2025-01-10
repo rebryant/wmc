@@ -404,6 +404,7 @@ void Egraph::write_nnf(FILE *outfile) {
     fclose(outfile);
 }
 
+
 void Egraph::smooth() {   
     if (is_smoothed)
 	return;
@@ -461,6 +462,52 @@ void Egraph::smooth() {
     if (scount > 0)
 	incr_histo(HISTO_EDGE_SMOOTHS, scount);
     is_smoothed = true;
+}
+
+void Egraph::unsmooth() {
+    for (Egraph_edge e : edges) {
+	incr_count_by(COUNT_SMOOTH_VARIABLES, - (int) e.smoothing_variables.size());
+	e.smoothing_variables.clear();
+    }
+}
+
+void Egraph::smooth_single(int var) {
+    std::vector<bool> var_found;
+    var_found.resize(operations.size(), false);
+    std::vector<bool> edge_contains;
+    edge_contains.resize(edges.size(), false);
+    for (int id = 1; id <= edges.size(); id++) {
+	int from_id = edges[id-1].from_id;
+	int to_id = edges[id-1].to_id;
+	if (var_found[from_id-1]) {
+	    var_found[to_id-1] = true;
+	    continue;
+	}
+	for (int lit : edges[id-1].literals) {
+	    int evar = IABS(lit);
+	    if (evar == var) {
+		var_found[to_id-1] = true;
+		edge_contains[id=1] = true;
+		break;
+	    }
+	}
+    }
+    for (int id = 1; id <= edges.size(); id++) {
+	int from_id = edges[id-1].from_id;
+	int to_id = edges[id-1].to_id;
+	if (operations[from_id-1].type == NNF_FALSE)
+	    continue;
+	if (operations[to_id-1].type == NNF_AND)
+	    continue;
+	int scount = 0;
+	if (var_found[to_id-1] && !var_found[from_id-1] && !edge_contains[id-1]) 
+	    add_smoothing_variable(id, var);
+    }
+    // Check at root
+    int id = edges.size();
+    int child_id = edges[id-1].to_id;
+    if (!var_found[child_id-1])
+	add_smoothing_variable(id, var);
 }
 
 /*******************************************************************************************************************
@@ -1246,7 +1293,9 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
     if (!prepare_weights(literal_string_weights, smoothed))
 	return false;
     mpfi_t *operation_values = new mpfi_t[egraph->operations.size()];
+    bool *operation_updated = new bool[egraph->operations.size()];
     for (int id = 1; id <= egraph->operations.size(); id++) {
+	operation_updated[id-1] = false;
 	mpfi_init(operation_values[id-1]);
 	switch (egraph->operations[id-1].type) {
 	case NNF_TRUE:
@@ -1264,22 +1313,28 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
 	mpfi_init(product);
 	evaluate_edge(product, e, smoothed);
 	mpfi_mul(product, product, operation_values[e.from_id-1]);
-	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
-	if (multiply)
-	    mpfi_mul(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
-	else {
-	    mpfi_add(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
+	if (operation_updated[e.to_id-1]) {
+	    bool add = egraph->operations[e.to_id-1].type == NNF_OR;
+	    if (add) {
+		mpfi_add(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
+		double dp = digit_precision_mpfi(operation_values[e.to_id-1]);
+		if (dp < min_digit_precision)
+		    min_digit_precision = dp;
+		if (dp < target_digit_precision)
+		    precision_failure_count++;
+	    } else 
+		mpfi_mul(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
+	} else {
+	    operation_updated[e.to_id-1] = true;
+	    mpfi_swap(operation_values[e.to_id-1], product);
 	}
-	double dp = digit_precision_mpfi(operation_values[e.to_id-1]);
-	if (dp < min_digit_precision)
-	    min_digit_precision = dp;
-	if (dp < target_digit_precision)
-	    precision_failure_count++;
+	mpfi_clear(product);
     }
     mpfi_swap(count, operation_values[egraph->root_id-1]);
     for (int id = 1; id <= egraph->operations.size(); id++)
 	mpfi_clear(operation_values[id-1]);
     delete[] operation_values;
+    delete[] operation_updated;
 
     if (!smoothed)
 	mpfi_mul(count, count, rescale);
