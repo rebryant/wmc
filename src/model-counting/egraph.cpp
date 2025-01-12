@@ -208,6 +208,7 @@ static int line_number = 0;
 Egraph::Egraph(std::unordered_set<int> *dvars) {
     data_variables = dvars;
     is_smoothed = false;
+    smooth_variable_count = 0;
 }
 
 void Egraph::add_operation(int id, nnf_type_t type) {
@@ -304,6 +305,7 @@ static bool read_numbers(FILE *infile, std::vector<int> &vec, int *rc) {
 void Egraph::read_nnf(FILE *infile) {
     operations.clear();
     line_number = 0;
+    std::unordered_set<int> smoothing_variables;
     // Capture arguments for each line
     std::vector<int> largs;
 
@@ -361,7 +363,9 @@ void Egraph::read_nnf(FILE *infile) {
 	    }
 	    // Add smoothing variables
 	    for (++pos; pos < largs.size()-1; pos++) {
-		add_smoothing_variable(eid, largs[pos]);
+		int var = largs[pos];
+		smoothing_variables.insert(var);
+		add_smoothing_variable(eid, var);
 		scount++;
 	    }
 	    incr_histo(HISTO_EDGE_PRODUCTS, lcount);
@@ -382,6 +386,7 @@ void Egraph::read_nnf(FILE *infile) {
 		incr_histo(HISTO_SUMS, operations[id-1].indegree-1);
 	}
     }
+    smooth_variable_count = smoothing_variables.size();
 }
 
 void Egraph::write_nnf(FILE *outfile) {
@@ -414,7 +419,7 @@ void Egraph::smooth() {
     // For each edge, union of all variables for edge
     std::vector<std::unordered_set<int>> edge_variables;
     edge_variables.resize(edges.size());
- 
+    std::unordered_set<int> smoothed_variables; 
     for (int id = 1; id <= edges.size(); id++) {
 	int from_id = edges[id-1].from_id;
 	int to_id = edges[id-1].to_id;
@@ -443,6 +448,7 @@ void Egraph::smooth() {
 		operation_dependencies[from_id-1].find(v) == operation_dependencies[from_id-1].end()) {
 		report(4, "Adding smoothing variable %d on edge #%d (%d <-- %d)\n", v, id, to_id, from_id);
 		add_smoothing_variable(id, v);
+		smoothed_variables.insert(v);
 		scount++;
 	    }
 	}
@@ -457,11 +463,13 @@ void Egraph::smooth() {
 	if (operation_dependencies[child_id-1].find(v) == operation_dependencies[child_id-1].end()) {
 	    report(4, "Adding smoothing variable %d on root edge #%d (%d --> %d)\n", v, id, root_id, child_id);
 	    add_smoothing_variable(id, v);
+		smoothed_variables.insert(v);
 	}
     }
     if (scount > 0)
 	incr_histo(HISTO_EDGE_SMOOTHS, scount);
     is_smoothed = true;
+    smooth_variable_count = smoothed_variables.size();
 }
 
 void Egraph::unsmooth() {
@@ -469,6 +477,7 @@ void Egraph::unsmooth() {
 	incr_count_by(COUNT_SMOOTH_VARIABLES, - (int) e.smoothing_variables.size());
 	e.smoothing_variables.clear();
     }
+    smooth_variable_count = 0;
 }
 
 void Egraph::smooth_single(int var) {
@@ -476,6 +485,7 @@ void Egraph::smooth_single(int var) {
     var_found.resize(operations.size(), false);
     std::vector<bool> edge_contains;
     edge_contains.resize(edges.size(), false);
+    int ecount = 0;
     for (int id = 1; id <= edges.size(); id++) {
 	int from_id = edges[id-1].from_id;
 	int to_id = edges[id-1].to_id;
@@ -487,7 +497,7 @@ void Egraph::smooth_single(int var) {
 	    int evar = IABS(lit);
 	    if (evar == var) {
 		var_found[to_id-1] = true;
-		edge_contains[id=1] = true;
+		edge_contains[id-1] = true;
 		break;
 	    }
 	}
@@ -500,14 +510,25 @@ void Egraph::smooth_single(int var) {
 	if (operations[to_id-1].type == NNF_AND)
 	    continue;
 	int scount = 0;
-	if (var_found[to_id-1] && !var_found[from_id-1] && !edge_contains[id-1]) 
+	if (var_found[to_id-1] && !var_found[from_id-1] && !edge_contains[id-1]) {
+	    ecount++;
 	    add_smoothing_variable(id, var);
+	}
     }
     // Check at root
     int id = edges.size();
     int child_id = edges[id-1].to_id;
-    if (!var_found[child_id-1])
+    if (!var_found[child_id-1]) {
+	ecount++;
 	add_smoothing_variable(id, var);
+    }
+    if (ecount > 0) {
+	report(3, "Adding smoothing variable %d to %d edges\n", var, ecount);
+	smooth_variable_count++;
+	incr_histo(HISTO_EDGE_SMOOTHS, 1);
+    } else 
+	report(3, "No copies of smoothing variable %d needed\n", var, ecount);
+
 }
 
 /*******************************************************************************************************************
@@ -527,8 +548,13 @@ void Evaluator_q25::clear_evaluation() {
     for (auto iter : smoothing_weights)
 	q25_free(iter.second);
     smoothing_weights.clear();
+    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
+	reset_histo(HISTO_EDGE_SMOOTHS);
+	egraph->unsmooth();
+    }
     q25_free(rescale);
     rescale = q25_from_32(1);
+
 }
 
 // literal_string_weights == NULL for unweighted
@@ -567,12 +593,16 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 	q25_ptr sum = q25_add(pwt, nwt);
 	if (smoothed)
 	    smoothing_weights[v] = sum;
-	else {
+	else if (q25_is_zero(sum)) {
+	    smoothing_weights[v] = sum;
+	    egraph->smooth_single(v);
+
+	} else {
 	    int mark = q25_enter();
 	    q25_ptr recip = q25_mark(q25_recip(sum));
 	    if (!q25_is_valid(recip)) {
 		char *srecip = q25_string(sum);
-		err(true, "Q25: Could not get reciprocal of summed weights for variable %d.  Sum = s\n", v, sum);
+		err(true, "Q25: Could not get reciprocal of summed weights for variable %d.  Sum = %s\n", v, srecip);
 		free(srecip);
 	    }
 	    rescale = q25_mul(q25_mark(rescale), q25_mark(sum));
@@ -586,18 +616,16 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
     }
 }
 
-q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e, bool smoothed) {
+q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e) {
     q25_ptr result = q25_from_32(1);
     int mark = q25_enter();
     for (int lit : e.literals) {
 	q25_ptr wt = evaluation_weights[lit];
 	result = q25_mul(q25_mark(result), wt);
     }
-    if (smoothed) {
-	for (int v : e.smoothing_variables) {
-	    q25_ptr wt = smoothing_weights[v];
-	    result = q25_mul(q25_mark(result), wt);
-	}
+    for (int v : e.smoothing_variables) {
+	q25_ptr wt = smoothing_weights[v];
+	result = q25_mul(q25_mark(result), wt);
     }
     q25_leave(mark);
     if (verblevel >= 4) {
@@ -626,7 +654,7 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_str
     }
     for (Egraph_edge e : egraph->edges) {
 	int mark = q25_enter();
-	q25_ptr edge_val = evaluate_edge(e, smoothed);
+	q25_ptr edge_val = evaluate_edge(e);
 	q25_ptr product = q25_mark(q25_mul(q25_mark(edge_val), operation_values[e.from_id-1]));
 	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
 	q25_ptr new_val = multiply ? 
@@ -651,22 +679,14 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_str
 	    q25_free(operation_values[id-1]);
     }
     operation_values.clear();
-    if (!smoothed) {
-	q25_ptr oresult = result;
-	result = q25_mul(rescale, oresult);
-	if (verblevel >= 4) {
-	    char *srescale = q25_string(rescale);
-	    char *soresult = q25_string(oresult);
-	    char *sresult = q25_string(result);
-	    report(4, "Q25: Final result: Rescale = %s.  Density = %s.  Result = %s\n",
-		   srescale, soresult, sresult);
-	    free(srescale); free(soresult), free(sresult);
-	} else if (verblevel >= 4) {
-	    char *sresult = q25_string(result);
-	    report(4, "Q25: Smoothed result = %s\n", sresult);
-	    free(sresult);
-	}
-	q25_free(oresult);
+    q25_ptr oresult = result;
+    result = q25_mul(oresult, rescale);
+    q25_free(oresult);
+
+    if (verblevel >= 4) {
+	char *sresult = q25_string(result);
+	report(4, "Q25: Result = %s\n", sresult);
+	free(sresult);
     }
     return result;
 }
@@ -685,6 +705,10 @@ void Evaluator_double::clear_evaluation() {
     evaluation_weights.clear();
     smoothing_weights.clear();
     rescale = 1.0;
+    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
+	egraph->unsmooth();
+	reset_histo(HISTO_EDGE_SMOOTHS);
+    }
 }
 
 // literal_string_weights == NULL for unweighted
@@ -725,10 +749,10 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 	double sum = pwt + nwt;
 	if (smoothed)
 	    smoothing_weights[v] = sum;
-	else {
-	    if (sum == 0) {
-		err(true, "DBL: Could not get reciprocal of summed weights for variable %d.  Sum = %f\n", v, sum);
-	    }
+	else if (sum == 0.0) {
+	    smoothing_weights[v] = sum;
+	    egraph->smooth_single(v);
+	} else {
 	    rescale *= sum;
 	    pwt = pwt/sum;
 	    nwt = nwt/sum;
@@ -738,17 +762,15 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
     }
 }
 
-double Evaluator_double::evaluate_edge(Egraph_edge &e, bool smoothed) {
+double Evaluator_double::evaluate_edge(Egraph_edge &e) {
     double result = 1.0;
     for (int lit : e.literals) {
 	double wt = evaluation_weights[lit];
 	result *= wt;
     }
-    if (smoothed) {
-	for (int v : e.smoothing_variables) {
-	    double wt = smoothing_weights[v];
-	    result *= wt;
-	}
+    for (int v : e.smoothing_variables) {
+	double wt = smoothing_weights[v];
+	result *= wt;
     }
     if (verblevel >= 4) {
 	report(4, "DBL: Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, result);
@@ -773,7 +795,7 @@ double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_s
 	}
     }
     for (Egraph_edge e : egraph->edges) {
-	double edge_val = evaluate_edge(e, smoothed);
+	double edge_val = evaluate_edge(e);
 	double product = edge_val * operation_values[e.from_id-1];
 	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
 	double new_val = multiply ? 
@@ -790,15 +812,8 @@ double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_s
 
     double result = operation_values[egraph->root_id-1];
     operation_values.clear();
-    if (!smoothed) {
-	double oresult = result;
-	result *= rescale;
-	if (verblevel >= 4) {
-	    report(4, "DBL: Final result: Rescale = %f.  Density = %f.  Result = %f\n",
-		   rescale, oresult, result);
-	}
-    } else
-	report(4, "DBL: Smoothed result = %f\n", result);
+    result *= rescale;
+    report(4, "DBL: Result = %f\n", result);
 
     return result;
 }
@@ -820,6 +835,10 @@ void Evaluator_mpf::clear_evaluation() {
     //    for (auto iter : smoothing_weights)
     //	mpf_clear(iter.second);
     smoothing_weights.clear();
+    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
+	reset_histo(HISTO_EDGE_SMOOTHS);
+	egraph->unsmooth();
+    }
     rescale = 1;
 }
 
@@ -877,13 +896,12 @@ bool Evaluator_mpf::prepare_weights(std::unordered_map<int,const char*> *literal
 	    }
 	}
 	mpf_class sum = nwt+pwt;
-	if (smoothed)
+	if (smoothed) 
 	    smoothing_weights[v] = sum;
-	else {
-	    if (cmp(sum, mpf_class(0)) == 0) {
-		err(false, "MPF: Weights for variable %d sum to 0\n", v);
-		return false;
-	    }
+	else if (cmp(sum, mpf_class(0)) == 0) {
+	    smoothing_weights[v] = sum;
+	    egraph->smooth_single(v);
+	} else {
 	    rescale *= sum;
 	    pwt /= sum;
 	    nwt /= sum;
@@ -894,14 +912,12 @@ bool Evaluator_mpf::prepare_weights(std::unordered_map<int,const char*> *literal
     return true;
 }
 
-void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e, bool smoothed) {
+void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
     value = 1;
     for (int lit : e.literals)
 	value *= evaluation_weights[lit];
-    if (smoothed) {
-	for (int v : e.smoothing_variables)
-	    value *= smoothing_weights[v];
-    }
+    for (int v : e.smoothing_variables)
+	value *= smoothing_weights[v];
     if (verblevel >= 4) {
 	mp_exp_t exp;
 	char *svalue = mpf_get_str(NULL, &exp, 10, 40, value.get_mpf_t());
@@ -933,7 +949,7 @@ bool Evaluator_mpf::evaluate(mpf_class &count, std::unordered_map<int,const char
 	mp_exp_t eold, eedge, efrom, eproduct, enew_val;	
 	mpf_class product;
 
-	evaluate_edge(product, e, smoothed);
+	evaluate_edge(product, e);
 
 	if (verblevel >= 4) {
 	    sedge = mpf_get_str(NULL, &eedge, 10, 40, product.get_mpf_t());
@@ -960,26 +976,13 @@ bool Evaluator_mpf::evaluate(mpf_class &count, std::unordered_map<int,const char
     //	mpf_clear(operation_values[id-1]);
     operation_values.clear();
 
-    if (smoothed) {
-	if (verblevel >= 4) {
-	    mp_exp_t ecount;
-	    char *scount = mpf_get_str(NULL, &ecount, 10, 40, count.get_mpf_t());
-	    report(4, "MPF: Smoothed count = 0.%se%ld\n", scount, ecount);
-	    free(scount);
-	}
-    } else {
-	char *socount = NULL;
-	mp_exp_t eocount, erescale, ecount;
-	if (verblevel >= 4)
-	    socount = mpf_get_str(NULL, &eocount, 10, 40, count.get_mpf_t());
-	count *= rescale;
-	if (verblevel >= 4) {
-	    char *srescale = mpf_get_str(NULL, &erescale, 10, 40, rescale.get_mpf_t());
-	    char *scount = mpf_get_str(NULL, &ecount, 10, 40, count.get_mpf_t());
-	    report(4, "MPF: Final count: Rescale = 0.%se%ld.  Density = 0.%se%ld.  Count = 0.%se%ld\n",
-		   srescale, socount, scount);
-	    free(srescale); free(socount), free(scount);
-	}
+    count *= rescale;
+
+    if (verblevel >= 4) {
+	mp_exp_t ecount;
+	char *scount = mpf_get_str(NULL, &ecount, 10, 40, count.get_mpf_t());
+	report(4, "MPF: Count = 0.%se%ld\n", scount, ecount);
+	free(scount);
     }
     return true;
 }
@@ -1004,6 +1007,23 @@ static size_t mpq_bytes(mpq_srcptr val) {
     return size;
 }
 
+// Form product of values in queue.
+// Use breadth-first evaluation to form balanced binary tree
+static void reduce_product(mpq_class &product, std::vector<mpq_class> &eval_queue) {
+    if (eval_queue.size() == 0)
+	product = 1.0;
+    else if (eval_queue.size() == 1) 
+	product = eval_queue[0];
+    else {
+	size_t index = 0;
+	while (index < eval_queue.size()-1) {
+	    eval_queue.push_back(eval_queue[index] * eval_queue[index+1]);
+	    index += 2;
+	}
+	product = eval_queue[index];
+    }
+}
+
 
 Evaluator_mpq::Evaluator_mpq(Egraph *eg) { 
     egraph = eg;
@@ -1017,6 +1037,10 @@ void Evaluator_mpq::clear_evaluation() {
     //    for (auto iter : smoothing_weights)
     //	mpq_clear(iter.second);
     smoothing_weights.clear();
+    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
+	egraph->unsmooth();
+	reset_histo(HISTO_EDGE_SMOOTHS);
+    }	
     rescale = 1;
     max_bytes = 0;
 }
@@ -1033,6 +1057,8 @@ static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
 // literal_string_weights == NULL for unweighted
 bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
     clear_evaluation();
+    std::vector<mpq_class> product_queue;
+
     for (int v : *egraph->data_variables) {
 	mpq_class pwt = 1;
 	bool gotp = false;
@@ -1075,41 +1101,31 @@ bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal
 	    }
 	}
 	mpq_class sum = nwt+pwt;
-	if (smoothed)
+	if (smoothed || cmp(sum, mpq_class(0)) == 0)
 	    smoothing_weights[v] = sum;
-	else {
-	    if (cmp(sum, mpq_class(0)) == 0) {
-		err(false, "MPQ: Weights for variable %d sum to 0\n", v);
-		return false;
-	    }
-	    rescale *= sum;
+	else if (smoothed || cmp(sum, mpq_class(0)) == 0) {
+	    // Smooth this variable if weights sum to zero
+	    smoothing_weights[v] = sum;
+	    egraph->smooth_single(v);
+	} else {
+	    product_queue.push_back(sum);
 	    pwt /= sum;
 	    nwt /= sum;
 	}
 	evaluation_weights[v] = pwt;
 	evaluation_weights[-v] = nwt;
     }
+    reduce_product(rescale, product_queue);
     return true;
 }
 
-void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed) {
-    // Use breadth-first evaluation to form balanced binary tree
+void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e) {
     std::vector<mpq_class> eval_queue;
     for (int lit : e.literals)
 	eval_queue.push_back(evaluation_weights[lit]);
-    if (smoothed)
-	for (int v : e.smoothing_variables)
-	    eval_queue.push_back(smoothing_weights[v]);
-    if (eval_queue.size() == 0)
-	value = 1;
-    else {
-	size_t index = 0;
-	while (index < eval_queue.size()-1) {
-	    eval_queue.push_back(eval_queue[index] * eval_queue[index+1]);
-	    index += 2;
-	}
-	value = eval_queue[index];
-    }
+    for (int v : e.smoothing_variables)
+	eval_queue.push_back(smoothing_weights[v]);
+    reduce_product(value, eval_queue);
     if (verblevel >= 4) {
 	char *svalue = mpq_get_str(NULL, 10, value.get_mpq_t());
 	report(4, "MPQ: Evaluating edge (%d <-- %d).  Value = %s\n", e.to_id, e.from_id, svalue);
@@ -1118,7 +1134,6 @@ void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothe
     size_t bytes = mpq_bytes(value.get_mpq_t());
     if (bytes > max_bytes)
 	max_bytes = bytes;
-
 }
 
 bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
@@ -1143,7 +1158,7 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
 	char *sedge = NULL;
 
 	mpq_class product;
-	evaluate_edge(product, e, smoothed);
+	evaluate_edge(product, e);
 
 	if (verblevel >= 4) {
 	    sedge = mpq_get_str(NULL, 10, product.get_mpq_t());
@@ -1174,24 +1189,12 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
     //	mpq_clear(operation_values[id-1]);
     operation_values.clear();
 
-    if (smoothed) {
-	if (verblevel >= 4) {
-	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
-	    report(4, "MPQ: Smoothed count = %s\n", scount);
-	    free(scount);
-	}
-    } else {
-	char *socount = NULL;
-	if (verblevel >= 4)
-	    socount = mpq_get_str(NULL, 10, count.get_mpq_t());
-	count *= rescale;
-	if (verblevel >= 4) {
-	    char *srescale = mpq_get_str(NULL, 10, rescale.get_mpq_t());
-	    char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
-	    report(4, "MPQ: Final count: Rescale = %s.  Density = %s.  Count = %s\n",
-		   srescale, socount, scount);
-	    free(srescale); free(socount), free(scount);
-	}
+    count *= rescale;
+
+    if (verblevel >= 4) {
+	char *scount = mpq_get_str(NULL, 10, count.get_mpq_t());
+	report(4, "MPQ: count = %s\n", scount);
+	free(scount);
     }
     return true;
 }
@@ -1211,11 +1214,14 @@ Evaluator_mpfi::Evaluator_mpfi(Egraph *eg, int tdp, bool ref) {
 void Evaluator_mpfi::clear_evaluation() {
     evaluation_weights.clear();
     smoothing_weights.clear();
+    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
+	egraph->unsmooth();
+	reset_histo(HISTO_EDGE_SMOOTHS);
+    }
     mpfi_set_d(rescale, 1.0);
     min_digit_precision = (double) MAX_DIGIT_PRECISION;
     precision_failure_count = 0;
 }
-
 
 // literal_string_weights == NULL for unweighted
 bool Evaluator_mpfi::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
@@ -1264,11 +1270,10 @@ bool Evaluator_mpfi::prepare_weights(std::unordered_map<int,const char*> *litera
 	mpq_class sum = nwt+pwt;
 	if (smoothed)
 	    smoothing_weights[v] = sum;
-	else {
-	    if (cmp(sum, mpq_class(0)) == 0) {
-		err(false, "MPQ: Weights for variable %d sum to 0\n", v);
-		return false;
-	    }
+	else if (cmp(sum, mpq_class(0)) == 0) {
+	    smoothing_weights[v] = sum;
+	    egraph->smooth_single(v);
+	} else {
 	    mpfi_mul_q(rescale, rescale, sum.get_mpq_t());
 	    pwt /= sum;
 	    nwt /= sum;
@@ -1279,14 +1284,12 @@ bool Evaluator_mpfi::prepare_weights(std::unordered_map<int,const char*> *litera
     return true;
 }
 
-void Evaluator_mpfi::evaluate_edge(mpfi_ptr value, Egraph_edge &e, bool smoothed) {
+void Evaluator_mpfi::evaluate_edge(mpfi_ptr value, Egraph_edge &e) {
     mpfi_set_d(value, 1.0);
     for (int lit : e.literals)
 	mpfi_mul_q(value, value, evaluation_weights[lit].get_mpq_t());
-    if (smoothed) {
-	for (int v : e.smoothing_variables)
-	    mpfi_mul_q(value, value, smoothing_weights[v].get_mpq_t());
-    }
+    for (int v : e.smoothing_variables)
+	mpfi_mul_q(value, value, smoothing_weights[v].get_mpq_t());
 }
 
 bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
@@ -1311,7 +1314,7 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
     for (Egraph_edge e : egraph->edges) {
 	mpfi_t product;
 	mpfi_init(product);
-	evaluate_edge(product, e, smoothed);
+	evaluate_edge(product, e);
 	mpfi_mul(product, product, operation_values[e.from_id-1]);
 	if (operation_updated[e.to_id-1]) {
 	    bool add = egraph->operations[e.to_id-1].type == NNF_OR;
@@ -1336,8 +1339,7 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
     delete[] operation_values;
     delete[] operation_updated;
 
-    if (!smoothed)
-	mpfi_mul(count, count, rescale);
+    mpfi_mul(count, count, rescale);
 
     return true;
 }

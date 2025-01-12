@@ -200,7 +200,8 @@ void run(const char *cnf_name) {
 		prefix, end_time - start_time);
 	lprintf("%s     MPFI had %ld precision failures and a minimum precision of %.3f\n",
 		prefix, mpfiev.precision_failure_count, mpfiev.min_digit_precision);
-	mpfiev.clear_evaluation();
+	// Want to keep final stats.
+	//	mpfiev.clear_evaluation();
     } else {
 	lprintf("%s Calculation of weighted count using mpfi failed\n", prefix);
     }
@@ -219,6 +220,7 @@ void report_stats() {
     long smoothing_ops = get_histo_total(HISTO_EDGE_SMOOTHS);
 
     lprintf("%s   Data variables    : %d\n", prefix, ndvar);
+    lprintf("%s     Smooth variables: %d\n", prefix, eg->smooth_variable_count);
     lprintf("%s   Operations \n", prefix);
     lprintf("%s     Sums            : %d\n", prefix, sum_count);
     lprintf("%s     Edge products   : %d\n", prefix, edge_product_count);

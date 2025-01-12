@@ -81,6 +81,8 @@ public:
     int root_id;
     std::unordered_set<int> *data_variables;
     bool is_smoothed;
+    int smooth_variable_count;
+
 
     Egraph(std::unordered_set<int> *data_variables);
     void read_nnf(FILE *infile);
@@ -126,7 +128,7 @@ public:
     
 private:
     void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    q25_ptr evaluate_edge(Egraph_edge &e, bool smoothed);
+    q25_ptr evaluate_edge(Egraph_edge &e);
 
 };
 
@@ -151,7 +153,7 @@ public:
     
 private:
     void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    double evaluate_edge(Egraph_edge &e, bool smoothed);
+    double evaluate_edge(Egraph_edge &e);
 };
 
 /*******************************************************************************************************************
@@ -175,7 +177,7 @@ public:
 
 private:
     bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    void evaluate_edge(mpf_class &value, Egraph_edge &e, bool smoothed);
+    void evaluate_edge(mpf_class &value, Egraph_edge &e);
 };
 
 /*******************************************************************************************************************
@@ -201,7 +203,7 @@ public:
     
 private:
     bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    void evaluate_edge(mpq_class &value, Egraph_edge &e, bool smoothed);
+    void evaluate_edge(mpq_class &value, Egraph_edge &e);
 };
 
 /*******************************************************************************************************************
@@ -232,7 +234,7 @@ public:
 
 private:
     bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
-    void evaluate_edge(mpfi_ptr value, Egraph_edge &e, bool smoothed);
+    void evaluate_edge(mpfi_ptr value, Egraph_edge &e);
 };
 
 
