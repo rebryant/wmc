@@ -1101,10 +1101,10 @@ bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal
 	    }
 	}
 	mpq_class sum = nwt+pwt;
-	if (smoothed || cmp(sum, mpq_class(0)) == 0)
+	if (smoothed)
 	    smoothing_weights[v] = sum;
-	else if (smoothed || cmp(sum, mpq_class(0)) == 0) {
-	    // Smooth this variable if weights sum to zero
+	else if (cmp(sum, mpq_class(0)) == 0) {
+	    // Smooth this variable if its weights sum to zero
 	    smoothing_weights[v] = sum;
 	    egraph->smooth_single(v);
 	} else {
