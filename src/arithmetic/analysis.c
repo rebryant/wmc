@@ -31,22 +31,26 @@ static bool double_is_nan(double x) {
     return biased_exp == 0x7FF &&  frac != 0;
 }
 
-
-double digit_precision_q25(q25_ptr qx, q25_ptr qy) {
-    if (!q25_is_valid(qx) || q25_is_infinite(qx, NULL)
-	|| !q25_is_valid(qy) || q25_is_infinite(qy, NULL))
-	return -1.0;
-    if (q25_compare(qx, qy) == 0)
+double digit_precision_q25(q25_ptr x_est, q25_ptr x) {
+    if (!q25_is_valid(x_est) || q25_is_infinite(x_est, NULL)
+	|| !q25_is_valid(x) || q25_is_infinite(x, NULL))
+	return 0.0;
+    if (q25_compare(x_est, x) == 0)
 	return MAX_DIGIT_PRECISION;
-
     int pos = q25_enter();
-    q25_ptr aqx = q25_is_negative(qx) ? q25_mark(q25_negate(qx)) : qx;
-    q25_ptr aqy = q25_is_negative(qy) ? q25_mark(q25_negate(qy)) : qy;
-    q25_ptr denom = q25_mark(q25_add(aqx, aqy));
-    q25_ptr nqx = q25_mark(q25_negate(qx));
-    q25_ptr num = q25_mark(q25_add(nqx, qy));
-    if (q25_is_negative(num))
-	q25_inplace_negate(num);
+    q25_ptr num, denom;
+    if (q25_is_zero(x)) {
+	denom = q25_mark(q25_from_32(1));
+	num = q25_mark(q25_abs(x_est));
+	if (q25_compare(num, denom) >= 0)
+	    num = denom;
+    } else {
+	denom = q25_mark(q25_abs(x));
+	q25_ptr x_neg = q25_mark(q25_negate(x));
+	num = q25_mark(q25_add(x_est, x_neg));
+	if (q25_is_negative(num))
+	    q25_inplace_negate(num);
+    }
     /* See whether over limit */
     q25_ptr dscale = q25_scale(denom, -MAX_DIGIT_PRECISION, -MAX_DIGIT_PRECISION);
     if (q25_compare(num, dscale) < 0) {
@@ -68,11 +72,13 @@ double digit_precision_q25(q25_ptr qx, q25_ptr qy) {
     double rdenom = q25_to_double(denom);
 
     q25_leave(pos);
-    if (rdenom == 0 || double_is_infinite(rnum, NULL) || double_is_infinite(rdenom, NULL))
-	return -1.0;
+    if (rdenom == 0 || double_is_infinite(rnum, NULL))
+	return 0.0;
+    if (double_is_infinite(rdenom, NULL))
+	return MAX_DIGIT_PRECISION;
     if (rnum == 0) {
 	if (rdenom == 0)
-	    return -1.0;
+	    return 0.0;
 	else
 	    return MAX_DIGIT_PRECISION;
     }
@@ -85,19 +91,19 @@ double digit_precision_q25(q25_ptr qx, q25_ptr qy) {
     return ldiv;
 }
 
-double digit_precision_mix(q25_ptr qx, double y) {
+double digit_precision_mix(q25_ptr x_est, double x) {
     int pos = q25_enter();
-    q25_ptr qy = q25_mark(q25_from_double(y));
-    double result = digit_precision_q25(qx, qy);
+    q25_ptr qx = q25_mark(q25_from_double(x));
+    double result = digit_precision_q25(x_est, qx);
     q25_leave(pos);
     return result;
 }
 
-double digit_precision(double x, double y) {
+double digit_precision(double x_est, double x) {
     int pos = q25_enter();
     q25_ptr qx = q25_mark(q25_from_double(x));
-    q25_ptr qy = q25_mark(q25_from_double(y));
-    double result = digit_precision_q25(qx, qy);
+    q25_ptr qx_est = q25_mark(q25_from_double(x_est));
+    double result = digit_precision_q25(qx, qx_est);
     q25_leave(pos);
     return result;
 }

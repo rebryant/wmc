@@ -654,7 +654,19 @@ q25_ptr q25_negate(q25_ptr q) {
 }
 
 void q25_inplace_negate(q25_ptr q) {
-    q->negative = !q->negative;
+    if (!q25_is_zero(q))
+	q->negative = !q->negative;
+}
+
+q25_ptr q25_abs(q25_ptr q) {
+    q25_work(WID, q);
+    working_val[WID].negative = false;
+    return q25_build(WID);
+}
+
+void q25_inplace_abs(q25_ptr q) {
+    if (!q25_is_zero(q))
+	q->negative = false;
 }
 
 // Can only compute reciprocal when d == 1

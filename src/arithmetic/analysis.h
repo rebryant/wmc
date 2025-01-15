@@ -43,11 +43,11 @@ extern "C" {
 #define MAX_DIGIT_PRECISION (1000*1000)
 
 /* Returns number between 0 and MAX_DIGIT_PRECISION */
-double digit_precision_q25(q25_ptr qx, q25_ptr y);
+double digit_precision_q25(q25_ptr x_est, q25_ptr x);
 
-double digit_precision_mix(q25_ptr qx, double y);
+double digit_precision_mix(q25_ptr x_est, double x);
 
-double digit_precision(double x, double y);
+double digit_precision(double x_est, double x);
 
 #ifdef CPLUSPLUS
 }

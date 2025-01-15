@@ -92,6 +92,10 @@ void q25_inplace_scale(q25_ptr q, int32_t p2, int32_t p5);
 q25_ptr q25_negate(q25_ptr q);
 void q25_inplace_negate(q25_ptr q);
 
+/* Absolute value */
+q25_ptr q25_abs(q25_ptr q);
+void q25_inplace_abs(q25_ptr q);
+
 /* 
    Compute reciprocal 
    Can only compute reciprocal when d == 1
