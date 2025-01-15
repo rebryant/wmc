@@ -48,8 +48,7 @@ double digit_precision_q25(q25_ptr x_est, q25_ptr x) {
 	denom = q25_mark(q25_abs(x));
 	q25_ptr x_neg = q25_mark(q25_negate(x));
 	num = q25_mark(q25_add(x_est, x_neg));
-	if (q25_is_negative(num))
-	    q25_inplace_negate(num);
+	q25_inplace_abs(num);
     }
     /* See whether over limit */
     q25_ptr dscale = q25_scale(denom, -MAX_DIGIT_PRECISION, -MAX_DIGIT_PRECISION);

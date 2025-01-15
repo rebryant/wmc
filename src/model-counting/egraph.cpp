@@ -90,57 +90,29 @@ const char *mpfr_string(mpfr_srcptr val) {
     return result;
 }
 
-double digit_precision_mpfi(mpfi_srcptr v) {
-    mpfr_t diam;
-    mpfr_init(diam);
-    mpfi_diam_abs(diam, v);
-    if (mpfr_sgn(diam) == 0) {
-	mpfr_clear(diam);
-	return MAX_DIGIT_PRECISION;
-    }
-
-    mpfr_t avg;
-    mpfr_init(avg);
-    mpfi_mid(avg, v);
-    mpfr_abs(avg, avg, MPFR_RNDN);
-
-    mpfr_t div;
-    mpfr_init(div);
-    mpfr_div(div, diam, avg, MPFR_RNDN);
-    double ddiv = mpfr_get_d(div, MPFR_RNDN);
-    double result = -log10(ddiv);
-    if (result < 0.0)
-	result = 0.0;
-    if (result > MAX_DIGIT_PRECISION)
-	result = MAX_DIGIT_PRECISION;
-    mpfr_clears(diam, avg, div, NULL);
-    return result;
-}
-
-double digit_precision_mpfr(mpfr_srcptr val, mpq_srcptr ref) {
-    mpfr_prec_t save_prec = mpfr_get_default_prec();
-    mpfr_t fref;
-    mpfr_prec_t vprec = 3*mpfr_get_prec(val);
-    mpfr_set_default_prec(vprec);
-    mpfr_init_set_q(fref, ref, MPFR_RNDN);
-    if (mpfr_cmp(val, fref) == 0) {
-	mpfr_clear(fref);
-	mpfr_set_default_prec(save_prec);
+double digit_precision_mpfr(mpfr_srcptr x_est, mpq_srcptr x) {
+    if (mpfr_cmp_q(x_est, x) == 0)
 	return (double) MAX_DIGIT_PRECISION;
-    }
+
+    mpfr_prec_t save_prec = mpfr_get_default_prec();
+    mpfr_prec_t prec = 3*mpfr_get_prec(x_est);
+    mpfr_set_default_prec(prec);
 
     mpfr_t num;
-    mpfr_init_set(num, val, MPFR_RNDN);
-    mpfr_sub(num, num, fref, MPFR_RNDN);
-    mpfr_abs(num, num, MPFR_RNDN);
-
     mpfr_t den;
-    mpfr_init_set(den, val, MPFR_RNDN);
-    mpfr_abs(den, den, MPFR_RNDN);
-    mpfr_abs(fref, fref, MPFR_RNDN);
-    mpfr_add(den, den, fref, MPFR_RNDN);
-
-    mpfr_mul_d(den, den, 0.5, MPFR_RNDN);
+    if (mpq_sgn(x) == 0) {
+	mpfr_init_set_d(den, 1.0, MPFR_RNDN);
+	mpfr_init_set(num, x_est, MPFR_RNDN);
+	mpfr_abs(num, num, MPFR_RNDN);
+	if (mpfr_cmp_d(num, 1.0) > 0)
+	    mpfr_set_d(num, 1.0, MPFR_RNDN);
+    } else {
+	mpfr_init_set_q(den, x, MPFR_RNDN);
+	mpfr_abs(den, den, MPFR_RNDN);
+	mpfr_init_set_q(num, x, MPFR_RNDN);
+	mpfr_sub(num, num, x_est, MPFR_RNDN);
+	mpfr_abs(num, num, MPFR_RNDN);
+    }
     mpfr_div(num, num, den, MPFR_RNDN);
     mpfr_log10(num, num, MPFR_RNDN);
     double result = -mpfr_get_d(num, MPFR_RNDN);
@@ -148,19 +120,37 @@ double digit_precision_mpfr(mpfr_srcptr val, mpq_srcptr ref) {
 	result = 0.0;
     if (result > MAX_DIGIT_PRECISION)
 	result = MAX_DIGIT_PRECISION;
-    mpfr_clears(fref, num, den, NULL);
+    mpfr_clears(num, den, NULL);
     mpfr_set_default_prec(save_prec);
     return result;
-    
 }
 
-double digit_precision_mpf(mpf_srcptr val, mpq_srcptr ref) {
-    mpfr_t rval;
-    int prec = mpf_get_prec(val);
-    mpfr_init2(rval, prec);
-    mpfr_set_f(rval, val, MPFR_RNDN);
-    double result = digit_precision_mpfr(rval, ref);
-    mpfr_clear(rval);
+double digit_precision_mpfi(mpfi_srcptr v) {
+    mpfr_t diam;
+    mpfr_init(diam);
+    mpfi_diam(diam, v);
+    if (mpfr_sgn(diam) == 0) {
+	mpfr_clear(diam);
+	return MAX_DIGIT_PRECISION;
+    }
+    mpfr_log10(diam, diam, MPFR_RNDN);
+    double result = -mpfr_get_d(diam, MPFR_RNDN);
+    if (result < 0)
+	result = 0.0;
+    if (result > MAX_DIGIT_PRECISION)
+	result = MAX_DIGIT_PRECISION;
+    mpfr_clear(diam);
+    return result;
+}
+
+
+double digit_precision_mpf(mpf_srcptr x_est, mpq_srcptr x) {
+    mpfr_t rx_est;
+    int prec = mpf_get_prec(x_est);
+    mpfr_init2(rx_est, prec);
+    mpfr_set_f(rx_est, x_est, MPFR_RNDN);
+    double result = digit_precision_mpfr(rx_est, x);
+    mpfr_clear(rx_est);
     return result;
 }
 
@@ -180,15 +170,15 @@ static bool double_is_special(double x) {
 }
 
 
-double digit_precision_d(double val, mpq_srcptr ref) {
-    if (double_is_special(val))
+double digit_precision_d(double x_est, mpq_srcptr x) {
+    if (double_is_special(x_est))
 	return 0.0;
-    mpfr_t rval;
+    mpfr_t rx_est;
     int prec = 64;
-    mpfr_init2(rval, prec);
-    mpfr_set_d(rval, val, MPFR_RNDN);
-    double result = digit_precision_mpfr(rval, ref);
-    mpfr_clear(rval);
+    mpfr_init2(rx_est, prec);
+    mpfr_set_d(rx_est, x_est, MPFR_RNDN);
+    double result = digit_precision_mpfr(rx_est, x);
+    mpfr_clear(rx_est);
     return result;
 }
 

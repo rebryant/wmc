@@ -51,9 +51,9 @@
 const char *mpf_string(mpf_srcptr val);
 const char *mpfr_string(mpfr_srcptr val);
 
-double digit_precision_mpfr(mpfr_srcptr val, mpq_srcptr ref);
-double digit_precision_mpf(mpf_srcptr val, mpq_srcptr ref);
-double digit_precision_d(double val, mpq_srcptr ref);
+double digit_precision_mpfr(mpfr_srcptr x_est, mpq_srcptr x);
+double digit_precision_mpf(mpf_srcptr x_est, mpq_srcptr x);
+double digit_precision_d(double x_est, mpq_srcptr x);
 double digit_precision_mpfi(mpfi_srcptr v);
 
 /*******************************************************************************************************************
