@@ -22,47 +22,30 @@ def weightString(scaled, sigdigs):
     return wstring
 
 # Attempt at encoding as CNF.  Not quite right.
-def generateWrongCnf(root, n, sigdigs):
+def generateCnf(root, n, sigdigs):
     cnfName = root + ".cnf"
     cnf = readwrite.CnfWriter(n+4, fname=cnfName, verbLevel=2)
     cnf.doHeaderComment("Problem requiring very high precision")
-    cnf.doHeaderComment("Variables: %d+4, Max weight 10e%d, Minimum weight 10e-%d" % (n, sigdigs, sigdigs))
-    cnf.doHeaderComment("Encodings: t1 <--> /\\ x_i, t2 <--> /\\ !x_i, t3 <--> t1 \\/ t2, ITE(z, t3, t1)")
-    cnf.doHeaderComment("   z = var1, t1 = var2, t2 = var2, t3 = var3") 
-    xvars = list(range(5, n+5))
+    cnf.doHeaderComment("Variables: %d+1, Max weight 10e%d, Minimum weight 10e-%d" % (n, sigdigs, sigdigs))
+    xvars = list(range(2, n+2))
     nxvars = [-x for x in xvars]
     z  = 1
-    t1 = 2
-    t2 = 3
-    t3 = 4
     wdict = {}
-    wdict[t1]  =  "1.0"
-    wdict[-t1] =  "1.0"
-    wdict[t2]  =  "1.0"
-    wdict[-t2] =  "1.0" 
-    wdict[t3]  =  "1.0"
-    wdict[-t3] =  "1.0"
-    wdict[z]   =  "1.0"
-    wdict[-z]  = "-1.0"
+    wdict[z]  =  "1.0"
+    wdict[-z] =  "-1.0"
     for x in xvars:
         wdict[x] = weightString(int(100**sigdigs), sigdigs)
         wdict[-x] = weightString(1, sigdigs)
     cnf.addWeights(wdict)
-    cnf.doComment("  t1 <--> /\\ x_i")
-    cnf.doClause([t1] + nxvars)
+    cnf.doComment("  z --> /\\ x_i")
     for x in xvars:
-        cnf.doClause([-t1, x])
-    cnf.doComment("t2 <--> /\\ !x_i")
-    cnf.doClause([t2] + xvars)
-    for nx in nxvars:
-        cnf.doClause([-t2, nx])
-    cnf.doComment("t3 <--> t1 \\/ t2")
-    cnf.doClause([-t3, t1, t2])
-    cnf.doClause([t3, -t1])
-    cnf.doClause([t3, -t2])
-    cnf.doComment("ITE(z, t3, t1)")
-    cnf.doClause([-z, t3])
-    cnf.doClause([z, t1])
+        cnf.doClause([z, x])
+    cnf.doComment("  !z --> (/\\ x_i  \\/  /\\ !x_i)")
+    x1 = xvars[0]
+    xrest = xvars[1:]
+    for x in xrest:
+        cnf.doClause([-z, -x1, x])
+        cnf.doClause([-z,   x1, -x])
     cnf.finish()
 
 def generateWeightedCnf(root, n, sigdigs):
@@ -137,7 +120,7 @@ def run(name, args):
         sys.stderr.write("Need root name\n")
         usage(name)
         return
-    generateWeightedCnf(root, n, sigdigs)
+    generateCnf(root, n, sigdigs)
     generateNnf(root, n)
     
 if __name__ == "__main__":

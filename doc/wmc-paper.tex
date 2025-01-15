@@ -1,0 +1,108 @@
+\documentclass[letterpaper,USenglish,cleveref, autoref, thm-restate]{lipics-v2021}
+
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+%\newtheorem{proposition}{Proposition}
+
+\newcommand{\boolnot}{\neg}
+\newcommand{\tautology}{\top}
+\newcommand{\nil}{\bot}
+\newcommand{\obar}[1]{\overline{#1}}
+\newcommand{\lit}{\ell}
+
+\newcommand{\progname}[1]{\textsc{#1}}
+\newcommand{\dfour}{\progname{D4}}
+\newcommand{\Dfour}{\progname{D4}}
+
+\newcommand{\approximate}[1]{\hat{#1}}
+\newcommand{\relativedifference}{\delta}
+\newcommand{\digitprecision}{\Delta}
+\newcommand{\minvalue}{\omega}
+\newcommand{\maxValue}{\Omega}
+
+
+\definecolor{redorange}{rgb}{0.878431, 0.235294, 0.192157}
+\definecolor{lightblue}{rgb}{0.552941, 0.72549, 0.792157}
+\definecolor{clearyellow}{rgb}{0.964706, 0.745098, 0}
+\definecolor{clearorange}{rgb}{0.917647, 0.462745, 0}
+\definecolor{mildgray}{rgb}{0.54902, 0.509804, 0.47451}
+\definecolor{softblue}{rgb}{0.643137, 0.858824, 0.909804}
+\definecolor{bluegray}{rgb}{0.141176, 0.313725, 0.603922}
+\definecolor{lightgreen}{rgb}{0.709804, 0.741176, 0}
+\definecolor{darkgreen}{rgb}{0.152941, 0.576471, 0.172549}
+\definecolor{redpurple}{rgb}{0.835294, 0, 0.196078}
+\definecolor{midblue}{rgb}{0, 0.592157, 0.662745}
+\definecolor{clearpurple}{rgb}{0.67451, 0.0784314, 0.352941}
+\definecolor{browngreen}{rgb}{0.333333, 0.313725, 0.145098}
+\definecolor{darkestpurple}{rgb}{0.396078, 0.113725, 0.196078}
+\definecolor{greypurple}{rgb}{0.294118, 0.219608, 0.298039}
+\definecolor{darkturquoise}{rgb}{0, 0.239216, 0.298039}
+\definecolor{darkbrown}{rgb}{0.305882, 0.211765, 0.160784}
+\definecolor{midgreen}{rgb}{0.560784, 0.6, 0.243137}
+\definecolor{darkred}{rgb}{0.576471, 0.152941, 0.172549}
+\definecolor{darkpurple}{rgb}{0.313725, 0.027451, 0.470588}
+\definecolor{darkestblue}{rgb}{0, 0.156863, 0.333333}
+\definecolor{lightpurple}{rgb}{0.776471, 0.690196, 0.737255}
+\definecolor{softgreen}{rgb}{0.733333, 0.772549, 0.572549}
+\definecolor{offwhite}{rgb}{0.839216, 0.823529, 0.768627}
+\definecolor{medgreen}{rgb}{0.15, 0.6, 0.15}
+
+\bibliographystyle{plainurl}% the mandatory bibstyle
+
+\title{Arithmetic Considerations in Weighted Model Counting}
+
+\titlerunning{Certifying Projected Knowledge Compilation}
+
+\author{Randal E. Bryant}{Computer Science Department, Carnegie Mellon University, Pittsburgh, PA 15213 USA}{Randy.Bryant@cs.cmu.edu}{https://orcid.org/0000-0001-5024-6613}{}
+
+\authorrunning{R. E. Bryant} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
+
+\Copyright{Randal E. Bryant} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+
+%%
+%% end of the preamble, start of the body of the document source.
+\begin{document}
+
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+%% The abstract is a short summary of the work to be presented in the
+%% article.
+\begin{abstract}
+\end{abstract}
+
+\section{Preliminaries}
+
+For real numbers $x$ and $y$, we define their \emph{relative difference} as
+\begin{eqnarray}
+\relativedifference(x, y) & = & \frac{|x - y|}{|x|+|y|} \label{eqn:reldiff} 
+\end{eqnarray}
+with the convention that $\relativedifference(0,0) = 0$.  This number will range
+from $0$ when $x=y$ to $1$ when $x = -y$.  When $\approximate{x}$ is
+an approximation of real number $x$, then $\relativedifference(\approximate{x}, x)$
+is a measure of the relative error of the approximation.
+Compared to the traditional method of expressing relative error as $|\approximate{x}-x|/|x|$,
+ours has the advantage of being defined even when $x=0$.
+
+We then define the \emph{digit similarity} of real values $x$ and $y$ as
+\begin{eqnarray}
+\digitprecision(x, y) & = & - \log_{10} \relativedifference(x, y) \label{eqn:digitprecision} 
+\end{eqnarray}
+This value will range between $0$ when $x = -y$ and $\infty$ when
+$x=y$.  When both $x$ and $y$ are written as (possibly infinite-length) decimal numbers, $\digitprecision(x,y)$ indicates the number
+of leading digits they have in common.
+
+\newpage
+\bibliography{references}
+
+\end{document}
+
+%%
+%% End of file
