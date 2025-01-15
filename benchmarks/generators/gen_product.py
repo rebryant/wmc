@@ -6,10 +6,14 @@
 #   Uniform: Use specified weight for all vars
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-h] [-u WEIGHT] [-s SEED] [-r u|e] -n COUNT\n" % name)
+    sys.stderr.write("Usage: %s [-h] [-u WEIGHT] [-s SEED] [-r u|e] [-c OUT.nnf] (-n COUNT | -p COUNT_LOG10)\n" % name)
     sys.stderr.write("  -u  WEIGHT  Used specified weight for all variables\n")
     sys.stderr.write("  -s  SEED    Set seed for randomly generated weights\n")
     sys.stderr.write("  -r  u|e     Use randomly generated weights (u: uniform, e:exponential)\n")
+    sys.stderr.write("  -c OUT.nnf  Generate .nnf directly\n")
+    sys.stderr.write("  -n COUNT    Specify variable count\n")
+    sys.stderr.write("  -p CNT_L10  Specify LOG_10(count)\n")
+    
 
 import sys
 import getopt
@@ -27,6 +31,18 @@ defaultWeight = None
 
 seed = 12345
 randomMethod = None
+
+def writeList(outFile, ls):
+    sls = [str(v) for v in ls]
+    outFile.write(" ".join(sls))
+    outFile.write("\n")
+
+def genNnf(outFile, n):
+    writeList(outFile, ['o', 1, 0])
+    writeList(outFile, ['t', 2, 0])
+    ls = [1, 2] + [x+1 for x in range(n)] + [0]
+    writeList(outFile, ls)
+
 
 # For generating random weights with different distributions.  Copied from tools/reweight.py
 def weightString(scaled, sigDigitCount):
@@ -124,7 +140,7 @@ def initialize(progPath):
         line = trim(line)
         if len(line) > 0:
             weightList.append(line)
-    sys.stderr.write("Found %d weights\n" % len(weightList))
+#    sys.stderr.write("Found %d weights\n" % len(weightList))
     wfile.close()
     if len(weightList) == 0:
         sys.stderr.write("No weights found in weight file '%s'" % weightFile)
@@ -169,25 +185,43 @@ def run(name, args):
     global defaultWeight
     global seed, randomMethod
     n = None
-    initialize(name)
-    optList, args = getopt.getopt(args, "hn:u:s:r:")
+    needWeights = True
+    outName = None
+    optList, args = getopt.getopt(args, "hn:p:u:s:r:c:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
         elif opt == '-n':
             n = int(val)
+        elif opt == '-p':
+            n = 10**int(val)
         elif opt == '-s':
             seed = int(val)
         elif opt == '-r':
             randomMethod = val
+            needWeights = False
         elif opt == '-u':
             defaultWeight = val
+            needWeights = False
+        elif opt == '-c':
+            outName = val
     if n is None:
         sys.stderr.write("Need variable count\n")
         usage(name)
         return
-    generate(name, n)
+    if (outName is not None):
+        try:
+            outFile = open(outName, "w")
+        except:
+            print("Couldn't open output file %s" % outName)
+            return
+        genNnf(outFile, n)
+        outFile.close()
+    else:
+        if needWeights:
+            initialize(name)
+        generate(name, n)
     
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
