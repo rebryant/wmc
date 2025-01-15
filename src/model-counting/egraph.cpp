@@ -1324,6 +1324,11 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
 	mpfi_clear(product);
     }
     mpfi_swap(count, operation_values[egraph->root_id-1]);
+    double dp = digit_precision_mpfi(count);
+    if (dp < min_digit_precision)
+	min_digit_precision = dp;
+    if (dp < target_digit_precision)
+	precision_failure_count++;
     for (int id = 1; id <= egraph->operations.size(); id++)
 	mpfi_clear(operation_values[id-1]);
     delete[] operation_values;
