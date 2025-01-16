@@ -1,0 +1,26 @@
+c: CNT:     Reading files and constructing graph required 17.685 seconds
+c: CNT:     Using weights from file 'prod-p7_uniform-123456.cnf'
+c: CNT:   WEIGHTED MPQ COUNT    = 2.6297375573395725978542228398006327961e-4343794
+c: CNT:     MPQ required 236.372 seconds, 137978288 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = 2.629737557339572597854222839800631927503e-4343794   precision = 33.481
+c: CNT:     MPF required 8.339 seconds
+c: CNT:   WEIGHTED DBL COUNT    = 0   precision = -0.000
+c: CNT:     DBL required 2.091 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = 2.62973755733957259785422283980063279769e-4343794   precision est = 31.373 actual = 36.218
+c: CNT:     MPFI required 11.667 seconds
+c: CNT:     MPFI had 0 precision failures and a minimum precision of 31.373
+c: CNT:   Data variables    : 10000000
+c: CNT:     Smooth variables: 0
+c: CNT:   Operations 
+c: CNT:     Sums            : 0
+c: CNT:     Edge products   : 1
+c: CNT:     Node Products   : 0
+c: CNT:     Smooth prods    : 0
+c: CNT:     Operations TOTAL: 1
+c: CNT:   Binary Operations 
+c: CNT:     Sum ops         : 0
+c: CNT:     Edge product ops: 10000000
+c: CNT:     Node product ops: 0
+c: CNT:     Smooth prod ops : 0
+c: CNT:     Binops  TOTAL   : 10000000
+c: CNT:   Graph bytes       : 40000008

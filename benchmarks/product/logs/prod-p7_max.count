@@ -1,0 +1,26 @@
+c: CNT:     Reading files and constructing graph required 17.685 seconds
+c: CNT:     Using weights from file 'prod-p7_max.cnf'
+c: CNT:   WEIGHTED MPQ COUNT    = 1.0e90000000
+c: CNT:     MPQ required 21.131 seconds, 74743472 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = 9.999999999999999999999999999999996682348e89999999   precision = 33.479
+c: CNT:     MPF required 6.316 seconds
+c: CNT:   WEIGHTED DBL COUNT    = inf   precision = 0.000
+c: CNT:     DBL required 1.179 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = 9.999999999999999999999999999999999978949e89999999   precision est = 31.373 actual = 35.677
+c: CNT:     MPFI required 9.497 seconds
+c: CNT:     MPFI had 0 precision failures and a minimum precision of 31.373
+c: CNT:   Data variables    : 10000000
+c: CNT:     Smooth variables: 0
+c: CNT:   Operations 
+c: CNT:     Sums            : 0
+c: CNT:     Edge products   : 1
+c: CNT:     Node Products   : 0
+c: CNT:     Smooth prods    : 0
+c: CNT:     Operations TOTAL: 1
+c: CNT:   Binary Operations 
+c: CNT:     Sum ops         : 0
+c: CNT:     Edge product ops: 10000000
+c: CNT:     Node product ops: 0
+c: CNT:     Smooth prod ops : 0
+c: CNT:     Binops  TOTAL   : 10000000
+c: CNT:   Graph bytes       : 40000008

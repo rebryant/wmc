@@ -1,0 +1,26 @@
+c: CNT:     Reading files and constructing graph required 17.685 seconds
+c: CNT:     Using weights from file 'prod-p7_exponential-123456.cnf'
+c: CNT:   WEIGHTED MPQ COUNT    = 2.56524195559085181549401938228303648886e-46612128
+c: CNT:     MPQ required 139.503 seconds, 103359584 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = 2.565241955590851815494019382283035640786e-46612128   precision = 33.481
+c: CNT:     MPF required 8.295 seconds
+c: CNT:   WEIGHTED DBL COUNT    = 0   precision = -0.000
+c: CNT:     DBL required 2.170 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = 2.565241955590851815494019382283036493864e-46612128   precision est = 31.373 actual = 35.710
+c: CNT:     MPFI required 11.566 seconds
+c: CNT:     MPFI had 0 precision failures and a minimum precision of 31.373
+c: CNT:   Data variables    : 10000000
+c: CNT:     Smooth variables: 0
+c: CNT:   Operations 
+c: CNT:     Sums            : 0
+c: CNT:     Edge products   : 1
+c: CNT:     Node Products   : 0
+c: CNT:     Smooth prods    : 0
+c: CNT:     Operations TOTAL: 1
+c: CNT:   Binary Operations 
+c: CNT:     Sum ops         : 0
+c: CNT:     Edge product ops: 10000000
+c: CNT:     Node product ops: 0
+c: CNT:     Smooth prod ops : 0
+c: CNT:     Binops  TOTAL   : 10000000
+c: CNT:   Graph bytes       : 40000008
