@@ -74,6 +74,12 @@ struct Egraph_edge {
     std::vector<int> smoothing_variables;
 };
 
+struct Egraph_weights {
+    std::unordered_map<int,mpq_class> evaluation_weights;
+    std::unordered_map<int,mpq_class> smoothing_weights;
+    std::vector<mpq_class> rescale_weights;
+};
+
 class Egraph {
 public:
     std::vector<Egraph_operation> operations;
@@ -83,16 +89,16 @@ public:
     bool is_smoothed;
     int smooth_variable_count;
 
-
     Egraph(std::unordered_set<int> *data_variables);
     void read_nnf(FILE *infile);
     void write_nnf(FILE *outfile);
 
+    Egraph_weights *prepare_weights(std::unordered_map<int,const char *> *literal_string_weights);
     void smooth();
 
     // Ability to do partial smoothing
     // Remove all smoothing variables
-    void unsmooth();
+    void reset_smooth();
     void smooth_single(int var);
 
     bool is_data_variable(int var) { return data_variables->find(var) != data_variables->end(); }
@@ -121,13 +127,13 @@ public:
 
     Evaluator_q25(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    q25_ptr evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    q25_ptr evaluate(std::unordered_map<int,const char *> *literal_string_weights);
     void clear_evaluation();
     int max_size;
 
     
 private:
-    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights);
     q25_ptr evaluate_edge(Egraph_edge &e);
 
 };
@@ -148,11 +154,11 @@ public:
 
     Evaluator_double(Egraph *egraph);
     // literal_weights == NULL for unweighted
-    double evaluate(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    double evaluate(std::unordered_map<int,const char *> *literal_string_weights);
     void clear_evaluation();
     
 private:
-    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights);
     double evaluate_edge(Egraph_edge &e);
 };
 
@@ -164,19 +170,17 @@ class Evaluator_mpf {
 private:
     Egraph *egraph;
     // For evaluation
-    std::unordered_map<int,mpf_class> evaluation_weights;
-    std::unordered_map<int,mpf_class> smoothing_weights;
+    Egraph_weights *weights;
     mpf_class rescale;
 
 public:
 
-    Evaluator_mpf(Egraph *egraph);
+    Evaluator_mpf(Egraph *egraph, Egraph_weights *weights);
     // literal_weights == NULL for unweighted
-    bool evaluate(mpf_class &count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void evaluate(mpf_class &count);
     void clear_evaluation();
 
 private:
-    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void evaluate_edge(mpf_class &value, Egraph_edge &e);
 };
 
@@ -188,21 +192,19 @@ class Evaluator_mpq {
 private:
     Egraph *egraph;
     // For evaluation
-    std::unordered_map<int,mpq_class> evaluation_weights;
-    std::unordered_map<int,mpq_class> smoothing_weights;
+    Egraph_weights *weights;
     mpq_class rescale;
 
 public:
 
-    Evaluator_mpq(Egraph *egraph);
+    Evaluator_mpq(Egraph *egraph, Egraph_weights *weights);
     // literal_weights == NULL for unweighted
-    bool evaluate(mpq_class &count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    void evaluate(mpq_class &count);
     void clear_evaluation();
     // Maximum number of bytes in MPQ representation of any generated value
     size_t max_bytes;
     
 private:
-    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void evaluate_edge(mpq_class &value, Egraph_edge &e);
 };
 
@@ -214,48 +216,38 @@ class Evaluator_mpfi {
 private:
     Egraph *egraph;
     // For evaluation.  Use MPQ to store weights precisely
-    std::unordered_map<int,mpq_class> evaluation_weights;
-    std::unordered_map<int,mpq_class> smoothing_weights;
+    Egraph_weights *weights;
     mpfi_t rescale;
-    int target_digit_precision;
-    /* Use recomputation to achieve desired precision */
-    bool refine;
+    // Measure precision of intermdiate results
+    bool instrument;
 
 public:
 
-    Evaluator_mpfi(Egraph *egraph, int target_digit_precision, bool refine);
-    // literal_weights == NULL for unweighted
-    bool evaluate(mpfi_ptr count, std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
+    Evaluator_mpfi(Egraph *egraph, Egraph_weights *weights, bool instrument);
+    void evaluate(mpfi_ptr count);
     void clear_evaluation();
-    
-    // Instrumentation
+    // Least digit precision estimate encountered.  Only computed when instrument.
     double min_digit_precision;
-    long precision_failure_count;
 
 private:
-    bool prepare_weights(std::unordered_map<int,const char *> *literal_string_weights, bool smoothed);
     void evaluate_edge(mpfi_ptr value, Egraph_edge &e);
 };
 
-
 /*******************************************************************************************************************
-Evaluation via Gnu multi-precision integer arithmetic (unweighted counting only)
+Evaluation starting with MFPI and switching to MPQ is needed
 *******************************************************************************************************************/
 
-/** NOT IMPLEMENTED **/
-
-class Evaluator_mpz {
+class Evaluator_combo {
 private:
+
     Egraph *egraph;
+    double target_precision;
 
 public:
 
-    Evaluator_mpz(Egraph *egraph);
-    // Can indicate superset of those variables appearing in the NNF
-    bool evaluate(mpz_class &count, std::unordered_set<int> *data_variables);
-    void clear_evaluation();
-    
-private:
-    void evaluate_edge(mpz_class &value, Egraph_edge &e);
+    Evaluator_combo(Egraph *egraph, double target_precision);
+    // literal_weights == NULL for unweighted
+    bool evaluate(mpq_ptr count, std::unordered_map<int,const char *> *literal_string_weights);
+
 };
 

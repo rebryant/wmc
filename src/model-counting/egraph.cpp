@@ -182,6 +182,33 @@ double digit_precision_d(double x_est, mpq_srcptr x) {
     return result;
 }
 
+static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
+    mpq_t one;
+    mpq_init(one);
+    mpq_set_ui(one, 1, 1);
+    mpq_neg(dest, val);
+    mpq_add(dest, dest, one);
+    mpq_clear(one);
+}
+
+// Form product of values in queue.
+// Use breadth-first evaluation to form balanced binary tree
+static void reduce_product(mpq_class &product, std::vector<mpq_class> &eval_queue) {
+    size_t start_size = eval_queue.size();
+    if (eval_queue.size() == 0)
+	product = 1.0;
+    else if (eval_queue.size() == 1) 
+	product = eval_queue[0];
+    else {
+	size_t index = 0;
+	while (index < eval_queue.size()-1) {
+	    eval_queue.push_back(eval_queue[index] * eval_queue[index+1]);
+	    index += 2;
+	}
+	product = eval_queue[index];
+    }
+    eval_queue.resize(start_size);
+}
 
 
 
@@ -462,11 +489,17 @@ void Egraph::smooth() {
     smooth_variable_count = smoothed_variables.size();
 }
 
-void Egraph::unsmooth() {
-    for (Egraph_edge e : edges) {
-	incr_count_by(COUNT_SMOOTH_VARIABLES, - (int) e.smoothing_variables.size());
-	e.smoothing_variables.clear();
+void Egraph::reset_smooth() {
+    if (is_smoothed || smooth_variable_count == 0)
+	return;
+    for (int id = 1; id <= edges.size(); id++) {
+	incr_count_by(COUNT_SMOOTH_VARIABLES, - (int) edges[id-1].smoothing_variables.size());
+	if (edges[id-1].smoothing_variables.size() != 0)
+	    report(4, "Removing %d variables from edge #%d (%d <-- %d)\n",
+		   (int) edges[id-1].smoothing_variables.size(), id, edges[id-1].to_id, edges[id-1].from_id);
+	edges[id-1].smoothing_variables.clear();
     }
+    reset_histo(HISTO_EDGE_SMOOTHS);
     smooth_variable_count = 0;
 }
 
@@ -503,6 +536,7 @@ void Egraph::smooth_single(int var) {
 	if (var_found[to_id-1] && !var_found[from_id-1] && !edge_contains[id-1]) {
 	    ecount++;
 	    add_smoothing_variable(id, var);
+	    report(4, "Adding smoothing variable %d on edge #%d (%d <-- %d)\n", var, id, to_id, from_id);
 	}
     }
     // Check at root
@@ -521,6 +555,75 @@ void Egraph::smooth_single(int var) {
 
 }
 
+// literal_string_weights == NULL for unweighted
+Egraph_weights * Egraph::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights) {
+    Egraph_weights *weights = new(Egraph_weights);
+    weights->evaluation_weights.clear();
+    weights->smoothing_weights.clear();
+    weights->rescale_weights.clear();
+    for (int v : *data_variables) {
+	mpq_class pwt = 1;
+	bool gotp = false;
+	mpq_class nwt = 1;
+	bool gotn = false;
+
+	if (literal_string_weights) {
+	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
+		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
+		if (!q25_is_valid(qpwt)) {
+		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
+		    delete weights;
+		    return NULL;
+		}
+		if (!q25_to_mpq(pwt.get_mpq_t(), qpwt)) {
+		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
+		    delete weights;
+		    return NULL;
+		}
+		q25_free(qpwt);
+		gotp = true;
+	    }
+	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
+		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
+		if (!q25_is_valid(qnwt)) {
+		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    delete weights;
+		    return NULL;
+		}
+		if (!q25_to_mpq(nwt.get_mpq_t(), qnwt)) {
+		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
+		    delete weights;
+		    return NULL;
+		}
+		q25_free(qnwt);
+		gotn = true;
+	    }
+	    if (gotp) {
+		if (!gotn)
+		    mpq_one_minus(nwt.get_mpq_t(), pwt.get_mpq_t());
+	    } else {
+		if (gotn)
+		    mpq_one_minus(pwt.get_mpq_t(), nwt.get_mpq_t());
+	    }
+	}
+	mpq_class sum = nwt+pwt;
+	if (is_smoothed)
+	    weights->smoothing_weights[v] = sum;
+	else if (cmp(sum, mpq_class(0)) == 0) {
+	    weights->smoothing_weights[v] = sum;
+	    smooth_single(v);
+	} else {
+	    weights->rescale_weights.push_back(sum);
+	    pwt /= sum;
+	    nwt /= sum;
+	}
+	weights->evaluation_weights[v] = pwt;
+	weights->evaluation_weights[-v] = nwt;
+    }
+    return weights;
+}
+
+
 /*******************************************************************************************************************
 Evaluation via Q25
 *******************************************************************************************************************/
@@ -538,17 +641,14 @@ void Evaluator_q25::clear_evaluation() {
     for (auto iter : smoothing_weights)
 	q25_free(iter.second);
     smoothing_weights.clear();
-    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
-	reset_histo(HISTO_EDGE_SMOOTHS);
-	egraph->unsmooth();
-    }
+    egraph->reset_smooth();
     q25_free(rescale);
     rescale = q25_from_32(1);
 
 }
 
 // literal_string_weights == NULL for unweighted
-void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights) {
     clear_evaluation();
     for (int v : *egraph->data_variables) {
 	q25_ptr pwt = NULL;
@@ -581,7 +681,7 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 	    }
 	}
 	q25_ptr sum = q25_add(pwt, nwt);
-	if (smoothed)
+	if (egraph->is_smoothed)
 	    smoothing_weights[v] = sum;
 	else if (q25_is_zero(sum)) {
 	    smoothing_weights[v] = sum;
@@ -626,8 +726,8 @@ q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e) {
     return result;
 }
 
-q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    prepare_weights(literal_string_weights, smoothed);
+q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_string_weights) {
+    prepare_weights(literal_string_weights);
     std::vector<q25_ptr> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -695,14 +795,12 @@ void Evaluator_double::clear_evaluation() {
     evaluation_weights.clear();
     smoothing_weights.clear();
     rescale = 1.0;
-    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
-	egraph->unsmooth();
-	reset_histo(HISTO_EDGE_SMOOTHS);
-    }
+    egraph->reset_smooth();
 }
 
+
 // literal_string_weights == NULL for unweighted
-void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
+void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights) {
     clear_evaluation();
     for (int v : *egraph->data_variables) {
 	double pwt = 0.0;
@@ -737,7 +835,7 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 	    }
 	}
 	double sum = pwt + nwt;
-	if (smoothed)
+	if (egraph->is_smoothed)
 	    smoothing_weights[v] = sum;
 	else if (sum == 0.0) {
 	    smoothing_weights[v] = sum;
@@ -768,8 +866,8 @@ double Evaluator_double::evaluate_edge(Egraph_edge &e) {
     return result;
 }
 
-double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    prepare_weights(literal_string_weights, smoothed);
+double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_string_weights) {
+    prepare_weights(literal_string_weights);
     std::vector<double> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -813,22 +911,13 @@ Evaluation via Gnu multi-precision floating-point arithmetic
 *******************************************************************************************************************/
 
 
-Evaluator_mpf::Evaluator_mpf(Egraph *eg) { 
+Evaluator_mpf::Evaluator_mpf(Egraph *eg, Egraph_weights *wts) { 
     egraph = eg;
+    weights = wts;
     clear_evaluation();
 }
     
 void Evaluator_mpf::clear_evaluation() {
-    //    for (auto iter : evaluation_weights)
-    //	mpf_clear(iter.second);
-    evaluation_weights.clear();
-    //    for (auto iter : smoothing_weights)
-    //	mpf_clear(iter.second);
-    smoothing_weights.clear();
-    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
-	reset_histo(HISTO_EDGE_SMOOTHS);
-	egraph->unsmooth();
-    }
     rescale = 1;
 }
 
@@ -841,73 +930,13 @@ static void mpf_one_minus(mpf_ptr dest, mpf_srcptr val) {
     mpf_clear(one);
 }
 
-// literal_string_weights == NULL for unweighted
-bool Evaluator_mpf::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    clear_evaluation();
-    for (int v : *egraph->data_variables) {
-	mpf_class pwt = 1;
-	bool gotp = false;
-	mpf_class nwt = 1;
-	bool gotn = false;
-
-	if (literal_string_weights) {
-	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
-		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
-		if (!q25_is_valid(qpwt)) {
-		    err(false, "MPF: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		if (!q25_to_mpf(pwt.get_mpf_t(), qpwt)) {
-		    err(false, "MPF: Couldn't convert from q25 to mpf for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		q25_free(qpwt);
-		gotp = true;
-	    }
-	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
-		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
-		if (!q25_is_valid(qnwt)) {
-		    err(false, "MPF: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		if (!q25_to_mpf(nwt.get_mpf_t(), qnwt)) {
-		    err(false, "MPF: Couldn't convert from q25 to mpf for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		q25_free(qnwt);
-		gotn = true;
-	    }
-	    if (gotp) {
-		if (!gotn)
-		    mpf_one_minus(nwt.get_mpf_t(), pwt.get_mpf_t());
-	    } else {
-		if (gotn)
-		    mpf_one_minus(pwt.get_mpf_t(), nwt.get_mpf_t());
-	    }
-	}
-	mpf_class sum = nwt+pwt;
-	if (smoothed) 
-	    smoothing_weights[v] = sum;
-	else if (cmp(sum, mpf_class(0)) == 0) {
-	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v);
-	} else {
-	    rescale *= sum;
-	    pwt /= sum;
-	    nwt /= sum;
-	}
-	evaluation_weights[v] = pwt;
-	evaluation_weights[-v] = nwt;
-    }
-    return true;
-}
-
 void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
     value = 1;
+    // Automatically convert from mpq to mpf
     for (int lit : e.literals)
-	value *= evaluation_weights[lit];
+	value *= weights->evaluation_weights[lit];
     for (int v : e.smoothing_variables)
-	value *= smoothing_weights[v];
+	value *= weights->smoothing_weights[v];
     if (verblevel >= 4) {
 	mp_exp_t exp;
 	char *svalue = mpf_get_str(NULL, &exp, 10, 40, value.get_mpf_t());
@@ -916,9 +945,11 @@ void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
     }
 }
 
-bool Evaluator_mpf::evaluate(mpf_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    if (!prepare_weights(literal_string_weights, smoothed))
-	return false;
+void Evaluator_mpf::evaluate(mpf_class &count) {
+    clear_evaluation();
+    rescale = 1.0;
+    for (mpf_class wt : weights->rescale_weights)
+	rescale *= wt;
     std::vector<mpf_class> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -974,9 +1005,7 @@ bool Evaluator_mpf::evaluate(mpf_class &count, std::unordered_map<int,const char
 	report(4, "MPF: Count = 0.%se%ld\n", scount, ecount);
 	free(scount);
     }
-    return true;
 }
-
 
 /*******************************************************************************************************************
 Evaluation via Gnu multi-precision rational arithmetic
@@ -997,124 +1026,22 @@ static size_t mpq_bytes(mpq_srcptr val) {
     return size;
 }
 
-// Form product of values in queue.
-// Use breadth-first evaluation to form balanced binary tree
-static void reduce_product(mpq_class &product, std::vector<mpq_class> &eval_queue) {
-    if (eval_queue.size() == 0)
-	product = 1.0;
-    else if (eval_queue.size() == 1) 
-	product = eval_queue[0];
-    else {
-	size_t index = 0;
-	while (index < eval_queue.size()-1) {
-	    eval_queue.push_back(eval_queue[index] * eval_queue[index+1]);
-	    index += 2;
-	}
-	product = eval_queue[index];
-    }
-}
-
-
-Evaluator_mpq::Evaluator_mpq(Egraph *eg) { 
+Evaluator_mpq::Evaluator_mpq(Egraph *eg, Egraph_weights *wts) { 
     egraph = eg;
-    clear_evaluation();
+    weights = wts;
 }
     
 void Evaluator_mpq::clear_evaluation() {
-    //    for (auto iter : evaluation_weights)
-    //	mpq_clear(iter.second);
-    evaluation_weights.clear();
-    //    for (auto iter : smoothing_weights)
-    //	mpq_clear(iter.second);
-    smoothing_weights.clear();
-    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
-	egraph->unsmooth();
-	reset_histo(HISTO_EDGE_SMOOTHS);
-    }	
     rescale = 1;
     max_bytes = 0;
-}
-
-static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
-    mpq_t one;
-    mpq_init(one);
-    mpq_set_ui(one, 1, 1);
-    mpq_neg(dest, val);
-    mpq_add(dest, dest, one);
-    mpq_clear(one);
-}
-
-// literal_string_weights == NULL for unweighted
-bool Evaluator_mpq::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    clear_evaluation();
-    std::vector<mpq_class> product_queue;
-
-    for (int v : *egraph->data_variables) {
-	mpq_class pwt = 1;
-	bool gotp = false;
-	mpq_class nwt = 1;
-	bool gotn = false;
-
-	if (literal_string_weights) {
-	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
-		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
-		if (!q25_is_valid(qpwt)) {
-		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		if (!q25_to_mpq(pwt.get_mpq_t(), qpwt)) {
-		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		q25_free(qpwt);
-		gotp = true;
-	    }
-	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
-		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
-		if (!q25_is_valid(qnwt)) {
-		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		if (!q25_to_mpq(nwt.get_mpq_t(), qnwt)) {
-		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		q25_free(qnwt);
-		gotn = true;
-	    }
-	    if (gotp) {
-		if (!gotn)
-		    mpq_one_minus(nwt.get_mpq_t(), pwt.get_mpq_t());
-	    } else {
-		if (gotn)
-		    mpq_one_minus(pwt.get_mpq_t(), nwt.get_mpq_t());
-	    }
-	}
-	mpq_class sum = nwt+pwt;
-	if (smoothed)
-	    smoothing_weights[v] = sum;
-	else if (cmp(sum, mpq_class(0)) == 0) {
-	    // Smooth this variable if its weights sum to zero
-	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v);
-	} else {
-	    product_queue.push_back(sum);
-	    pwt /= sum;
-	    nwt /= sum;
-	}
-	evaluation_weights[v] = pwt;
-	evaluation_weights[-v] = nwt;
-    }
-    reduce_product(rescale, product_queue);
-    return true;
 }
 
 void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e) {
     std::vector<mpq_class> eval_queue;
     for (int lit : e.literals)
-	eval_queue.push_back(evaluation_weights[lit]);
+	eval_queue.push_back(weights->evaluation_weights[lit]);
     for (int v : e.smoothing_variables)
-	eval_queue.push_back(smoothing_weights[v]);
+	eval_queue.push_back(weights->smoothing_weights[v]);
     reduce_product(value, eval_queue);
     if (verblevel >= 4) {
 	char *svalue = mpq_get_str(NULL, 10, value.get_mpq_t());
@@ -1126,9 +1053,9 @@ void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e) {
 	max_bytes = bytes;
 }
 
-bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    if (!prepare_weights(literal_string_weights, smoothed))
-	return false;
+void Evaluator_mpq::evaluate(mpq_class &count) {
+    clear_evaluation();
+    reduce_product(rescale, weights->rescale_weights);
     std::vector<mpq_class> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1186,105 +1113,38 @@ bool Evaluator_mpq::evaluate(mpq_class &count, std::unordered_map<int,const char
 	report(4, "MPQ: count = %s\n", scount);
 	free(scount);
     }
-    return true;
 }
 
 /*******************************************************************************************************************
 Evaluation via MPFI
 *******************************************************************************************************************/
 
-Evaluator_mpfi::Evaluator_mpfi(Egraph *eg, int tdp, bool ref) { 
+Evaluator_mpfi::Evaluator_mpfi(Egraph *eg, Egraph_weights *wts, bool instr) { 
     egraph = eg;
-    target_digit_precision = tdp;
-    refine = ref;
+    weights = wts;
+    instrument = instr;
     mpfi_init(rescale);
     clear_evaluation();
 }
     
 void Evaluator_mpfi::clear_evaluation() {
-    evaluation_weights.clear();
-    smoothing_weights.clear();
-    if (!egraph->is_smoothed && egraph->smooth_variable_count > 0) {
-	egraph->unsmooth();
-	reset_histo(HISTO_EDGE_SMOOTHS);
-    }
     mpfi_set_d(rescale, 1.0);
-    min_digit_precision = (double) MAX_DIGIT_PRECISION;
-    precision_failure_count = 0;
-}
-
-// literal_string_weights == NULL for unweighted
-bool Evaluator_mpfi::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    clear_evaluation();
-    for (int v : *egraph->data_variables) {
-	mpq_class pwt = 1;
-	bool gotp = false;
-	mpq_class nwt = 1;
-	bool gotn = false;
-
-	if (literal_string_weights) {
-	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
-		q25_ptr qpwt = q25_from_string((*literal_string_weights)[v]);
-		if (!q25_is_valid(qpwt)) {
-		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		if (!q25_to_mpq(pwt.get_mpq_t(), qpwt)) {
-		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", v, (*literal_string_weights)[v]);
-		    return false;
-		}
-		q25_free(qpwt);
-		gotp = true;
-	    }
-	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
-		q25_ptr qnwt = q25_from_string((*literal_string_weights)[-v]);
-		if (!q25_is_valid(qnwt)) {
-		    err(false, "MPQ: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		if (!q25_to_mpq(nwt.get_mpq_t(), qnwt)) {
-		    err(false, "MPQ: Couldn't convert from q25 to mpq for literal %d with string '%s'\n", -v, (*literal_string_weights)[-v]);
-		    return false;
-		}
-		q25_free(qnwt);
-		gotn = true;
-	    }
-	    if (gotp) {
-		if (!gotn)
-		    mpq_one_minus(nwt.get_mpq_t(), pwt.get_mpq_t());
-	    } else {
-		if (gotn)
-		    mpq_one_minus(pwt.get_mpq_t(), nwt.get_mpq_t());
-	    }
-	}
-	mpq_class sum = nwt+pwt;
-	if (smoothed)
-	    smoothing_weights[v] = sum;
-	else if (cmp(sum, mpq_class(0)) == 0) {
-	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v);
-	} else {
-	    mpfi_mul_q(rescale, rescale, sum.get_mpq_t());
-	    pwt /= sum;
-	    nwt /= sum;
-	}
-	evaluation_weights[v] = pwt;
-	evaluation_weights[-v] = nwt;
-    }
-    return true;
+    min_digit_precision = MAX_DIGIT_PRECISION;
 }
 
 void Evaluator_mpfi::evaluate_edge(mpfi_ptr value, Egraph_edge &e) {
     mpfi_set_d(value, 1.0);
     for (int lit : e.literals)
-	mpfi_mul_q(value, value, evaluation_weights[lit].get_mpq_t());
+	mpfi_mul_q(value, value, weights->evaluation_weights[lit].get_mpq_t());
     for (int v : e.smoothing_variables)
-	mpfi_mul_q(value, value, smoothing_weights[v].get_mpq_t());
+	mpfi_mul_q(value, value, weights->smoothing_weights[v].get_mpq_t());
 }
 
-bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*> *literal_string_weights, bool smoothed) {
-    if (!prepare_weights(literal_string_weights, smoothed))
-	return false;
+void Evaluator_mpfi::evaluate(mpfi_ptr count) {
+    clear_evaluation();
+    mpfi_set_d(rescale, 1.0);
+    for (mpq_class wt : weights->rescale_weights)
+	mpfi_mul_q(rescale, rescale, wt.get_mpq_t());
     mpfi_t *operation_values = new mpfi_t[egraph->operations.size()];
     bool *operation_updated = new bool[egraph->operations.size()];
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1301,20 +1161,23 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
 	    mpfi_set_d(operation_values[id-1], 0.0);
 	}
     }
+    int id = 0;
     for (Egraph_edge e : egraph->edges) {
+	id++;
 	mpfi_t product;
 	mpfi_init(product);
 	evaluate_edge(product, e);
+	report(4, "Evaluated edge #%d (%d <-- %d)\n", id, e.to_id, e.from_id);
 	mpfi_mul(product, product, operation_values[e.from_id-1]);
 	if (operation_updated[e.to_id-1]) {
 	    bool add = egraph->operations[e.to_id-1].type == NNF_OR;
 	    if (add) {
 		mpfi_add(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
-		double dp = digit_precision_mpfi(operation_values[e.to_id-1]);
-		if (dp < min_digit_precision)
-		    min_digit_precision = dp;
-		if (dp < target_digit_precision)
-		    precision_failure_count++;
+		if (instrument && add) {
+		    double dp = digit_precision_mpfi(operation_values[e.to_id-1]);
+		    if (dp < min_digit_precision)
+			min_digit_precision = dp;
+		}
 	    } else 
 		mpfi_mul(operation_values[e.to_id-1], operation_values[e.to_id-1], product);
 	} else {
@@ -1327,14 +1190,10 @@ bool Evaluator_mpfi::evaluate(mpfi_ptr count, std::unordered_map<int,const char*
     double dp = digit_precision_mpfi(count);
     if (dp < min_digit_precision)
 	min_digit_precision = dp;
-    if (dp < target_digit_precision)
-	precision_failure_count++;
     for (int id = 1; id <= egraph->operations.size(); id++)
 	mpfi_clear(operation_values[id-1]);
     delete[] operation_values;
     delete[] operation_updated;
 
     mpfi_mul(count, count, rescale);
-
-    return true;
 }

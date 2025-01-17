@@ -40,10 +40,11 @@
 #include "analysis.h"
 
 void usage(const char *name) {
-    lprintf("Usage: %s [-h] [-s] [-Q] [-v VERB] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
+    lprintf("Usage: %s [-h] [-s] [-I] [-Q] [-v VERB] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
     lprintf("  -h          Print this information\n");
     lprintf("  -Q          Include evaluation using q25\n");
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
+    lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
     lprintf("  -v VERB     Set verbosity level\n");
     lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
 
@@ -72,9 +73,11 @@ char *change_extension(const char *fname, const char *ext) {
 const char *prefix = "c: CNT:";
 bool smooth = false;
 bool use_q25 = false;
+bool instrument = false;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
+double smooth_time = 0;
 
 void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
@@ -82,9 +85,14 @@ void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     core_cnf->import_file(cnf_file, true, false);
     eg = new Egraph(core_cnf->data_variables);
     eg->read_nnf(nnf_file);
-    if (smooth)
+    if (smooth) {
+	double start_smooth =  tod();	
 	eg->smooth();
+	smooth_time = tod() - start_smooth;
+    } else
+	smooth_time = 0;
     setup_time = tod() - start_time;
+
     if (out_file)
 	eg->write_nnf(out_file);
 }
@@ -95,8 +103,13 @@ void run(const char *cnf_name) {
 	err(false, "Couldn't open file '%s'.  Skipping\n", cnf_name);
 	return;
     }
-    lprintf("%s     Reading files and constructing graph required %.3f seconds\n",
-	    prefix, setup_time);
+    if (smooth) {
+	lprintf("%s     Reading files and constructing graph required %.3f seconds, including %.3f for smoothing\n",
+		prefix, setup_time, smooth_time);
+    } else {
+	lprintf("%s     Reading files and constructing graph required %.3f seconds\n",
+		prefix, setup_time);
+    }
     lprintf("%s     Using weights from file '%s'\n", prefix, cnf_name);
     double start_time = tod();
     double end_time;
@@ -119,7 +132,7 @@ void run(const char *cnf_name) {
 	double peak_q25_bytes = 0;
 	double max_q25_bytes = 0;
 	start_time = tod();
-	wcount = qev.evaluate(input_weights, smooth);
+	wcount = qev.evaluate(input_weights);
 	end_time = tod();
 	q25_ptr rwcount = q25_round(wcount, 50);
 	char *swcount = q25_best_string(rwcount);
@@ -132,79 +145,77 @@ void run(const char *cnf_name) {
 	qev.clear_evaluation();
     }
     start_time = tod();
-    Evaluator_mpq mpqev = Evaluator_mpq(eg);
-    if (mpqev.evaluate(qwcount, input_weights, smooth)) {
-	end_time = tod();
-	if (use_q25) {
-	    q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
-	    if (q25_compare(wcount, cwcount) == 0) 
-		lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
-	    else
-		err(false, "Q25 weighted count != MPQ weighted count\n");
-	    q25_free(cwcount);
-	} else {
-	    mpf_t fw;
-	    mpf_init(fw);
-	    mpf_set_q(fw, qwcount.get_mpq_t());
-	    const char *swcount = mpf_string(fw);
-	    lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
-	    mpf_clear(fw);
-	}
-	lprintf("%s     MPQ required %.3f seconds, %d max bytes\n",
-		prefix, end_time - start_time, mpqev.max_bytes);
-	mpqev.clear_evaluation();
-    } else {
-	lprintf("%s Calculation of weighted count using mpq failed\n", prefix);
+    Egraph_weights *weights = eg->prepare_weights(input_weights);
+    if (weights == NULL) {
+	lprintf("Fatal error.  Exiting\n");
+	return;
     }
+
+    Evaluator_mpq mpqev = Evaluator_mpq(eg, weights);
+    mpqev.evaluate(qwcount);
+    end_time = tod();
+    if (use_q25) {
+	q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
+	if (q25_compare(wcount, cwcount) == 0) 
+	    lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
+	else
+	    err(false, "Q25 weighted count != MPQ weighted count\n");
+	q25_free(cwcount);
+    } else {
+	mpf_t fw;
+	mpf_init(fw);
+	mpf_set_q(fw, qwcount.get_mpq_t());
+	const char *swcount = mpf_string(fw);
+	lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
+	mpf_clear(fw);
+    }
+    lprintf("%s     MPQ required %.3f seconds, %d max bytes\n",
+	    prefix, end_time - start_time, mpqev.max_bytes);
+    mpqev.clear_evaluation();
     q25_free(wcount);
 
     start_time = tod();
-    Evaluator_mpf mpfev = Evaluator_mpf(eg);
+    Evaluator_mpf mpfev = Evaluator_mpf(eg, weights);
     mpf_class fcount = 0;
-    if (mpfev.evaluate(fcount, input_weights, smooth)) {
-	end_time = tod();
-	double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
-	const char *sfcount = mpf_string(fcount.get_mpf_t());
-	lprintf("%s   %s MPF COUNT    = %s   precision = %.3f\n", prefix, wlabel, sfcount, precision);
-	lprintf("%s     MPF required %.3f seconds\n",
-		prefix, end_time - start_time);
-	mpfev.clear_evaluation();
-    } else {
-	lprintf("%s Calculation of weighted count using mpf failed\n", prefix);
-    }
+    mpfev.evaluate(fcount);
+    end_time = tod();
+    double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
+    const char *sfcount = mpf_string(fcount.get_mpf_t());
+    lprintf("%s   %s MPF COUNT    = %s   precision = %.3f\n", prefix, wlabel, sfcount, precision);
+    lprintf("%s     MPF required %.3f seconds\n",
+	    prefix, end_time - start_time);
+    mpfev.clear_evaluation();
     start_time = tod();
     Evaluator_double dev = Evaluator_double(eg);
-    double dwcount = dev.evaluate(input_weights, smooth);
+    double dwcount = dev.evaluate(input_weights);
     end_time = tod();
     double wprecision = digit_precision_d(dwcount, qwcount.get_mpq_t());
     lprintf("%s   %s DBL COUNT    = %.20g   precision = %.3f\n", prefix, wlabel, dwcount, wprecision);
     lprintf("%s     DBL required %.3f seconds\n",
 	    prefix, end_time - start_time);
-    dev.clear_evaluation();
+    //    dev.clear_evaluation();
 
     start_time = tod();
-    Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, 20, false);
+    Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, weights, instrument);
     mpfi_t icount;
     mpfi_init(icount);
-    if (mpfiev.evaluate(icount, input_weights, smooth)) {
-	end_time = tod();
-	double est_precision = digit_precision_mpfi(icount);
-	mpfr_t mid;
-	mpfr_init(mid);
-	mpfi_mid(mid, icount);
-	double actual_precision = digit_precision_mpfr(mid, qwcount.get_mpq_t());
-	const char *sicount = mpfr_string(mid);
-	lprintf("%s   %s MPFI COUNT   = %s   precision est = %.3f actual = %.3f\n", prefix, wlabel, sicount,
-		est_precision, actual_precision);
-	lprintf("%s     MPFI required %.3f seconds\n",
-		prefix, end_time - start_time);
-	lprintf("%s     MPFI had %ld precision failures and a minimum precision of %.3f\n",
-		prefix, mpfiev.precision_failure_count, mpfiev.min_digit_precision);
-	// Want to keep final stats.
-	//	mpfiev.clear_evaluation();
-    } else {
-	lprintf("%s Calculation of weighted count using mpfi failed\n", prefix);
-    }
+    mpfiev.evaluate(icount);
+    end_time = tod();
+    double est_precision = digit_precision_mpfi(icount);
+    mpfr_t mid;
+    mpfr_init(mid);
+    mpfi_mid(mid, icount);
+    double actual_precision = digit_precision_mpfr(mid, qwcount.get_mpq_t());
+    const char *sicount = mpfr_string(mid);
+    lprintf("%s   %s MPFI COUNT   = %s   precision est = %.3f actual = %.3f\n", prefix, wlabel, sicount,
+	    est_precision, actual_precision);
+    lprintf("%s     MPFI required %.3f seconds\n",
+	    prefix, end_time - start_time);
+    if (instrument)
+	lprintf("%s     MPFI had a minimum precision of %.3f\n",
+		prefix, mpfiev.min_digit_precision);
+    // Want to keep final stats.
+    //	mpfiev.clear_evaluation();
     delete local_cnf;
 }
 
@@ -241,13 +252,16 @@ int main(int argc, char *argv[]) {
     int c;
     int mpf_precision = 128;
     FILE *out_file = NULL;
-    while ((c = getopt(argc, argv, "hQsv:o:")) != -1) {
+    while ((c = getopt(argc, argv, "hQIsv:o:")) != -1) {
 	switch(c) {
 	case 'h':
 	    usage(argv[0]);
 	    exit(0);
 	case 'Q':
 	    use_q25 = true;
+	    break;
+	case 'I':
+	    instrument = true;
 	    break;
 	case 's':
 	    smooth = true;
