@@ -21,7 +21,7 @@ hugep: prod-p$(P)_huge.cnf
 maxp: prod-p$(P)_max.cnf
 uniformp: prod-p$(P)_uniform-$(SEED).cnf
 exponentialp: prod-p$(P)_exponential-$(SEED).cnf
-allp: halfp minp maxp subunitp uniformp exponentialp
+allp: halfp hugep minp maxp subunitp uniformp exponentialp
 
 half-$(N).cnf:
 	$(INTERP) $(GEN) -n $(N) -u 0.5 > half-$(N).cnf
