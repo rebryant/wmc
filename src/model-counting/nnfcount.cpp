@@ -74,6 +74,7 @@ const char *prefix = "c: CNT:";
 bool smooth = false;
 bool use_q25 = false;
 bool instrument = false;
+double target_precision = 30.0;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
@@ -83,7 +84,7 @@ void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
     core_cnf = new Cnf();
     core_cnf->import_file(cnf_file, true, false);
-    eg = new Egraph(core_cnf->data_variables);
+    eg = new Egraph(core_cnf->data_variables, core_cnf->variable_count());
     eg->read_nnf(nnf_file);
     if (smooth) {
 	double start_smooth =  tod();	
@@ -219,6 +220,48 @@ void run(const char *cnf_name) {
     delete local_cnf;
 }
 
+void run_combo(const char *cnf_name) {
+    FILE *cnf_file = fopen(cnf_name, "r");
+    if (!cnf_file) {
+	err(false, "Couldn't open file '%s'.  Skipping\n", cnf_name);
+	return;
+    }
+    if (smooth) {
+	lprintf("%s     Reading files and constructing graph required %.3f seconds, including %.3f for smoothing\n",
+		prefix, setup_time, smooth_time);
+    } else {
+	lprintf("%s     Reading files and constructing graph required %.3f seconds\n",
+		prefix, setup_time);
+    }
+    lprintf("%s     Using weights from file '%s'\n", prefix, cnf_name);
+    Cnf *local_cnf = new Cnf();
+    local_cnf->import_file(cnf_file, true, false);
+    fclose(cnf_file);
+    
+    std::unordered_map<int,const char*> *input_weights = NULL;
+    const char *wlabel = "UNWEIGHTED";
+    if (local_cnf->is_weighted()) {
+	input_weights = local_cnf->input_weights;
+	wlabel = "WEIGHTED";
+    }
+    double start_time = tod();
+    Egraph_weights *weights = eg->prepare_weights(input_weights);
+    if (weights == NULL) {
+	lprintf("Fatal error.  Exiting\n");
+	return;
+    }
+    mpf_class ccount = 0.0;
+    Evaluator_combo cev = Evaluator_combo(eg, weights, target_precision, instrument);
+    cev.evaluate(ccount);
+    double precision = cev.guaranteed_precision;
+    const char *sccount = mpf_string(ccount.get_mpf_t());
+    lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
+    lprintf("%s    COMBO required %.3f seconds\n",
+	    prefix, tod() - start_time);
+    delete local_cnf;
+}
+
+
 void report_stats() {
     int ndvar = core_cnf->data_variables->size();
     int sum_count = get_histo_count(HISTO_SUMS);
@@ -318,6 +361,7 @@ int main(int argc, char *argv[]) {
 	printf("Saving results in '%s'\n", lname);
 	set_logname(lname);
 	run(cnf_name);
+	run_combo(cnf_name);
 	report_stats();
 	set_logname(NULL);
     }

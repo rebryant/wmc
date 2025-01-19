@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <ctype.h>
+#include <math.h>
 
 #include "report.h"
 #include "counters.h"
@@ -222,10 +223,11 @@ static const char nnf_type_char[NNF_NUM] = { '\0', 't', 'f', 'a', 'o' };
 // Current line number
 static int line_number = 0;
 
-Egraph::Egraph(std::unordered_set<int> *dvars) {
+Egraph::Egraph(std::unordered_set<int> *dvars, int nv) {
     data_variables = dvars;
     is_smoothed = false;
     smooth_variable_count = 0;
+    nvar = nv;
 }
 
 void Egraph::add_operation(int id, nnf_type_t type) {
@@ -558,9 +560,8 @@ void Egraph::smooth_single(int var) {
 // literal_string_weights == NULL for unweighted
 Egraph_weights * Egraph::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights) {
     Egraph_weights *weights = new(Egraph_weights);
-    weights->evaluation_weights.clear();
-    weights->smoothing_weights.clear();
-    weights->rescale_weights.clear();
+    reset_smooth();
+    weights->all_nonnegative = true;
     for (int v : *data_variables) {
 	mpq_class pwt = 1;
 	bool gotp = false;
@@ -612,13 +613,15 @@ Egraph_weights * Egraph::prepare_weights(std::unordered_map<int,const char*> *li
 	else if (cmp(sum, mpq_class(0)) == 0) {
 	    weights->smoothing_weights[v] = sum;
 	    smooth_single(v);
-	} else {
+	} else if (cmp(sum, mpq_class(1)) != 0) {
 	    weights->rescale_weights.push_back(sum);
 	    pwt /= sum;
 	    nwt /= sum;
 	}
 	weights->evaluation_weights[v] = pwt;
 	weights->evaluation_weights[-v] = nwt;
+	if (mpq_sgn(pwt.get_mpq_t()) < 0 || mpq_sgn(nwt.get_mpq_t()) < 0)
+	    weights->all_nonnegative = false;
     }
     return weights;
 }
@@ -1196,4 +1199,119 @@ void Evaluator_mpfi::evaluate(mpfi_ptr count) {
     delete[] operation_updated;
 
     mpfi_mul(count, count, rescale);
+}
+
+/*******************************************************************************************************************
+Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and switch to MPQ if needed
+*******************************************************************************************************************/
+
+/* Parameters */
+
+// Don't attempt floating-point if it requires too many bits 
+#define MPQ_THRESHOLD 1024
+
+static const char* method_name[3] = {"MPF", "MPFI", "MPQ"};
+
+Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecision, int instr) {
+    egraph = eg;
+    weights = wts;
+    target_precision = tprecision;
+    instrument = instr;
+    computed_method = COMPUTE_MPF;
+}
+
+/*
+  How many digits of precision can we guarantee when all weights are nonnegative?
+  Compute floats with specified bit precision over formula with specified number of variables
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+*/
+static double digit_precision_bound(int bit_precision, int nvar, double constant) {
+    return (double) bit_precision * log10(2) - log10(nvar * constant);
+}
+
+/*
+  How many bits of floating-point precision are required to achieve
+  target digit precision when all weights are nonnegative?
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+ */
+static int required_bit_precision(double target_precision, int nvar, double constant) {
+    double minp = target_precision * log2(10.0) + log2(nvar * constant);
+    /* Must be multiple of 64 */
+    return 64 * ceil(minp/64);
+}
+
+void Evaluator_combo::evaluate(mpf_class &count) {
+    computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
+    int constant = egraph->is_smoothed ? 3 : 5;
+    int bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
+    int save_precision = mpf_get_default_prec();
+    if (bit_precision > MPQ_THRESHOLD)
+	computed_method = COMPUTE_MPQ;
+    report(1, "Achieving target precision %.1f with %d variables would require %d bit FP.  Using %s\n",
+	   target_precision, egraph->nvar, bit_precision, method_name[computed_method]);
+
+    mpq_class mpq_count = 0.0;
+
+    double start_time = tod();
+    switch (computed_method) {
+    case COMPUTE_MPF:
+	{
+	    mpf_set_default_prec(bit_precision);
+	    Evaluator_mpf ev = Evaluator_mpf(egraph, weights);
+	    ev.evaluate(count);
+	    guaranteed_precision = digit_precision_bound(bit_precision, egraph->nvar, constant);
+	    mpf_set_default_prec(save_precision);
+	}
+	break;
+    case COMPUTE_MPFI:
+	{
+	    save_precision = mpfr_get_default_prec();
+	    mpfr_set_default_prec(bit_precision);
+	    mpfi_t mpfi_count;
+	    mpfi_init(mpfi_count);
+	    Evaluator_mpfi ev = Evaluator_mpfi(egraph, weights, instrument);
+	    ev.evaluate(mpfi_count);
+	    computed_method = COMPUTE_MPFI;
+	    guaranteed_precision = digit_precision_mpfi(mpfi_count);
+	    if (guaranteed_precision >= target_precision) {
+		mpfr_t mpfr_count;
+		mpfr_init(mpfr_count);
+		mpfi_mid(mpfr_count, mpfi_count);
+		mpf_t mpf_count;
+		mpf_init2(mpf_count, bit_precision);
+		mpfr_get_f(mpf_count, mpfr_count, MPFR_RNDN);
+		count = (mpf_class) mpf_count;
+		mpfr_set_default_prec(save_precision);		
+	    } else {
+		mpfr_set_default_prec(save_precision);
+		// Try again
+		report(1, "After %.2f seconds, MPFI gave only guaranteed precision of %.1f.  Computing with MPQ\n",
+		       tod() - start_time, guaranteed_precision);
+		mpq_class mpq_count = 0.0;
+		Evaluator_mpq ev = Evaluator_mpq(egraph, weights);
+		ev.evaluate(mpq_count);
+		computed_method = COMPUTE_MPQ;
+		guaranteed_precision = MAX_DIGIT_PRECISION;
+		mpf_t mpf_count;
+		mpf_init2(mpf_count, bit_precision);
+		mpf_set_q(mpf_count, mpq_count.get_mpq_t());
+		count = (mpf_class) mpf_count;
+	    }
+	}
+	break;
+    case COMPUTE_MPQ:
+	{
+	    mpq_class mpq_count = 0.0;
+	    Evaluator_mpq ev = Evaluator_mpq(egraph, weights);
+	    ev.evaluate(mpq_count);
+	    guaranteed_precision = MAX_DIGIT_PRECISION;
+	    mpf_t mpf_count;
+	    mpf_init2(mpf_count, bit_precision);
+	    mpf_set_q(mpf_count, mpq_count.get_mpq_t());
+	    count = (mpf_class) mpf_count;
+	}
+    }
+    report(1, "Total time for evaluation %.2f seconds.  Method %s, Guaranteed precision %.1f\n",
+	   tod() - start_time, method_name[computed_method], guaranteed_precision);
+	   
 }

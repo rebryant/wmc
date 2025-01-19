@@ -78,6 +78,7 @@ struct Egraph_weights {
     std::unordered_map<int,mpq_class> evaluation_weights;
     std::unordered_map<int,mpq_class> smoothing_weights;
     std::vector<mpq_class> rescale_weights;
+    bool all_nonnegative;
 };
 
 class Egraph {
@@ -88,8 +89,10 @@ public:
     std::unordered_set<int> *data_variables;
     bool is_smoothed;
     int smooth_variable_count;
+    // Count of variables in original formula, including those eliminated by projection
+    int nvar;
 
-    Egraph(std::unordered_set<int> *data_variables);
+    Egraph(std::unordered_set<int> *data_variables, int nvar);
     void read_nnf(FILE *infile);
     void write_nnf(FILE *outfile);
 
@@ -234,20 +237,26 @@ private:
 };
 
 /*******************************************************************************************************************
-Evaluation starting with MFPI and switching to MPQ is needed
+Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and switch to MPQ if needed
 *******************************************************************************************************************/
+
+typedef enum { COMPUTE_MPF, COMPUTE_MPFI, COMPUTE_MPQ } computed_t;
 
 class Evaluator_combo {
 private:
 
     Egraph *egraph;
+    Egraph_weights *weights;
     double target_precision;
+    int instrument;
 
 public:
 
-    Evaluator_combo(Egraph *egraph, double target_precision);
+    Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int instrument);
     // literal_weights == NULL for unweighted
-    bool evaluate(mpq_ptr count, std::unordered_map<int,const char *> *literal_string_weights);
+    void evaluate(mpf_class &count);
 
+    double guaranteed_precision;
+    computed_t computed_method;
 };
 
