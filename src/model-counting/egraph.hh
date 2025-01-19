@@ -43,13 +43,27 @@
 #include <mpfr.h>
 #include <mpfi.h>
 
-
 #include "q25.h"
 
 /* Some useful utility functions */
 
-const char *mpf_string(mpf_srcptr val);
-const char *mpfr_string(mpfr_srcptr val);
+/*
+  How many digits of precision can we guarantee when all weights are nonnegative?
+  Compute floats with specified bit precision over formula with specified number of variables
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+*/
+double digit_precision_bound(int bit_precision, int nvar, double constant);
+
+/*
+  How many bits of floating-point precision are required to achieve
+  target digit precision when all weights are nonnegative?
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+ */
+int required_bit_precision(double target_precision, int nvar, double constant);
+
+
+const char *mpf_string(mpf_srcptr val, int digits);
+const char *mpfr_string(mpfr_srcptr val, int digits);
 
 double digit_precision_mpfr(mpfr_srcptr x_est, mpq_srcptr x);
 double digit_precision_mpf(mpf_srcptr x_est, mpq_srcptr x);
@@ -249,14 +263,15 @@ private:
     Egraph_weights *weights;
     double target_precision;
     int instrument;
+    computed_t computed_method;
 
 public:
 
     Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int instrument);
     // literal_weights == NULL for unweighted
     void evaluate(mpf_class &count);
-
+    const char *method();
     double guaranteed_precision;
-    computed_t computed_method;
+    int max_bytes;
 };
 

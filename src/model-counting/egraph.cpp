@@ -40,14 +40,34 @@
 
 /*
   Useful functions
-
  */
 
-const char *mpf_string(mpf_srcptr val) {
+/*
+  How many digits of precision can we guarantee when all weights are nonnegative?
+  Compute floats with specified bit precision over formula with specified number of variables
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+*/
+double digit_precision_bound(int bit_precision, int nvar, double constant) {
+    return (double) bit_precision * log10(2) - log10(nvar * constant);
+}
+
+/*
+  How many bits of floating-point precision are required to achieve
+  target digit precision when all weights are nonnegative?
+  constant = 3 for smoothed evaluation and 5 for unsmoothed
+ */
+int required_bit_precision(double target_precision, int nvar, double constant) {
+    double minp = target_precision * log2(10.0) + log2(nvar * constant);
+    /* Must be multiple of 64 */
+    return 64 * ceil(minp/64);
+}
+
+
+const char *mpf_string(mpf_srcptr val, int digits) {
     char buf[2048];
     char boffset = 0;
     mp_exp_t ecount;
-    char *sval = mpf_get_str(NULL, &ecount, 10, 40, val);
+    char *sval = mpf_get_str(NULL, &ecount, 10, digits, val);
     if (!sval || strlen(sval) == 0 || sval[0] == '0') {
 	strcpy(buf, "0.0");
     } else {
@@ -82,11 +102,11 @@ const char *mpf_string(mpf_srcptr val) {
 }
 
 
-const char *mpfr_string(mpfr_srcptr val) {
+const char *mpfr_string(mpfr_srcptr val, int digits) {
     mpf_t fval;
     mpf_init(fval);
     mpfr_get_f(fval, val, MPFR_RNDN);
-    const char* result = mpf_string(fval);
+    const char* result = mpf_string(fval, digits);
     mpf_clear(fval);
     return result;
 }
@@ -1218,26 +1238,11 @@ Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecis
     target_precision = tprecision;
     instrument = instr;
     computed_method = COMPUTE_MPF;
+    max_bytes = 24;
 }
 
-/*
-  How many digits of precision can we guarantee when all weights are nonnegative?
-  Compute floats with specified bit precision over formula with specified number of variables
-  constant = 3 for smoothed evaluation and 5 for unsmoothed
-*/
-static double digit_precision_bound(int bit_precision, int nvar, double constant) {
-    return (double) bit_precision * log10(2) - log10(nvar * constant);
-}
-
-/*
-  How many bits of floating-point precision are required to achieve
-  target digit precision when all weights are nonnegative?
-  constant = 3 for smoothed evaluation and 5 for unsmoothed
- */
-static int required_bit_precision(double target_precision, int nvar, double constant) {
-    double minp = target_precision * log2(10.0) + log2(nvar * constant);
-    /* Must be multiple of 64 */
-    return 64 * ceil(minp/64);
+const char *Evaluator_combo::method() {
+    return method_name[computed_method];
 }
 
 void Evaluator_combo::evaluate(mpf_class &count) {
@@ -1245,10 +1250,11 @@ void Evaluator_combo::evaluate(mpf_class &count) {
     int constant = egraph->is_smoothed ? 3 : 5;
     int bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
     int save_precision = mpf_get_default_prec();
+    max_bytes = 8 + bit_precision/8;
     if (bit_precision > MPQ_THRESHOLD)
 	computed_method = COMPUTE_MPQ;
-    report(1, "Achieving target precision %.1f with %d variables would require %d bit FP.  Using %s\n",
-	   target_precision, egraph->nvar, bit_precision, method_name[computed_method]);
+    report(1, "Achieving target precision %.1f with %d variables would require %d bit FP.  Starting with %s\n",
+	   target_precision, egraph->nvar, bit_precision, method());
 
     mpq_class mpq_count = 0.0;
 
@@ -1267,6 +1273,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	{
 	    save_precision = mpfr_get_default_prec();
 	    mpfr_set_default_prec(bit_precision);
+	    max_bytes *= 2;
 	    mpfi_t mpfi_count;
 	    mpfi_init(mpfi_count);
 	    Evaluator_mpfi ev = Evaluator_mpfi(egraph, weights, instrument);
@@ -1296,6 +1303,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 		mpf_init2(mpf_count, bit_precision);
 		mpf_set_q(mpf_count, mpq_count.get_mpq_t());
 		count = (mpf_class) mpf_count;
+		max_bytes = ev.max_bytes;
 	    }
 	}
 	break;
@@ -1309,9 +1317,10 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	    mpf_init2(mpf_count, bit_precision);
 	    mpf_set_q(mpf_count, mpq_count.get_mpq_t());
 	    count = (mpf_class) mpf_count;
+	    max_bytes = ev.max_bytes;
 	}
     }
-    report(1, "Total time for evaluation %.2f seconds.  Method %s, Guaranteed precision %.1f\n",
-	   tod() - start_time, method_name[computed_method], guaranteed_precision);
+    report(3, "Total time for evaluation %.2f seconds.  Method %s, Guaranteed precision %.1f\n",
+	   tod() - start_time, method(), guaranteed_precision);
 	   
 }

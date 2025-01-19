@@ -40,12 +40,13 @@
 #include "analysis.h"
 
 void usage(const char *name) {
-    lprintf("Usage: %s [-h] [-s] [-I] [-Q] [-v VERB] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
+    lprintf("Usage: %s [-h] [-s] [-I] [-v VERB] [-L LEVEL] [-p PREC] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
     lprintf("  -h          Print this information\n");
-    lprintf("  -Q          Include evaluation using q25\n");
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
     lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
     lprintf("  -v VERB     Set verbosity level\n");
+    lprintf("  -L LEVEL    Detail level: Basic (1), + Individual methods (2), + Q25 (3)\n");
+    lprintf("  -p PREC     Required precision (in decimal digits)\n");
     lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
 
 }
@@ -72,7 +73,7 @@ char *change_extension(const char *fname, const char *ext) {
 
 const char *prefix = "c: CNT:";
 bool smooth = false;
-bool use_q25 = false;
+int detail_level = 1;
 bool instrument = false;
 double target_precision = 30.0;
 Egraph *eg;
@@ -104,14 +105,6 @@ void run(const char *cnf_name) {
 	err(false, "Couldn't open file '%s'.  Skipping\n", cnf_name);
 	return;
     }
-    if (smooth) {
-	lprintf("%s     Reading files and constructing graph required %.3f seconds, including %.3f for smoothing\n",
-		prefix, setup_time, smooth_time);
-    } else {
-	lprintf("%s     Reading files and constructing graph required %.3f seconds\n",
-		prefix, setup_time);
-    }
-    lprintf("%s     Using weights from file '%s'\n", prefix, cnf_name);
     double start_time = tod();
     double end_time;
     Cnf *local_cnf = new Cnf();
@@ -127,7 +120,7 @@ void run(const char *cnf_name) {
 
     q25_ptr wcount = q25_from_32(0);
     mpq_class qwcount = 0;
-    if (use_q25) {
+    if (detail_level >= 3) {
 	Evaluator_q25 qev = Evaluator_q25(eg);
 	long weighted_operations = 0;
 	double peak_q25_bytes = 0;
@@ -155,7 +148,7 @@ void run(const char *cnf_name) {
     Evaluator_mpq mpqev = Evaluator_mpq(eg, weights);
     mpqev.evaluate(qwcount);
     end_time = tod();
-    if (use_q25) {
+    if (detail_level >= 3) {
 	q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
 	if (q25_compare(wcount, cwcount) == 0) 
 	    lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
@@ -166,7 +159,7 @@ void run(const char *cnf_name) {
 	mpf_t fw;
 	mpf_init(fw);
 	mpf_set_q(fw, qwcount.get_mpq_t());
-	const char *swcount = mpf_string(fw);
+	const char *swcount = mpf_string(fw, (int) target_precision);
 	lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
 	mpf_clear(fw);
     }
@@ -181,7 +174,7 @@ void run(const char *cnf_name) {
     mpfev.evaluate(fcount);
     end_time = tod();
     double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
-    const char *sfcount = mpf_string(fcount.get_mpf_t());
+    const char *sfcount = mpf_string(fcount.get_mpf_t(), (int) target_precision);
     lprintf("%s   %s MPF COUNT    = %s   precision = %.3f\n", prefix, wlabel, sfcount, precision);
     lprintf("%s     MPF required %.3f seconds\n",
 	    prefix, end_time - start_time);
@@ -207,7 +200,7 @@ void run(const char *cnf_name) {
     mpfr_init(mid);
     mpfi_mid(mid, icount);
     double actual_precision = digit_precision_mpfr(mid, qwcount.get_mpq_t());
-    const char *sicount = mpfr_string(mid);
+    const char *sicount = mpfr_string(mid, (int) target_precision);
     lprintf("%s   %s MPFI COUNT   = %s   precision est = %.3f actual = %.3f\n", prefix, wlabel, sicount,
 	    est_precision, actual_precision);
     lprintf("%s     MPFI required %.3f seconds\n",
@@ -254,10 +247,10 @@ void run_combo(const char *cnf_name) {
     Evaluator_combo cev = Evaluator_combo(eg, weights, target_precision, instrument);
     cev.evaluate(ccount);
     double precision = cev.guaranteed_precision;
-    const char *sccount = mpf_string(ccount.get_mpf_t());
+    const char *sccount = mpf_string(ccount.get_mpf_t(), (int) target_precision);
     lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
-    lprintf("%s    COMBO required %.3f seconds\n",
-	    prefix, tod() - start_time);
+    lprintf("%s      COMBO used %s with %.3f seconds and %d max bytes\n",
+	    prefix, cev.method(), tod() - start_time, cev.max_bytes);
     delete local_cnf;
 }
 
@@ -295,13 +288,16 @@ int main(int argc, char *argv[]) {
     int c;
     int mpf_precision = 128;
     FILE *out_file = NULL;
-    while ((c = getopt(argc, argv, "hQIsv:o:")) != -1) {
+    while ((c = getopt(argc, argv, "hIsv:L:p:o:")) != -1) {
 	switch(c) {
 	case 'h':
 	    usage(argv[0]);
 	    exit(0);
-	case 'Q':
-	    use_q25 = true;
+	case 'L':
+	    detail_level = atoi(optarg);
+	    break;
+	case 'p':
+	    target_precision = atof(optarg);
 	    break;
 	case 'I':
 	    instrument = true;
@@ -358,10 +354,11 @@ int main(int argc, char *argv[]) {
 	const char *cnf_name = argv[argi++];
 	printf("\n");
 	char *lname = change_extension(cnf_name, smooth ? ".scount" : ".count");
-	printf("Saving results in '%s'\n", lname);
+	lprintf("%s Saving results in '%s'\n", prefix, lname);
 	set_logname(lname);
-	run(cnf_name);
 	run_combo(cnf_name);
+	if (detail_level >= 2)
+	    run(cnf_name);
 	report_stats();
 	set_logname(NULL);
     }
