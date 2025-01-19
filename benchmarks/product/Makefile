@@ -14,13 +14,13 @@ uniform: uniform-$(N)-$(SEED).cnf
 exponential: exponential-$(N)-$(SEED).cnf
 
 
-halfp: prod-p$(P)_half.cnf
-minp: prod-p$(P)_min.cnf
-subunitp: prod-p$(P)_subunit.cnf
-hugep: prod-p$(P)_huge.cnf
-maxp: prod-p$(P)_max.cnf
-uniformp: prod-p$(P)_uniform-$(SEED).cnf
-exponentialp: prod-p$(P)_exponential-$(SEED).cnf
+halfp: prodp-$(P)_half.cnf
+minp: prodp-$(P)_min.cnf
+subunitp: prodp-$(P)_subunit.cnf
+hugep: prodp-$(P)_huge.cnf
+maxp: prodp-$(P)_max.cnf
+uniformp: prodp-$(P)_uniform-$(SEED).cnf
+exponentialp: prodp-$(P)_exponential-$(SEED).cnf
 allp: halfp hugep minp maxp subunitp uniformp exponentialp
 
 half-$(N).cnf:
@@ -46,29 +46,29 @@ exponential-$(N)-$(SEED).cnf:
 
 
 
-prod-p$(P).nnf:
-	$(INTERP) $(GEN) -p $(P) -c prod-p$(P).nnf
+prodp-$(P).nnf:
+	$(INTERP) $(GEN) -p $(P) -c prodp-$(P).nnf
 
-prod-p$(P)_half.cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -p $(P) -u 0.5 > prod-p$(P)_half.cnf
+prodp-$(P)_half.cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u 0.5 > prodp-$(P)_half.cnf
 
-prod-p$(P)_min.cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -p $(P) -u 0.000000001 > prod-p$(P)_min.cnf
+prodp-$(P)_min.cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u 0.000000001 > prodp-$(P)_min.cnf
 
-prod-p$(P)_subunit.cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -p $(P) -u 0.999999999 > prod-p$(P)_subunit.cnf
+prodp-$(P)_subunit.cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u 0.999999999 > prodp-$(P)_subunit.cnf
 
-prod-p$(P)_max.cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -p $(P) -u 1000000000 > prod-p$(P)_max.cnf
+prodp-$(P)_max.cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u 1000000000 > prodp-$(P)_max.cnf
 
-prod-p$(P)_huge.cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -p $(P) -u  999999999.999999999 > prod-p$(P)_huge.cnf
+prodp-$(P)_huge.cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u  999999999.999999999 > prodp-$(P)_huge.cnf
 
-prod-p$(P)_uniform-$(SEED).cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -r u -s $(SEED) -p $(P) > prod-p$(P)_uniform-$(SEED).cnf
+prodp-$(P)_uniform-$(SEED).cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -r u -s $(SEED) -p $(P) > prodp-$(P)_uniform-$(SEED).cnf
 
-prod-p$(P)_exponential-$(SEED).cnf: prod-p$(P).nnf
-	$(INTERP) $(GEN) -r e -s $(SEED) -p $(P) > prod-p$(P)_exponential-$(SEED).cnf
+prodp-$(P)_exponential-$(SEED).cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -r e -s $(SEED) -p $(P) > prodp-$(P)_exponential-$(SEED).cnf
 
 
 .SUFFIXES: .cnf .nnf .count

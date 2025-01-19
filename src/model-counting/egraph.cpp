@@ -1253,7 +1253,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
     max_bytes = 8 + bit_precision/8;
     if (bit_precision > MPQ_THRESHOLD)
 	computed_method = COMPUTE_MPQ;
-    report(1, "Achieving target precision %.1f with %d variables would require %d bit FP.  Starting with %s\n",
+    report(3, "Achieving target precision %.1f with %d variables would require %d bit FP.  Starting with %s\n",
 	   target_precision, egraph->nvar, bit_precision, method());
 
     mpq_class mpq_count = 0.0;

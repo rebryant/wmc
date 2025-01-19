@@ -76,6 +76,7 @@ bool smooth = false;
 int detail_level = 1;
 bool instrument = false;
 double target_precision = 30.0;
+int bit_precision = 128;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 double setup_time = 0;
@@ -85,6 +86,12 @@ void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     double start_time = tod();
     core_cnf = new Cnf();
     core_cnf->import_file(cnf_file, true, false);
+
+    bit_precision = required_bit_precision(target_precision, core_cnf->variable_count(), 5);
+    mpf_set_default_prec(bit_precision);
+    mpfr_set_default_prec(bit_precision);
+
+
     eg = new Egraph(core_cnf->data_variables, core_cnf->variable_count());
     eg->read_nnf(nnf_file);
     if (smooth) {
@@ -266,6 +273,10 @@ void report_stats() {
     int smoothing_count = get_histo_count(HISTO_EDGE_SMOOTHS);
     long smoothing_ops = get_histo_total(HISTO_EDGE_SMOOTHS);
 
+    lprintf("%s   Options           : \n", prefix);
+    lprintf("%s     Smooth:         : %s\n", prefix, smooth ? "true" : "false");
+    lprintf("%s     Digit precision : %.1f\n", prefix, target_precision);
+    lprintf("%s     Bit precision   : %d\n", prefix, bit_precision);
     lprintf("%s   Data variables    : %d\n", prefix, ndvar);
     lprintf("%s     Smooth variables: %d\n", prefix, eg->smooth_variable_count);
     lprintf("%s   Operations \n", prefix);
@@ -286,7 +297,6 @@ void report_stats() {
 
 int main(int argc, char *argv[]) {
     int c;
-    int mpf_precision = 128;
     FILE *out_file = NULL;
     while ((c = getopt(argc, argv, "hIsv:L:p:o:")) != -1) {
 	switch(c) {
@@ -342,9 +352,6 @@ int main(int argc, char *argv[]) {
     FILE *cnf_file = fopen(cnf_name, "r");
     if (!cnf_file)
 	err(true, "Couldn't open CNF file '%s'\n", cnf_name);
-
-    mpf_set_default_prec(mpf_precision);
-    mpfr_set_default_prec(mpf_precision);
 
     double start = tod();
     setup(cnf_file, nnf_file, out_file);

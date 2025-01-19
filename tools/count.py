@@ -33,11 +33,13 @@ import parallel
 p = parallel.Printer()
 
 def usage(name):
-    p.print("Usage: %s [-f] [-h] [-s] [-I ILEVEL] [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
+    p.print("Usage: %s [-f] [-h] [-s] [-I] [-L LEVEL] [-p PREC]  [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
     p.print("  -h       Print this message")
     p.print("  -f       Force regeneration of all files")
     p.print("  -s       Use smoothing")
-    p.print("  -I ILVL  Set instrumentation level")
+    lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
+    lprintf("  -L LEVEL    Detail level: Basic (1), + Individual methods (2), + Q25 (3)\n");
+    lprintf("  -p PREC     Required precision (in decimal digits)\n");
     p.print("  -D SPATH Directory for source NNF files")
     p.print("  -N THRDS Run N threads concurrently")
     p.print("  -t TIME  Limit time for each of the programs")
@@ -49,7 +51,9 @@ threadCount = None
 # Use smoothing?
 smooth = False
 # instrumentation level
-instrumentationLevel = None
+instrument = False
+targetPrecision = None
+detailLevel = None
 
 # Pathnames
 def genProgramPath(progName, subdirectory = "bin"):
@@ -114,8 +118,12 @@ def runJob(nnfPath):
         cmd = [genProgramPath("nnfcount")]
         if smooth:
             cmd += ['-s']
-        if instrumentationLevel is not None:
-            cmd += ['-I', str(instrumentationLevel)]
+        if instrument:
+            cmd += ['-I']
+        if targetPrecision is not None:
+            cmd += ['-p', str(targetPrecision)]
+        if detailLevel is not None:
+            cmd += ['-L', str(detailLevel)]
         cmd += [nnfPath] + cnfNames
         ok = runCommand(cmd)
         if not ok:
@@ -149,9 +157,11 @@ def run(name, args):
     global force
     global threadCount
     global smooth
-    global instrumentationLevel
+    global instrument
+    global targetPrecision
+    global detailLevel
     home = None
-    optList, args = getopt.getopt(args, "hfsI:D:N:")
+    optList, args = getopt.getopt(args, "hfsIp:L:D:N:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -161,7 +171,11 @@ def run(name, args):
         elif opt == '-s':
             smooth = True
         elif opt == '-I':
-            instrumentationLevel = int(val)
+            instrument = True
+        elif opt == '-p':
+            targetPrecision = float(val)
+        elif opt == '-L':
+            detailLevel = float(val)
         elif opt == '-D':
             home = val
         elif opt == '-N':
