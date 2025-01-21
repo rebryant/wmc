@@ -14,6 +14,7 @@ uniform: uniform-$(N)-$(SEED).cnf
 exponential: exponential-$(N)-$(SEED).cnf
 
 
+prodp: prodp-$(P).cnf
 halfp: prodp-$(P)_half.cnf
 minp: prodp-$(P)_min.cnf
 subunitp: prodp-$(P)_subunit.cnf
@@ -21,7 +22,7 @@ hugep: prodp-$(P)_huge.cnf
 maxp: prodp-$(P)_max.cnf
 uniformp: prodp-$(P)_uniform-$(SEED).cnf
 exponentialp: prodp-$(P)_exponential-$(SEED).cnf
-allp: halfp hugep minp maxp subunitp uniformp exponentialp
+allp: prodp halfp hugep minp maxp subunitp uniformp exponentialp
 
 half-$(N).cnf:
 	$(INTERP) $(GEN) -n $(N) -u 0.5 > half-$(N).cnf
@@ -45,9 +46,11 @@ exponential-$(N)-$(SEED).cnf:
 	$(INTERP) $(GEN) -r e -s $(SEED) -n $(N) > exponential-$(N)-$(SEED).cnf
 
 
-
 prodp-$(P).nnf:
 	$(INTERP) $(GEN) -p $(P) -c prodp-$(P).nnf
+
+prodp-$(P).cnf: prodp-$(P).nnf
+	$(INTERP) $(GEN) -p $(P) -u 1.0 > prodp-$(P).cnf
 
 prodp-$(P)_half.cnf: prodp-$(P).nnf
 	$(INTERP) $(GEN) -p $(P) -u 0.5 > prodp-$(P)_half.cnf

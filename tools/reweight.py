@@ -10,14 +10,14 @@ import math
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] [-D u|e|b] [-R RANGE] [-C u|n|r|i|I] [N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
+    print("Usage: %s [-h] [-D u|e|b|s] [-R RANGE] [-C u|n|r|e|i|I] [-N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
     print("  -h          Print this message")
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
-    print("  -D DIST     Specify distribution: uniform (u), single exponential (e), or boundary values (b)")
+    print("  -D DIST     Specify distribution: uniform (u), single exponential (e), boundary values (b), constant (seed+min) (s)")
     print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX ('o' for open, 'c' for closed)")
     print("  -C CMETHOD  What should be relation between W(x) and W(-x):")
-    print("     sum-to-one (u), negated (n), reciprocal (r), independent (i), or independent with a nonzero sum (I)")
+    print("     sum-to-one (u), negated (n), reciprocal (r), equal (e)independent (i), or independent with a nonzero sum (I)")
     print("  -N NMETHOD  How should negative weights be generated: none (n), random (r)")         
     print("  -d DIGITS Number of significant digits")
     
@@ -36,9 +36,9 @@ def replaceExtension(path, ext):
     return ".".join(fields)
     
 class ValueGenerator:
-    codes = ['u', 'e', 'b']
-    names = ["uniform", "exponential", "boundary"]
-    uniform, exponential, boundary = range(3)
+    codes = ['u', 'e', 'b', 's']
+    names = ["uniform", "exponential", "boundary", "sweep"]
+    uniform, exponential, boundary, sweep = range(4)
     seed = 123456
     minValue = 1
     maxValue = 1000*1000*1000-1
@@ -78,6 +78,8 @@ class ValueGenerator:
             return random.randint(self.minValue, self.maxValue)
         elif self.method == self.boundary:
             return self.minValue if self.randomBool() else self.maxValue
+        elif self.method == self.sweep:
+            return self.minValue + self.seed
         else:
             raise Exception("Invalid value generation method %d" % (self.method))
 
@@ -85,9 +87,9 @@ class ValueGenerator:
         return random.randint(0,1) == 1
 
 class ComplementHandler:
-    codes = ['n', 'u', 'r', 'i', 'I']
-    names = ["negative", "sum-to-one", "reciprocal", "independent", "independent-nonzero-sum"]
-    negative, sumOne, reciprocal, independent, independentNonzero = range(5)
+    codes = ['n', 'u', 'r', 'e', 'i', 'I']
+    names = ["negative", "sum-to-one", "reciprocal", "equal", "independent", "independent-nonzero-sum"]
+    negative, sumOne, reciprocal, equal, independent, independentNonzero = range(6)
     method = None
     digits = 9
     minValue = None
@@ -115,6 +117,8 @@ class ComplementHandler:
             return -value
         if self.method == self.sumOne:
             return int(10**self.digits) - value
+        if self.method == self.equal:
+            return value
         if self.method == self.reciprocal:
             if value == 0:
                 return 0

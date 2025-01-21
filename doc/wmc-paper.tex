@@ -273,6 +273,39 @@ Even setting an upper bound of $n = 10^7$, we see that the computation using
 MPF will yield at least 31 significant digits.  That should suffice for most applications of weighted model counting.
 Importantly, this bound holds independent of the formula size, as well as of the values of the weights, as long as they are nonnegative.
 
+\begin{figure}
+\centering{%
+\begin{tikzpicture}
+  \begin{axis}[mark options={scale=1.0},height=8cm,width=12cm,grid=both, grid style={black!10}, 
+      legend style={at={(0.95,0.25)}},
+      legend cell align={left},
+                              %x post scale=2.0, y post scale=2.0,
+                              xmode=log,xmin=1,xmax=1e7,
+                              xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
+                              ymode=normal,ymin=0, ymax=50,
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0},
+                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+            ]
+
+    \input{data-formatted/prodp-mpf+vars}
+    \input{data-formatted/upos-mpf+vars}
+    \input{data-formatted/epos-mpf+vars}
+    \legend{
+      \scriptsize \textsf{Optimized Product},
+      \scriptsize \textsf{MC2024, Uniform $+$},
+      \scriptsize \textsf{MC2024, Exponential $+$}
+    }
+    \addplot[mark=none] coordinates{(1,38.05) (1e7,31.05)};
+    \node[right] at (axis cs: 2, 35.5) {\rotatebox{-4}{Precision Bound}};
+    \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
+    \node[right] at (axis cs: 2, 28.5) {Target Precision};
+ \end{axis}
+\end{tikzpicture}
+} % centering
+\caption{Digit Precision Achieved by MPF for Benchmarks with Nonnegative Weights.  The precision is guaranteed to be greater than the bound.}
+\label{fig:pos:mpf}
+\end{figure}
 
 \subsection{Eliminating smoothing}
 
@@ -324,6 +357,109 @@ In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
 but we must include all variables, included those projected away, in the
 variable count $n$.
 
+\section{Negative weights}
+
+
+\begin{figure}
+\centering{%
+\begin{tikzpicture}%[scale = 0.70]
+  \begin{axis}[mark options={scale=1.0},height=8cm,width=12cm,grid=both, grid style={black!10},
+      legend style={at={(0.95,0.25)}},
+      legend cell align={left},
+                              %x post scale=2.0, y post scale=2.0,
+                              xmode=log,xmin=1,xmax=1e7,
+                              xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
+                              ymode=normal,ymin=0, ymax=50,
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0},
+                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+            ]
+
+    \input{data-formatted/uposneg-mpf+vars}
+    \input{data-formatted/eposneg-mpf+vars}
+    \input{data-formatted/bposneg-mpf+vars}
+    \legend{
+      \scriptsize \textsf{MC2024, Uniform $\pm$},
+      \scriptsize \textsf{MC2024, Exponential $\pm$},
+      \scriptsize \textsf{MC2024, Limits $\pm$}
+    }
+    \addplot[mark=none, dashed] coordinates{(1,38.05) (1e7,31.05)};
+    \node[right] at (axis cs: 2, 35.5) {\rotatebox{-4}{Precision Bound}};
+    \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
+    \node[right] at (axis cs: 2, 28.5) {Target Precision};
+ \end{axis}
+\end{tikzpicture}
+} % centering
+\caption{Digit Precision Achieved by MPF for Benchmarks with Negative Weights.  There is no guaranteed bound for precision, but many cases remain above the precision bound.}
+\label{fig:posneg:mpf}
+\end{figure}
+
+\begin{figure}
+\centering{%
+\begin{tikzpicture}%[scale = 0.70]
+  \begin{axis}[mark options={scale=1.0},height=10cm,width=10cm,grid=both, grid style={black!10},
+      legend style={at={(0.95,0.25)}},
+      legend cell align={left},
+                              xmode=normal,xmin=0, xmax=50,
+                              xtick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
+                              xticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0},
+                              ymode=normal, ymin=0, ymax=50,
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0},
+                              xlabel={Estimated Precision}, ylabel={Actual Precision}
+            ]
+
+    \draw[ fill={blue!30}, opacity=0.2] (axis cs: 0,30) rectangle (axis cs: 30,50);
+    \node at (axis cs:15,40) {Overly pessimistic};
+    
+
+    \input{data-formatted/uposneg-mpfi-est+act}
+    \input{data-formatted/eposneg-mpfi-est+act}
+    \input{data-formatted/bposneg-mpfi-est+act}
+    \legend{
+      \scriptsize \textsf{MC2024, Uniform $\pm$},
+      \scriptsize \textsf{MC2024, Exponential $\pm$},
+      \scriptsize \textsf{MC2024, Limits $\pm$}
+    }
+    \addplot[mark=none] coordinates{(0,0) (50,50)};
+ \end{axis}
+\end{tikzpicture}
+} % centering
+\caption{Predictive Accuracy of MPFI.  MPFI never has a higher estimate than the actual, but it can
+incorrectly predict a precision less than the target of 30.0.}
+\label{fig:mpfi}
+\end{figure}
+
+\begin{figure}
+\centering{%
+\begin{tikzpicture}%[scale = 0.70]
+  \begin{axis}[mark options={scale=1.0},height=10cm,width=10cm,grid=both, grid style={black!10},
+      legend style={at={(0.95,0.25)}},
+      legend cell align={left},
+                              xmode=log,xmin=0.01, xmax=3000.0,
+                              xtick={1e-2, 1e-1, 1, 10, 1e2, 1e3},
+                              xticklabels={$0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$},
+                              ymode=log, ymin=0.01, ymax=3000.0,
+                              ytick={1e-2, 1e-1, 1, 10, 1e2, 1e3},
+                              xticklabels={$0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$},
+                              xlabel={MPQ Runtime (secs.)}, ylabel={Hybrid Runtime (secs.)}
+            ]
+
+    \input{data-formatted/combo-mpf+mpq}
+    \input{data-formatted/combo-mpfi+mpq}
+    \input{data-formatted/combo-mpq+mpq}
+    \legend{
+      \scriptsize \textsf{MC2024, Hybrid-MPF},
+      \scriptsize \textsf{MC2024, Hybrid-MPFI},
+      \scriptsize \textsf{MC2024, Hybrid-MPQ}
+    }
+    \addplot[mark=none] coordinates{(0.01,0.01) (10000.0,10000.0)};
+ \end{axis}
+\end{tikzpicture}
+} % centering
+\caption{Runtime for hybrid method vs.~for MPQ.  When the value can be computed with MPF or MPFI, the runtime is slightly better than just using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
+\label{fig:runtime}
+\end{figure}
 
 
 
