@@ -387,7 +387,8 @@ variable count $n$.
  \end{axis}
 \end{tikzpicture}
 } % centering
-\caption{Digit Precision Achieved by MPF for Benchmarks with Nonnegative Weights.  The precision is guaranteed to be greater than the bound.}
+\caption{Digit Precision Achieved by MPF for Benchmarks with Nonnegative Weights.  The precision is guaranteed to be greater than the bound.
+We set as a target to have digit precisions of at least 30.0.}
 
 \label{fig:pos:mpf}
 \end{figure}
@@ -513,14 +514,14 @@ incorrectly predict a precision less than the target of 30.0.}
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
   \begin{axis}[mark options={scale=1.0},height=10cm,width=10cm,grid=both, grid style={black!10},
-      legend style={at={(0.95,0.25)}},
+      legend style={at={(0.40,0.98)}},
       legend cell align={left},
-                              xmode=log,xmin=0.01, xmax=3000.0,
+                              xmode=log,xmin=0.1, xmax=3000.0,
                               xtick={1e-2, 1e-1, 1, 10, 1e2, 1e3},
                               xticklabels={$0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$},
-                              ymode=log, ymin=0.01, ymax=3000.0,
+                              ymode=log, ymin=0.1, ymax=3000.0,
                               ytick={1e-2, 1e-1, 1, 10, 1e2, 1e3},
-                              xticklabels={$0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$},
+                              yticklabels={$0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$},
                               xlabel={MPQ Runtime (secs.)}, ylabel={Hybrid Runtime (secs.)}
             ]
 
@@ -533,10 +534,12 @@ incorrectly predict a precision less than the target of 30.0.}
       \scriptsize \textsf{MC2024, Hybrid-MPQ}
     }
     \addplot[mark=none] coordinates{(0.01,0.01) (10000.0,10000.0)};
+    \addplot[mark=none, color=lightblue] coordinates{(0.1, 0.01) (10000.0, 1000.0)};
+    \node[right] at (axis cs: 3.0, 0.2) {$0.1\times$};
  \end{axis}
 \end{tikzpicture}
 } % centering
-\caption{Runtime for hybrid method vs.~for MPQ.  When the value can be computed with MPF or MPFI, the runtime is slightly better than just using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
+\caption{Runtime for hybrid method vs.~for MPQ.  When the value can be computed with MPF or MPFI, the runtime is signficantly better than using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
 \label{fig:runtime}
 \end{figure}
 
