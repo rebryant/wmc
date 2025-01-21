@@ -87,11 +87,43 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
+  Weighted model counting effectively computes the sum of the weights
+  associated with the satisfying assignments for a Boolean formula,
+  where the weight of an assignment is given by the product of the
+  weights associated with the positive and negated variables
+  comprising the assignment.  Weighted model counting finds
+  applications in a wide variety of domains including machine learning
+  and quantitative risk assignment.
+
+  Most weighted model counting programs avoid enumerating all
+  assignments to a formula by converting it, either explicitly or
+  implicity, into a set of conjunction and disjunction operations,
+  such that the count can be evaluating using multiplication for
+  conjunctions and addition for disjunctions.
+
+  Although computing these operations with rational arithmetic
+  yields exact results, the precision required for most applications
+  does not warrant the required space and time.  On
+  the other hand, the precision when using floating-point arithmetic
+  cannot be guaranteed, especially when some of the weights are
+  negative.
+
+  In this paper, we prove that, when all weights are nonnegative, the
+  precision of floating-point arithmetic will degrade, in the worst case, as the logarithm
+  of the number of variables.  This result, along with our
+  experiments, demonstrate that a high level of precision can be
+  achieved using a software floating-point implementation.  For
+  formulas with negative weights, we show that interval floating-point
+  arithmetic can reliably detect cases where a desired precision
+  cannot be achieved.  Using a program that combines floating-point,
+  interval, and rational arithmetic, we achieve the twin goals of
+  effiency and guaranteed precision.
 \end{abstract}
 
 \section{Preliminaries}
 
-When approximating real number $x$ with value $\approximate{x}$, we define the \emph{approximation error} $\aerror(\approxx, x)$ as:
+When approximating real number $x$ with value $\approximate{x}$, we
+define the \emph{approximation error} $\aerror(\approxx, x)$ as:
 \begin{eqnarray}
 \aerror[\approxx, x] & = & \left\{ \begin{array}{ll}
   \frac{|\approxx - x|}{|x|} \label{eqn:approx:error} & x \not = 0\\[0.8em]
@@ -122,7 +154,7 @@ where:
 As examples, consider these two different floating-point formats:
 \begin{itemize}
 \item The IEEE~754 double-precision format uses a slightly different representation, but it maps to the notation of Equation~\ref{eqn:floating-point} with $p=53$ and an exponent range of
-  $-1021 \leq e \leq 1024$.  This ignores its support for denormalized numbers, infinities, and NaN (not-a-number).  Unfortunately, the small exponent range limits the suitability of
+  $-1021 \leq e \leq 1024$.  Unfortunately, the small exponent range limits the suitability of
   this representation for weighted model counting.
 \item As will be shown, the MPF software floating-point package can be very effective for weighted model counting.
 We configured it to have $p=128$. On most 64-bit architectures, it represents
@@ -168,7 +200,7 @@ $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t)\,\roundepsilon$.
 Rounding this result introduces an addition error of $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+1)\,\roundepsilon$.
 
-Thus, mulitiplication, at most, propagates the errors of its arguments as their sum plus an additional unit of rounding error.
+Thus, mulitiplication, at most, propagates the errors of its arguments as their sum and adds a unit of rounding error.
 
 \subsection{Addition}
 
@@ -178,7 +210,7 @@ of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the
 Rounding the sum can add one more unit of rounding error, and so we have
 $\aerror[\round(\approxx + \approxy), x + y] \leq (r+1)\,\roundepsilon$.
 
-Thus, addition, at most,  propagates the maximum error of its arguments plus an additional unit of rounding error.
+Thus, addition, at most,  propagates the maximum error of its arguments and adds a unit of rounding error.
 
 \subsection{Evaluating a smooth, decision-DNNF formula}
 
@@ -356,6 +388,7 @@ variable count $n$.
 \end{tikzpicture}
 } % centering
 \caption{Digit Precision Achieved by MPF for Benchmarks with Nonnegative Weights.  The precision is guaranteed to be greater than the bound.}
+
 \label{fig:pos:mpf}
 \end{figure}
 
@@ -471,7 +504,7 @@ the precision bound.
  \end{axis}
 \end{tikzpicture}
 } % centering
-\caption{Predictive Accuracy of MPFI.  MPFI never has a higher estimate than the actual, but it can
+\caption{Predictive Accuracy of MPFI Interval Arithmetic.  MPFI never has a higher estimate than the actual, but it can
 incorrectly predict a precision less than the target of 30.0.}
 \label{fig:mpfi}
 \end{figure}
