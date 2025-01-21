@@ -1,0 +1,31 @@
+c: CNT:     Reading files and constructing graph required 0.000 seconds
+c: CNT:     Using weights from file 'prodp-0_233.cnf'
+c: CNT:    COMBO COUNT    = 1.000000233  guaranteed precision = 38.231
+c: CNT:      COMBO used MPFI with 0.000 seconds and 48 max bytes
+c: CNT:   WEIGHTED MPQ COUNT    = 1.000000233
+c: CNT:     MPQ required 0.000 seconds, 96 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = 1.000000233   precision = 38.232
+c: CNT:     MPF required 0.000 seconds
+c: CNT:   WEIGHTED DBL COUNT    = 1.0000002329999999606   precision = 16.405
+c: CNT:     DBL required 0.000 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = 1.000000233   precision est = 38.231 actual = 38.232
+c: CNT:     MPFI required 0.000 seconds
+c: CNT:   Options           : 
+c: CNT:     Smooth:         : false
+c: CNT:     Digit precision : 30.0
+c: CNT:     Bit precision   : 128
+c: CNT:   Data variables    : 1
+c: CNT:     Smooth variables: 0
+c: CNT:   Operations 
+c: CNT:     Sums            : 0
+c: CNT:     Edge products   : 1
+c: CNT:     Node Products   : 0
+c: CNT:     Smooth prods    : 0
+c: CNT:     Operations TOTAL: 1
+c: CNT:   Binary Operations 
+c: CNT:     Sum ops         : 0
+c: CNT:     Edge product ops: 1
+c: CNT:     Node product ops: 0
+c: CNT:     Smooth prod ops : 0
+c: CNT:     Binops  TOTAL   : 1
+c: CNT:   Graph bytes       : 12
