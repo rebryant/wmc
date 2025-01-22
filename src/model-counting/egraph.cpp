@@ -1279,8 +1279,10 @@ Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecis
     mpfi_seconds = 0.0;
     mpq_seconds = 0.0;
     mpq_count = 0.0;
+    mpf_count = 0.0;
     mpfi_init(mpfi_count);
     mpfi_set_d(mpfi_count, 0.0);
+    min_digit_precision = 0.0;
 }
 
 const char *Evaluator_combo::method() {
@@ -1308,6 +1310,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	    guaranteed_precision = digit_precision_bound(bit_precision, egraph->nvar, constant);
 	    mpf_set_default_prec(save_precision);
 	    mpf_seconds = tod() - start_time;
+	    mpf_count = count;
 	}
 	break;
     case COMPUTE_MPFI:
@@ -1319,6 +1322,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	    Evaluator_mpfi ev = Evaluator_mpfi(egraph, weights, instrument);
 	    ev.evaluate(mpfi_count);
 	    mpfi_seconds = tod() - start_time;
+	    min_digit_precision = ev.min_digit_precision;
 	    computed_method = COMPUTE_MPFI;
 	    guaranteed_precision = digit_precision_mpfi(mpfi_count);
 	    if (guaranteed_precision >= target_precision) {

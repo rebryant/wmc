@@ -127,7 +127,7 @@ void run(const char *cnf_name) {
     }
 
     q25_ptr wcount = q25_from_32(0);
-    mpq_class qwcount = 0;
+    mpq_class mpq_count = 0;
     if (detail_level >= 3) {
 	Evaluator_q25 qev = Evaluator_q25(eg);
 	long weighted_operations = 0;
@@ -146,18 +146,27 @@ void run(const char *cnf_name) {
 	free(swcount);
 	qev.clear_evaluation();
     }
-    start_time = tod();
     Egraph_weights *weights = eg->prepare_weights(input_weights);
     if (weights == NULL) {
 	lprintf("Fatal error.  Exiting\n");
 	return;
     }
 
-    Evaluator_mpq mpqev = Evaluator_mpq(eg, weights);
-    mpqev.evaluate(qwcount);
-    end_time = tod();
+    double mpq_seconds = 0.0;
+    size_t max_bytes = 0;
+    if (combo_ev && combo_ev->mpq_seconds > 0) {
+	mpq_seconds = combo_ev->mpq_seconds;
+	mpq_count = combo_ev->mpq_count;
+	max_bytes = combo_ev->max_bytes;
+    } else {
+	start_time = tod();
+	Evaluator_mpq mpqev = Evaluator_mpq(eg, weights);
+	mpqev.evaluate(mpq_count);
+	mpq_seconds = tod() - start_time;
+	max_bytes = mpqev.max_bytes;
+    }
     if (detail_level >= 3) {
-	q25_ptr cwcount = q25_from_mpq(qwcount.get_mpq_t());
+	q25_ptr cwcount = q25_from_mpq(mpq_count.get_mpq_t());
 	if (q25_compare(wcount, cwcount) == 0) 
 	    lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
 	else
@@ -166,56 +175,70 @@ void run(const char *cnf_name) {
     } else {
 	mpf_t fw;
 	mpf_init(fw);
-	mpf_set_q(fw, qwcount.get_mpq_t());
+	mpf_set_q(fw, mpq_count.get_mpq_t());
 	const char *swcount = mpf_string(fw, (int) target_precision);
 	lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
 	mpf_clear(fw);
     }
     lprintf("%s     MPQ required %.3f seconds, %d max bytes\n",
-	    prefix, end_time - start_time, mpqev.max_bytes);
-    mpqev.clear_evaluation();
+	    prefix, mpq_seconds, max_bytes);
     q25_free(wcount);
 
-    start_time = tod();
-    Evaluator_mpf mpfev = Evaluator_mpf(eg, weights);
+    double mpf_seconds = 0.0;
     mpf_class fcount = 0;
-    mpfev.evaluate(fcount);
-    end_time = tod();
-    double precision = digit_precision_mpf(fcount.get_mpf_t(), qwcount.get_mpq_t());
+    if (combo_ev && combo_ev->mpf_seconds > 0) {
+	mpf_seconds = combo_ev->mpf_seconds;
+	fcount = combo_ev->mpf_count;
+    } else {
+	start_time = tod();
+	Evaluator_mpf mpfev = Evaluator_mpf(eg, weights);
+	mpfev.evaluate(fcount);
+	mpf_seconds = start_time - tod();
+    }
+    double precision = digit_precision_mpf(fcount.get_mpf_t(), mpq_count.get_mpq_t());
     const char *sfcount = mpf_string(fcount.get_mpf_t(), (int) target_precision);
     lprintf("%s   %s MPF COUNT    = %s   precision = %.3f\n", prefix, wlabel, sfcount, precision);
     lprintf("%s     MPF required %.3f seconds\n",
-	    prefix, end_time - start_time);
-    mpfev.clear_evaluation();
+	    prefix, mpf_seconds);
+
     start_time = tod();
     Evaluator_double dev = Evaluator_double(eg);
     double dwcount = dev.evaluate(input_weights);
     end_time = tod();
-    double wprecision = digit_precision_d(dwcount, qwcount.get_mpq_t());
+    double wprecision = digit_precision_d(dwcount, mpq_count.get_mpq_t());
     lprintf("%s   %s DBL COUNT    = %.20g   precision = %.3f\n", prefix, wlabel, dwcount, wprecision);
     lprintf("%s     DBL required %.3f seconds\n",
 	    prefix, end_time - start_time);
-    //    dev.clear_evaluation();
 
-    start_time = tod();
-    Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, weights, instrument);
-    mpfi_t icount;
-    mpfi_init(icount);
-    mpfiev.evaluate(icount);
-    end_time = tod();
-    double est_precision = digit_precision_mpfi(icount);
+    double mpfi_seconds = 0.0;
+    mpfi_t mpfi_count;
+    double min_digit_precision = 0.0;
+    mpfi_init(mpfi_count);
+    mpfi_set_d(mpfi_count, 0.0);
+    if (combo_ev && combo_ev->mpfi_seconds > 0) {
+	mpfi_seconds = combo_ev->mpfi_seconds;
+	mpfi_set(mpfi_count, combo_ev->mpfi_count);
+	min_digit_precision = combo_ev->min_digit_precision;
+    } else {
+	start_time = tod();
+	Evaluator_mpfi mpfiev = Evaluator_mpfi(eg, weights, instrument);
+	mpfiev.evaluate(mpfi_count);
+	mpfi_seconds = tod() - start_time;
+	min_digit_precision = mpfiev.min_digit_precision;
+    }
+    double est_precision = digit_precision_mpfi(mpfi_count);
     mpfr_t mid;
     mpfr_init(mid);
-    mpfi_mid(mid, icount);
-    double actual_precision = digit_precision_mpfr(mid, qwcount.get_mpq_t());
+    mpfi_mid(mid, mpfi_count);
+    double actual_precision = digit_precision_mpfr(mid, mpq_count.get_mpq_t());
     const char *sicount = mpfr_string(mid, (int) target_precision);
     lprintf("%s   %s MPFI COUNT   = %s   precision est = %.3f actual = %.3f\n", prefix, wlabel, sicount,
 	    est_precision, actual_precision);
     lprintf("%s     MPFI required %.3f seconds\n",
-	    prefix, end_time - start_time);
+	    prefix, mpfi_seconds);
     if (instrument)
 	lprintf("%s     MPFI had a minimum precision of %.3f\n",
-		prefix, mpfiev.min_digit_precision);
+		prefix, min_digit_precision);
     // Want to keep final stats.
     //	mpfiev.clear_evaluation();
     delete local_cnf;

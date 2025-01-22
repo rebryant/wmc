@@ -277,13 +277,15 @@ public:
     computed_t computed_method;
     const char *method();
     double guaranteed_precision;
-    int max_bytes;
+    size_t max_bytes;
     // Leftover stuff that can be reused
     // Times for different evaluations.  Set to 0.0 if not used
     double mpf_seconds;
     double mpfi_seconds;
     double mpq_seconds;
     mpq_class mpq_count;
+    mpf_class mpf_count;
     mpfi_t mpfi_count;
+    double min_digit_precision;
 };
 
