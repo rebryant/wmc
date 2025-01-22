@@ -247,6 +247,7 @@ Egraph::Egraph(std::unordered_set<int> *dvars, int nv) {
     data_variables = dvars;
     is_smoothed = false;
     smooth_variable_count = 0;
+    disabled_edge_count = 0;
     nvar = nv;
 }
 
@@ -512,20 +513,23 @@ void Egraph::smooth() {
 }
 
 void Egraph::reset_smooth() {
-    if (is_smoothed || smooth_variable_count == 0)
+    if (is_smoothed || (smooth_variable_count == 0 && disabled_edge_count == 0))
 	return;
     for (int id = 1; id <= edges.size(); id++) {
 	incr_count_by(COUNT_SMOOTH_VARIABLES, - (int) edges[id-1].smoothing_variables.size());
 	if (edges[id-1].smoothing_variables.size() != 0)
 	    report(4, "Removing %d variables from edge #%d (%d <-- %d)\n",
 		   (int) edges[id-1].smoothing_variables.size(), id, edges[id-1].to_id, edges[id-1].from_id);
+	edges[id-1].has_zero = false;
 	edges[id-1].smoothing_variables.clear();
     }
     reset_histo(HISTO_EDGE_SMOOTHS);
     smooth_variable_count = 0;
+    disabled_edge_count = 0;
 }
 
-void Egraph::smooth_single(int var) {
+void Egraph::smooth_single(int var, bool is_zero) {
+    int disable_count = 0;
     std::vector<bool> var_found;
     var_found.resize(operations.size(), false);
     std::vector<bool> edge_contains;
@@ -557,19 +561,35 @@ void Egraph::smooth_single(int var) {
 	int scount = 0;
 	if (var_found[to_id-1] && !var_found[from_id-1] && !edge_contains[id-1]) {
 	    ecount++;
-	    add_smoothing_variable(id, var);
-	    report(4, "Adding smoothing variable %d on edge #%d (%d <-- %d)\n", var, id, to_id, from_id);
+	    if (is_zero) {
+		edges[id-1].has_zero = true;
+		disable_count++;
+		disabled_edge_count++;
+		report(4, "Disabling edge due to variable %d.  #%d (%d <-- %d)\n", var, id, to_id, from_id);
+	    } else {
+		add_smoothing_variable(id, var);
+		report(4, "Adding smoothing variable %d on edge #%d (%d <-- %d)\n", var, id, to_id, from_id);
+	    }
 	}
     }
     // Check at root
     int id = edges.size();
     int child_id = edges[id-1].to_id;
     if (!var_found[child_id-1]) {
-	ecount++;
-	add_smoothing_variable(id, var);
+	if (is_zero) {
+	    edges[id-1].has_zero = true;
+	    disable_count++;
+	    disabled_edge_count++;
+	    report(3, "Disabling root due to smoothing of variable %d\n", var);
+	} else {
+	    ecount++;
+	    add_smoothing_variable(id, var);
+	}
     }
+    if (disable_count > 0)
+	report(3, "Disabled %d edges\n", disable_count);
     if (ecount > 0) {
-	report(3, "Adding smoothing variable %d to %d edges\n", var, ecount);
+	report(3, "Added smoothing variable %d to %d edges\n", var, ecount);
 	smooth_variable_count++;
 	incr_histo(HISTO_EDGE_SMOOTHS, 1);
     } else 
@@ -632,7 +652,7 @@ Egraph_weights * Egraph::prepare_weights(std::unordered_map<int,const char*> *li
 	    weights->smoothing_weights[v] = sum;
 	else if (cmp(sum, mpq_class(0)) == 0) {
 	    weights->smoothing_weights[v] = sum;
-	    smooth_single(v);
+	    smooth_single(v, true);
 	} else if (cmp(sum, mpq_class(1)) != 0) {
 	    weights->rescale_weights.push_back(sum);
 	    pwt /= sum;
@@ -708,7 +728,7 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 	    smoothing_weights[v] = sum;
 	else if (q25_is_zero(sum)) {
 	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v);
+	    egraph->smooth_single(v, true);
 
 	} else {
 	    int mark = q25_enter();
@@ -730,6 +750,8 @@ void Evaluator_q25::prepare_weights(std::unordered_map<int,const char*> *literal
 }
 
 q25_ptr Evaluator_q25::evaluate_edge(Egraph_edge &e) {
+    if (e.has_zero)
+	return q25_from_32(0);
     q25_ptr result = q25_from_32(1);
     int mark = q25_enter();
     for (int lit : e.literals) {
@@ -862,7 +884,7 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 	    smoothing_weights[v] = sum;
 	else if (sum == 0.0) {
 	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v);
+	    egraph->smooth_single(v, true);
 	} else {
 	    rescale *= sum;
 	    pwt = pwt/sum;
@@ -874,6 +896,8 @@ void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *lite
 }
 
 double Evaluator_double::evaluate_edge(Egraph_edge &e) {
+    if (e.has_zero)
+	return 0.0;
     double result = 1.0;
     for (int lit : e.literals) {
 	double wt = evaluation_weights[lit];
@@ -954,6 +978,10 @@ static void mpf_one_minus(mpf_ptr dest, mpf_srcptr val) {
 }
 
 void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
+    if (e.has_zero) {
+	value = 0.0;
+	return;
+    }
     value = 1;
     // Automatically convert from mpq to mpf
     for (int lit : e.literals)
@@ -1060,6 +1088,10 @@ void Evaluator_mpq::clear_evaluation() {
 }
 
 void Evaluator_mpq::evaluate_edge(mpq_class &value, Egraph_edge &e) {
+    if (e.has_zero) {
+	value = 0.0;
+	return;
+    }
     std::vector<mpq_class> eval_queue;
     for (int lit : e.literals)
 	eval_queue.push_back(weights->evaluation_weights[lit]);
@@ -1156,6 +1188,10 @@ void Evaluator_mpfi::clear_evaluation() {
 }
 
 void Evaluator_mpfi::evaluate_edge(mpfi_ptr value, Egraph_edge &e) {
+    if (e.has_zero) {
+	mpfi_set_d(value, 0.0);
+	return;
+    }
     mpfi_set_d(value, 1.0);
     for (int lit : e.literals)
 	mpfi_mul_q(value, value, weights->evaluation_weights[lit].get_mpq_t());
@@ -1239,6 +1275,12 @@ Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecis
     instrument = instr;
     computed_method = COMPUTE_MPF;
     max_bytes = 24;
+    mpf_seconds = 0.0;
+    mpfi_seconds = 0.0;
+    mpq_seconds = 0.0;
+    mpq_count = 0.0;
+    mpfi_init(mpfi_count);
+    mpfi_set_d(mpfi_count, 0.0);
 }
 
 const char *Evaluator_combo::method() {
@@ -1256,8 +1298,6 @@ void Evaluator_combo::evaluate(mpf_class &count) {
     report(3, "Achieving target precision %.1f with %d variables would require %d bit FP.  Starting with %s\n",
 	   target_precision, egraph->nvar, bit_precision, method());
 
-    mpq_class mpq_count = 0.0;
-
     double start_time = tod();
     switch (computed_method) {
     case COMPUTE_MPF:
@@ -1267,17 +1307,18 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	    ev.evaluate(count);
 	    guaranteed_precision = digit_precision_bound(bit_precision, egraph->nvar, constant);
 	    mpf_set_default_prec(save_precision);
+	    mpf_seconds = tod() - start_time;
 	}
 	break;
     case COMPUTE_MPFI:
 	{
 	    save_precision = mpfr_get_default_prec();
 	    mpfr_set_default_prec(bit_precision);
+	    mpfi_set_prec(mpfi_count, bit_precision);
 	    max_bytes *= 2;
-	    mpfi_t mpfi_count;
-	    mpfi_init(mpfi_count);
 	    Evaluator_mpfi ev = Evaluator_mpfi(egraph, weights, instrument);
 	    ev.evaluate(mpfi_count);
+	    mpfi_seconds = tod() - start_time;
 	    computed_method = COMPUTE_MPFI;
 	    guaranteed_precision = digit_precision_mpfi(mpfi_count);
 	    if (guaranteed_precision >= target_precision) {
@@ -1294,11 +1335,12 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 		// Try again
 		report(1, "After %.2f seconds, MPFI gave only guaranteed precision of %.1f.  Computing with MPQ\n",
 		       tod() - start_time, guaranteed_precision);
-		mpq_class mpq_count = 0.0;
+		double start_time_mpq = tod();
 		Evaluator_mpq ev = Evaluator_mpq(egraph, weights);
 		ev.evaluate(mpq_count);
 		computed_method = COMPUTE_MPQ;
 		guaranteed_precision = MAX_DIGIT_PRECISION;
+		mpq_seconds = tod() - start_time_mpq;
 		mpf_t mpf_count;
 		mpf_init2(mpf_count, bit_precision);
 		mpf_set_q(mpf_count, mpq_count.get_mpq_t());
@@ -1309,7 +1351,6 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	break;
     case COMPUTE_MPQ:
 	{
-	    mpq_class mpq_count = 0.0;
 	    Evaluator_mpq ev = Evaluator_mpq(egraph, weights);
 	    ev.evaluate(mpq_count);
 	    guaranteed_precision = MAX_DIGIT_PRECISION;
@@ -1318,6 +1359,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	    mpf_set_q(mpf_count, mpq_count.get_mpq_t());
 	    count = (mpf_class) mpf_count;
 	    max_bytes = ev.max_bytes;
+	    mpq_seconds = tod() - start_time;
 	}
     }
     report(3, "Total time for evaluation %.2f seconds.  Method %s, Guaranteed precision %.1f\n",

@@ -79,6 +79,7 @@ double target_precision = 30.0;
 int bit_precision = 128;
 Egraph *eg;
 Cnf *core_cnf = NULL;
+Evaluator_combo *combo_ev = NULL;
 double setup_time = 0;
 double smooth_time = 0;
 
@@ -251,13 +252,13 @@ void run_combo(const char *cnf_name) {
 	return;
     }
     mpf_class ccount = 0.0;
-    Evaluator_combo cev = Evaluator_combo(eg, weights, target_precision, instrument);
-    cev.evaluate(ccount);
-    double precision = cev.guaranteed_precision;
+    combo_ev = new Evaluator_combo(eg, weights, target_precision, instrument);
+    combo_ev->evaluate(ccount);
+    double precision = combo_ev->guaranteed_precision;
     const char *sccount = mpf_string(ccount.get_mpf_t(), (int) target_precision);
     lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
     lprintf("%s      COMBO used %s with %.3f seconds and %d max bytes\n",
-	    prefix, cev.method(), tod() - start_time, cev.max_bytes);
+	    prefix, combo_ev->method(), tod() - start_time, combo_ev->max_bytes);
     delete local_cnf;
 }
 
@@ -279,6 +280,7 @@ void report_stats() {
     lprintf("%s     Bit precision   : %d\n", prefix, bit_precision);
     lprintf("%s   Data variables    : %d\n", prefix, ndvar);
     lprintf("%s     Smooth variables: %d\n", prefix, eg->smooth_variable_count);
+    lprintf("%s   Disabled edges    : %d\n", prefix, eg->disabled_edge_count);
     lprintf("%s   Operations \n", prefix);
     lprintf("%s     Sums            : %d\n", prefix, sum_count);
     lprintf("%s     Edge products   : %d\n", prefix, edge_product_count);

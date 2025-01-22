@@ -84,6 +84,8 @@ struct Egraph_operation {
 struct Egraph_edge {
     int from_id;
     int to_id;
+    // Disabled due to zero weight or smoothing value
+    bool has_zero;
     std::vector<int> literals;
     std::vector<int> smoothing_variables;
 };
@@ -103,6 +105,7 @@ public:
     std::unordered_set<int> *data_variables;
     bool is_smoothed;
     int smooth_variable_count;
+    int disabled_edge_count;
     // Count of variables in original formula, including those eliminated by projection
     int nvar;
 
@@ -116,7 +119,8 @@ public:
     // Ability to do partial smoothing
     // Remove all smoothing variables
     void reset_smooth();
-    void smooth_single(int var);
+    // Put in single smoothing variable.  If is_zero, then disable edge
+    void smooth_single(int var, bool is_zero);
 
     bool is_data_variable(int var) { return data_variables->find(var) != data_variables->end(); }
     bool is_literal(int lit) { return lit < 0 ? is_data_variable(-lit) : is_data_variable(lit); }
@@ -263,15 +267,23 @@ private:
     Egraph_weights *weights;
     double target_precision;
     int instrument;
-    computed_t computed_method;
 
 public:
 
     Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int instrument);
     // literal_weights == NULL for unweighted
     void evaluate(mpf_class &count);
+
+    computed_t computed_method;
     const char *method();
     double guaranteed_precision;
     int max_bytes;
+    // Leftover stuff that can be reused
+    // Times for different evaluations.  Set to 0.0 if not used
+    double mpf_seconds;
+    double mpfi_seconds;
+    double mpq_seconds;
+    mpq_class mpq_count;
+    mpfi_t mpfi_count;
 };
 
