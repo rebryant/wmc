@@ -1266,7 +1266,7 @@ Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and 
 // Don't attempt floating-point if it requires too many bits 
 #define MPQ_THRESHOLD 1024
 
-static const char* method_name[3] = {"MPF", "MPFI", "MPQ"};
+static const char* method_name[6] = {"MPF", "MPFI", "MPQ", "MPF_ONLY", "MPFI_ONLY", "MPQ_ABORT"};
 
 Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecision, int instr) {
     egraph = eg;
@@ -1289,8 +1289,11 @@ const char *Evaluator_combo::method() {
     return method_name[computed_method];
 }
 
-void Evaluator_combo::evaluate(mpf_class &count) {
-    computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
+void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
+    if (no_mpq)
+	computed_method = weights->all_nonnegative ? COMPUTE_MPF_NOMPQ : COMPUTE_MPFI_NOMPQ;
+    else
+	computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
     int constant = egraph->is_smoothed ? 3 : 5;
     int bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
     int save_precision = mpf_get_default_prec();
@@ -1303,6 +1306,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
     double start_time = tod();
     switch (computed_method) {
     case COMPUTE_MPF:
+    case COMPUTE_MPF_NOMPQ:
 	{
 	    mpf_set_default_prec(bit_precision);
 	    Evaluator_mpf ev = Evaluator_mpf(egraph, weights);
@@ -1314,6 +1318,7 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 	}
 	break;
     case COMPUTE_MPFI:
+    case COMPUTE_MPFI_NOMPQ:
 	{
 	    save_precision = mpfr_get_default_prec();
 	    mpfr_set_default_prec(bit_precision);
@@ -1334,6 +1339,11 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 		mpfr_get_f(mpf_count, mpfr_count, MPFR_RNDN);
 		count = (mpf_class) mpf_count;
 		mpfr_set_default_prec(save_precision);		
+	    } else if (no_mpq) {
+		report(1, "After %.2f seconds, MPFI gave only guaranteed precision of %.1f.  Aborting\n",
+		       tod() - start_time, guaranteed_precision);
+		count = 0.0;
+		computed_method = COMPUTE_MPQ_NOMPQ;
 	    } else {
 		mpfr_set_default_prec(save_precision);
 		// Try again
@@ -1352,6 +1362,10 @@ void Evaluator_combo::evaluate(mpf_class &count) {
 		max_bytes = ev.max_bytes;
 	    }
 	}
+	break;
+    case COMPUTE_MPQ_NOMPQ:
+	guaranteed_precision = 0.0;
+	count = 0.0;
 	break;
     case COMPUTE_MPQ:
 	{

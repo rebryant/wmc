@@ -258,7 +258,7 @@ private:
 Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and switch to MPQ if needed
 *******************************************************************************************************************/
 
-typedef enum { COMPUTE_MPF, COMPUTE_MPFI, COMPUTE_MPQ } computed_t;
+typedef enum { COMPUTE_MPF, COMPUTE_MPFI, COMPUTE_MPQ, COMPUTE_MPF_NOMPQ, COMPUTE_MPFI_NOMPQ, COMPUTE_MPQ_NOMPQ } computed_t;
 
 class Evaluator_combo {
 private:
@@ -272,7 +272,7 @@ public:
 
     Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int instrument);
     // literal_weights == NULL for unweighted
-    void evaluate(mpf_class &count);
+    void evaluate(mpf_class &count, bool no_mpq);
 
     computed_t computed_method;
     const char *method();

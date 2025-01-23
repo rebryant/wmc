@@ -45,7 +45,7 @@ void usage(const char *name) {
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
     lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
     lprintf("  -v VERB     Set verbosity level\n");
-    lprintf("  -L LEVEL    Detail level: Basic (1), + Individual methods (2), + Q25 (3)\n");
+    lprintf("  -L LEVEL    Detail level: Basic+Don't attempt MPQ (0), Basic (1), + Individual methods (2), + Q25 (3)\n");
     lprintf("  -p PREC     Required precision (in decimal digits)\n");
     lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
 
@@ -276,7 +276,8 @@ void run_combo(const char *cnf_name) {
     }
     mpf_class ccount = 0.0;
     combo_ev = new Evaluator_combo(eg, weights, target_precision, instrument);
-    combo_ev->evaluate(ccount);
+    bool abort_mpq = detail_level == 0;
+    combo_ev->evaluate(ccount, abort_mpq);
     double precision = combo_ev->guaranteed_precision;
     const char *sccount = mpf_string(ccount.get_mpf_t(), (int) target_precision);
     lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
