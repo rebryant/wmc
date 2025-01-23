@@ -534,9 +534,11 @@ incorrectly predict a precision less than the target of 30.0.}
       \scriptsize \textsf{MC2024, Hybrid-MPQ}
     }
     \addplot[mark=none] coordinates{(0.001,0.001) (10000.0,10000.0)};
-    \node[left] at (axis cs: 2.0, 2.0) {$1.0\times$};
+    \node[left] at (axis cs: 0.3, 0.3) {$1.0\times$};
     \addplot[mark=none, color=lightblue] coordinates{(0.01, 0.001) (10000.0, 1000.0)};
-    \node[left] at (axis cs: 2.0, 0.2) {$0.1\times$};
+    \node[left] at (axis cs: 0.3, 0.03) {$0.1\times$};
+    \addplot[mark=none, color=lightblue] coordinates{(0.1, 0.001)  (10000.0, 100.0)};
+    \node[right] at (axis cs: 0.4, 0.003) {$0.01\times$};
  \end{axis}
 \end{tikzpicture}
 } % centering
@@ -544,7 +546,23 @@ incorrectly predict a precision less than the target of 30.0.}
 \label{fig:runtime}
 \end{figure}
 
+\subsection{Comparing Implementation Strategies}
 
+\begin{table}
+  \caption{Performance Comparision of Different Implementation Strategies}
+  \label{tab:compare}
+  \centering{
+  \begin{tabular}{lrrrrrrrrr}
+    \toprule
+    Strategy & \multicolumn{2}{c}{MPF Runs} & \multicolumn{2}{c}{MPFI Runs} & \multicolumn{2}{c}{MPQ Runs} & \multicolumn{3}{c}{Combined} \\
+             & Cnt & Hours             &  Cnt & Hours             &  Cnt & Hours            &  Cnt & Hours & Avg (s) \\
+    \midrule
+    \input{method_table}
+    \\[-1em]
+   \bottomrule
+  \end{tabular}
+  } % Centering
+\end{table}
 
 
 \newpage

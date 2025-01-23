@@ -5,7 +5,7 @@ LDATA = ../benchmarks/2024-track2-public+private/logs
 LPDATA = ../benchmarks/product/sweep
 RDATA = data-raw
 FDATA = data-formatted
-
+TABULATE = tabulate_combo.py
 
 
 rdata:
@@ -23,10 +23,7 @@ rdata:
 	cp -p $(LDATA)/combo-mpf+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpfi+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpq+mpq.csv $(RDATA)
-
-
-
-
+	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
 
 
 
@@ -55,10 +52,10 @@ pdata:
 	$(INTERP) $(DGEN) -X 2 -Y 3 -x 50 -y 50 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
 		< $(RDATA)/bposneg-mpfi-est+act.csv > $(FDATA)/bposneg-mpfi-est+act.tex
 	#
-	$(INTERP) $(DGEN) -X 3 -Y 2 -O "only marks, color=redorange, mark=*, mark options={scale=0.7, opacity=0.7}" \
+	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=redorange, mark=*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/combo-mpf+mpq.csv > $(FDATA)/combo-mpf+mpq.tex
-	$(INTERP) $(DGEN) -X 3 -Y 2 -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
+	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/combo-mpfi+mpq.csv > $(FDATA)/combo-mpfi+mpq.tex
-	$(INTERP) $(DGEN) -X 3 -Y 2 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
+	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
 		< $(RDATA)/combo-mpq+mpq.csv > $(FDATA)/combo-mpq+mpq.tex
 
