@@ -1,15 +1,15 @@
 c: CNT:     Reading files and constructing graph required 194.948 seconds
-c: CNT:     Using weights from file 'mc2024_track2-random_074_100.cnf'
-c: CNT:    COMBO COUNT    = 1.55786073144289172219830265031e-141  guaranteed precision = 35.226
-c: CNT:      COMBO used MPF with 41.353 seconds and 24 max bytes
-c: CNT:   WEIGHTED MPQ COUNT    = 1.55786073144289172219830265031e-141
-c: CNT:     MPQ required 284.687 seconds, 5696 max bytes
-c: CNT:   WEIGHTED MPF COUNT    = 1.55786073144289172219830265031e-141   precision = 37.838
-c: CNT:     MPF required 41.352 seconds
-c: CNT:   WEIGHTED DBL COUNT    = 1.55786073144288979e-141   precision = 14.906
-c: CNT:     DBL required 6.551 seconds
-c: CNT:   WEIGHTED MPFI COUNT   = 1.55786073144289172219830265031e-141   precision est = 35.631 actual = 37.990
-c: CNT:     MPFI required 104.838 seconds
+c: CNT:     Using weights from file 'mc2024_track2-random_074_400.cnf'
+c: CNT:    COMBO COUNT    = -8.41883135569633549101294931574e378  guaranteed precision = 35.290
+c: CNT:      COMBO used MPFI with 112.351 seconds and 48 max bytes
+c: CNT:   WEIGHTED MPQ COUNT    = -8.41883135569633549101294931574e378
+c: CNT:     MPQ required 455.218 seconds, 6608 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = -8.41883135569633549101294931574e378   precision = 36.658
+c: CNT:     MPF required -42.960 seconds
+c: CNT:   WEIGHTED DBL COUNT    = nan   precision = 0.000
+c: CNT:     DBL required 6.585 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = -8.41883135569633549101294931574e378   precision est = 35.290 actual = 37.297
+c: CNT:     MPFI required 112.350 seconds
 c: CNT:   Options           : 
 c: CNT:     Smooth:         : false
 c: CNT:     Digit precision : 30.0
