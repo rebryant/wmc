@@ -26,7 +26,9 @@ import sys
 
 directory = "."
 
-method_mpf, method_mpfi, method_mpq = range(3)
+method_count = 3
+
+method_mpf, method_mpfi, method_mpq = range(method_count)
 method_name = ["MPF", "MPFI", "MPQ"]
 file_name = ["combo-mpf+mpq.csv", "combo-mpfi+mpq.csv", "combo-mpq+mpq.csv"]
 
@@ -54,6 +56,7 @@ class Instance:
         return "I.%s (%s) MPF:%.3f MPFI:%.3f MPQ:%.3f" % (self.name, method_name[self.method], self.mpf_seconds, self.mpfi_seconds, self.mpq_seconds)
 
 instances = []
+average_time = [0] * method_count
 
 def load(verbose):
     global instances
@@ -88,15 +91,12 @@ def load(verbose):
         if verbose:
             print("Created %d instances from %s" % (icount, fname))
 
-def table_entry(fields):
-    print(" & ".join(fields) + ' \\\\')
-
-
 # Here, method refers to final strategy:
 # MPF: Use MPF + MPQ
 # MPFI: Use MPF + MPFI + MPQ
 # MPQ: Use MPQ
 def tabulate(target_method, label):
+    global average_time
     count = [0] * 3
     time = [0] * 3
     total_count = 0
@@ -135,10 +135,16 @@ def tabulate(target_method, label):
         mtime = time[comp_method]/3600.0
         fields += [str(count[comp_method]), "%.2f" % mtime]
     avg = total_time/total_count
+    average_time[target_method] = avg
     ttime = total_time/3600.0
     fields += [str(total_count), "%.2f" % ttime, "%.1f" % avg]
     return fields
 
+def table_entry(fields):
+    print(" & ".join(fields) + ' \\\\')
+
+def command(name, value):
+    print("\\newcommand[\\global]{\\%s}{%s}" % (name, "%.2f" % value))
 
 
 def run(name, args):
@@ -155,6 +161,12 @@ def run(name, args):
     table_entry(fields)
     fields = tabulate(method_mpfi, "Hybrid")
     table_entry(fields)
+    compare_mpq_hybrid = average_time[method_mpq]/average_time[method_mpfi]
+    compare_mpq_mpf = average_time[method_mpq]/average_time[method_mpf]
+    compare_mpf_hybrid = average_time[method_mpf]/average_time[method_mpfi]
+    command("avgMpqHybrid", compare_mpq_hybrid)
+    command("avgMpqMpf", compare_mpq_mpf)
+    command("avgMpfHybrid", compare_mpf_hybrid)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])

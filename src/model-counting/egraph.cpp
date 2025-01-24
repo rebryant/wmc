@@ -1328,7 +1328,6 @@ void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
 	    ev.evaluate(mpfi_count);
 	    mpfi_seconds = tod() - start_time;
 	    min_digit_precision = ev.min_digit_precision;
-	    computed_method = COMPUTE_MPFI;
 	    guaranteed_precision = digit_precision_mpfi(mpfi_count);
 	    if (guaranteed_precision >= target_precision) {
 		mpfr_t mpfr_count;
