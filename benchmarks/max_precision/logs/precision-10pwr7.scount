@@ -1,0 +1,25 @@
+c: CNT:     Reading files and constructing graph required 28.093 seconds
+c: CNT:     Using weights from file 'precision-10pwr7.cnf'
+c: CNT:   WEIGHTED MPQ COUNT    = 1.0e-90000000
+c: CNT:     MPQ required 35.121 seconds, 224230224 max bytes
+c: CNT:   WEIGHTED MPF COUNT    = 0.0   precision = 0.000
+c: CNT:     MPF required 7.763 seconds
+c: CNT:   WEIGHTED DBL COUNT    = nan   precision = 0.000
+c: CNT:     DBL required 2.692 seconds
+c: CNT:   WEIGHTED MPFI COUNT   = 2.021369532715018552385921340693490312413e89999961   precision = 0.000
+c: CNT:     MPFI required 11.834 seconds
+c: CNT:     MPFI had 2 precision failures and a minimum precision of 0.000
+c: CNT:   Data variables    : 10000001
+c: CNT:   Operations 
+c: CNT:     Sums            : 2
+c: CNT:     Edge products   : 5
+c: CNT:     Node Products   : 0
+c: CNT:     Smooth prods    : 0
+c: CNT:     Operations TOTAL: 7
+c: CNT:   Binary Operations 
+c: CNT:     Sum ops         : 2
+c: CNT:     Edge product ops: 30000002
+c: CNT:     Node product ops: 0
+c: CNT:     Smooth prod ops : 0
+c: CNT:     Binops  TOTAL   : 30000004
+c: CNT:   Graph bytes       : 120000050
