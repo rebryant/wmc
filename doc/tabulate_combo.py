@@ -26,11 +26,11 @@ import sys
 
 directory = "."
 
-method_count = 3
+method_count = 5
 
-method_mpf, method_mpfi, method_mpq = range(method_count)
-method_name = ["MPF", "MPFI", "MPQ"]
-file_name = ["combo-mpf+mpq.csv", "combo-mpfi+mpq.csv", "combo-mpq+mpq.csv"]
+method_mpf, method_mpfi, method_mpq, method_mpf_only, method_mpfi_only = range(method_count)
+method_name = ["MPF", "MPFI", "MPQ", "MPF_ONLY", "MPFI_ONLY"]
+file_name = ["combo-mpf+mpq.csv", "combo-mpfi+mpq.csv", "combo-mpq+mpq.csv", "combo-mpf-only-secs.csv", "combo-mpfi-only-secs.csv"]
 
 class Instance:
     name = None
@@ -45,9 +45,9 @@ class Instance:
         self.mpfi_seconds = 0
         self.method = method
         self.mpq_seconds = mpq_seconds
-        if method == method_mpf:
+        if method in [method_mpf, method_mpf_only]:
             self.mpf_seconds = total_seconds
-        elif method == method_mpfi:
+        elif method in [method_mpfi, method_mpfi_only]:
             self.mpfi_seconds = total_seconds
         else:
             self.mpfi_seconds = total_seconds - mpq_seconds
@@ -60,7 +60,7 @@ average_time = [0] * method_count
 
 def load(verbose):
     global instances
-    for method in range(3):
+    for method in range(method_count):
         icount = 0
         fname = directory + "/" + file_name[method]
         try:
@@ -72,16 +72,20 @@ def load(verbose):
         line = 0
         for entry in creader:
             line+=1
-            if len(entry) != 3:
+            if len(entry) < 2:
                 print("File %s, Line %s.  Bad entry: Not enough fields" % (fname, line))
                 sys.exit(1)
             name = entry[0]
+            mpq_seconds = 0
             try:
                 total_seconds = float(entry[1])
-                mpq_seconds = float(entry[2])
+                if len(entry) > 2:
+                    mpq_seconds = float(entry[2])
             except:
                 print("File %s, Line %s (%s).  Bad entry: Couldn't parse numbers" % (fname, line, name))
                 sys.exit(1)
+
+            imethod = method
             instance = Instance(name, method, total_seconds, mpq_seconds)
             if (verbose):
                 print("Created %s" % str(instance))
@@ -102,8 +106,8 @@ def tabulate(target_method, label):
     total_count = 0
     total_time = 0
     for instance in instances:
-        total_count += 1
         if instance.method == method_mpf:
+            total_count += 1
             if target_method in [method_mpf, method_mpfi]:
                 count[method_mpf] += 1
                 time[method_mpf] += instance.mpf_seconds
@@ -113,6 +117,7 @@ def tabulate(target_method, label):
                 time[method_mpq] += instance.mpq_seconds
                 total_time += instance.mpq_seconds
         elif instance.method == method_mpfi:
+            total_count += 1
             if target_method in [method_mpf, method_mpq]:
                 count[method_mpq] += 1
                 time[method_mpq] += instance.mpq_seconds
@@ -121,12 +126,24 @@ def tabulate(target_method, label):
                 count[method_mpfi] += 1
                 time[method_mpfi] += instance.mpfi_seconds
                 total_time += instance.mpfi_seconds
-        else:
-            # Method mpq
+        elif instance.method == method_mpq:
+            total_count += 1
             count[method_mpq] += 1
             time[method_mpq] += instance.mpq_seconds
             total_time += instance.mpq_seconds
             if target_method == method_mpfi:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_time += instance.mpfi_seconds
+        elif instance.method == method_mpf_only:
+            if target_method in [method_mpf, method_mpfi]:
+                total_count += 1
+                count[method_mpf] += 1
+                time[method_mpf] += instance.mpf_seconds
+                total_time += instance.mpf_seconds
+        elif instance.method == method_mpfi_only:
+            if target_method == method_mpfi:
+                total_count += 1
                 count[method_mpfi] += 1
                 time[method_mpfi] += instance.mpfi_seconds
                 total_time += instance.mpfi_seconds

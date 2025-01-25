@@ -32,6 +32,8 @@ data:
 	$(INTERP) $(GRAB) "COMBO used MPF " mc2024_track2-random_*_*.count > combo-mpf-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPFI " mc2024_track2-random_*_*.count > combo-mpfi-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPQ " mc2024_track2-random_*_*.count > combo-mpq-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" mc2024_track2-random_*_*.count > combo-mpf-only-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPFI_ONLY" mc2024_track2-random_*_*.count > combo-mpfi-only-secs.csv
 	# MPQ time
 	$(INTERP) $(GRAB) "MPQ required " mc2024_track2-random_*_*.count > all-mpq-secs.csv
 	# Minimize across runs

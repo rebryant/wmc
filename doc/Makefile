@@ -23,6 +23,8 @@ rdata:
 	cp -p $(LDATA)/combo-mpf+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpfi+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpq+mpq.csv $(RDATA)
+	cp -p $(LDATA)/combo-mpf-only-secs.csv $(RDATA)
+	cp -p $(LDATA)/combo-mpfi-only-secs.csv $(RDATA)
 	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
 
 
