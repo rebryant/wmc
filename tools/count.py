@@ -33,13 +33,14 @@ import parallel
 p = parallel.Printer()
 
 def usage(name):
-    p.print("Usage: %s [-f] [-h] [-s] [-I] [-L LEVEL] [-p PREC]  [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
+    p.print("Usage: %s [-f] [-h] [-s] [-I] [-L LEVEL] [-p PREC] [-b BPREC] [-D SPATH] [-N THRDS] P1.NNF P2.NNF ... " % name)
     p.print("  -h       Print this message")
     p.print("  -f       Force regeneration of all files")
     p.print("  -s       Use smoothing")
     p.print("  -I       Measure digit precision of MPFI intermediate results");
     p.print("  -L LEVEL Detail level: Basic+Don't attempt MPQ (0), Basic (1), + Individual methods (2), + Q25 (3)")
     p.print("  -p PREC  Required precision (in decimal digits)");
+    p.print("  -b BPREC Fix bit precision (should be multiple of 64)")
     p.print("  -D SPATH Directory for source NNF files")
     p.print("  -N THRDS Run N threads concurrently")
     p.print("  -t TIME  Limit time for each of the programs")
@@ -53,6 +54,7 @@ smooth = False
 # instrumentation level
 instrument = False
 targetPrecision = None
+bitPrecision = None
 detailLevel = None
 
 # Pathnames
@@ -122,6 +124,8 @@ def runJob(nnfPath):
             cmd += ['-I']
         if targetPrecision is not None:
             cmd += ['-p', str(targetPrecision)]
+        if bitPrecision is not None:
+            cmd += ['-b', str(bitPrecision)]
         if detailLevel is not None:
             cmd += ['-L', str(detailLevel)]
         cmd += [nnfPath] + cnfNames
@@ -159,9 +163,10 @@ def run(name, args):
     global smooth
     global instrument
     global targetPrecision
+    global bitPrecision
     global detailLevel
     home = None
-    optList, args = getopt.getopt(args, "hfsIp:L:D:N:")
+    optList, args = getopt.getopt(args, "hfsIp:b:L:D:N:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -174,6 +179,8 @@ def run(name, args):
             instrument = True
         elif opt == '-p':
             targetPrecision = float(val)
+        elif opt == '-b':
+            bitPrecision = int(val)
         elif opt == '-L':
             detailLevel = float(val)
         elif opt == '-D':

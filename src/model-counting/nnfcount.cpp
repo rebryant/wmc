@@ -40,13 +40,14 @@
 #include "analysis.h"
 
 void usage(const char *name) {
-    lprintf("Usage: %s [-h] [-s] [-I] [-v VERB] [-L LEVEL] [-p PREC] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
+    lprintf("Usage: %s [-h] [-s] [-I] [-v VERB] [-L LEVEL] [-p PREC] [-b BPREC] [-o OUT.nnf] FORMULA.nnf FORMULA_1.cnf ... FORMULA_k.cnf\n", name);
     lprintf("  -h          Print this information\n");
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
     lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
     lprintf("  -v VERB     Set verbosity level\n");
     lprintf("  -L LEVEL    Detail level: Basic+Don't attempt MPQ (0), Basic (1), + Individual methods (2), + Q25 (3)\n");
     lprintf("  -p PREC     Required precision (in decimal digits)\n");
+    lprintf("  -b BPREC    Fix bit precision (should be multiple of 64)\n");
     lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
 
 }
@@ -76,7 +77,7 @@ bool smooth = false;
 int detail_level = 1;
 bool instrument = false;
 double target_precision = 30.0;
-int bit_precision = 128;
+int bit_precision = 0;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 Evaluator_combo *combo_ev = NULL;
@@ -88,7 +89,8 @@ void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     core_cnf = new Cnf();
     core_cnf->import_file(cnf_file, true, false);
 
-    bit_precision = required_bit_precision(target_precision, core_cnf->variable_count(), 5);
+    if (bit_precision == 0)
+	bit_precision = required_bit_precision(target_precision, core_cnf->variable_count(), 5);
     mpf_set_default_prec(bit_precision);
     mpfr_set_default_prec(bit_precision);
 
@@ -324,7 +326,7 @@ void report_stats() {
 int main(int argc, char *argv[]) {
     int c;
     FILE *out_file = NULL;
-    while ((c = getopt(argc, argv, "hIsv:L:p:o:")) != -1) {
+    while ((c = getopt(argc, argv, "hIsv:L:p:b:o:")) != -1) {
 	switch(c) {
 	case 'h':
 	    usage(argv[0]);
@@ -334,6 +336,13 @@ int main(int argc, char *argv[]) {
 	    break;
 	case 'p':
 	    target_precision = atof(optarg);
+	    break;
+	case 'b':
+	    bit_precision = atoi(optarg);
+	    if (bit_precision % 64 != 0) {
+		printf("Bit precision %d not valid.  Must be multiple of 64\n", bit_precision);
+		return 1;
+	    }
 	    break;
 	case 'I':
 	    instrument = true;
