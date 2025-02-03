@@ -10,16 +10,17 @@ import math
 import readwrite
 
 def usage(name):
-    print("Usage: %s [-h] [-D u|e|b|s] [-R RANGE] [-C u|n|r|e|i|I] [-N n|r] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
+    print("Usage: %s [-h] [-D u|e|b|s] [-R RANGE] [-C u|n|r|e|i|I] [-N n|r] [-p PCOUNT] [-s SEED] [-n COUNT] [-d DIGITS] IN1 IN2 ..." % name)
     print("  -h          Print this message")
     print("  -s SEED     Seed for first file")
     print("  -n COUNT    Generate COUNT variants for each input file")
+    print("  -p PCOUNT   How many variables to select for partial derivative computation")
     print("  -D DIST     Specify distribution: uniform (u), single exponential (e), boundary values (b), constant (seed+min) (s)")
     print("  -R RANGE    Specify range of values.  Use open/closed interval notation with MIN,MAX ('o' for open, 'c' for closed)")
     print("  -C CMETHOD  What should be relation between W(x) and W(-x):")
     print("     sum-to-one (u), negated (n), reciprocal (r), equal (e)independent (i), or independent with a nonzero sum (I)")
     print("  -N NMETHOD  How should negative weights be generated: none (n), random (r)")         
-    print("  -d DIGITS Number of significant digits")
+    print("  -d DIGITS   Number of significant digits")
     
 def getRoot(path):
     fields = path.split("/")
@@ -277,24 +278,30 @@ class Weighter:
         for v in svlist:
             self.assignVariable(v)
 
-def redoWeights(root, inputCnf, seed, weighter):
+def redoWeights(root, inputCnf, seed, weighter, partialCount):
     weighter.reseed(seed)
     outName = root + "_" + str(seed) + ".cnf"
     cwriter = readwrite.CnfWriter(inputCnf.nvar, outName, verbLevel = 2)
     cwriter.doHeaderComment(weighter.document())
-
     
     if inputCnf.showVariables is not None and len(inputCnf.showVariables) < inputCnf.nvar:
         cwriter.addShow(inputCnf.showVariables)
         vlist = list(inputCnf.showVariables)
     else:
         vlist = range(1, inputCnf.nvar+1)
+    if partialCount > 0:
+        if partialCount > len(vlist):
+            print("Cannot select %d partial derivative variables.  Only %d input variables" % (partialCount, len(vlist)))
+            return
+        dlist = sorted(random.sample(vlist, partialCount))
+        cwriter.addPartial(dlist)
+        weighter.reseed(seed)
     weighter.assignList(vlist)
     cwriter.addWeights(weighter.wdict)
     cwriter.finish()
     print("Generated file '%s'" % outName)
         
-def process(inPath, seed, weighter, count):
+def process(inPath, seed, weighter, partialCount, count):
     try:
         inCnfName = replaceExtension(inPath, "cnf")
         inputCnf = readwrite.CnfReader(inCnfName, 2, False)
@@ -303,7 +310,7 @@ def process(inPath, seed, weighter, count):
         return
     root = getRoot(inPath)
     for i in range(count):
-        redoWeights(root, inputCnf, seed+i, weighter)
+        redoWeights(root, inputCnf, seed+i, weighter, partialCount)
 
 def run(name, args):
     seed = 123456
@@ -313,8 +320,9 @@ def run(name, args):
     complementCode = "u"
     distributionCode = "u"
     negationCode = "n"
+    partialCount = 0
     
-    optList, args = getopt.getopt(args, "hs:n:D:R:C:N:d:")
+    optList, args = getopt.getopt(args, "hs:n:D:R:C:N:p:d:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -329,6 +337,8 @@ def run(name, args):
             complementCode = val
         elif opt == '-N':
             negationCode = val
+        elif opt == '-p':
+            partialCount = int(val)
         elif opt == "-d":
             digits = int(val)
         elif opt == "-n":
@@ -339,7 +349,7 @@ def run(name, args):
         print("Invalid parameters: %s" % str(ex))
         return
     for inPath in args:
-        process(inPath, seed, weighter, count)
+        process(inPath, seed, weighter, partialCount, count)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])

@@ -147,6 +147,7 @@ class CnfReader():
     nvar = 0
     verbLevel = 1
     showVariables = None
+    partialVariables = None
     tseitinVariables = None
     # Dict indexed by literal & with strings for weights
     weights = None
@@ -154,6 +155,7 @@ class CnfReader():
     def __init__(self, fname = None, verbLevel = 1, check = True):
         self.verbLevel = verbLevel
         self.showVariables = None
+        self.partialVariables = None
         self.tseitinVariables = None
         if fname is None:
             opened = False
@@ -176,6 +178,8 @@ class CnfReader():
             self.file.close()
         if self.showVariables is None:
             self.showVariables = set(range(1, self.nvar+1))
+        if self.partialVariables is None:
+            self.partialVariables = set([])
 
     def processShow(self, fields):
         self.showVariables = set([])
@@ -189,6 +193,20 @@ class CnfReader():
                 msg = "Invalid input variable %d" % var
                 raise ReadWriteException(msg)
             self.showVariables.add(var)
+
+    def processPartial(self, fields):
+        self.partialVariables = set([])
+        for s in fields[3:-1]:
+            try:
+                var = int(s)
+            except:
+                msg = "Couldn't parse '%s' as number" % s
+                raise ReadWriteException(msg)
+            if var < 1 or var > self.nvar:
+                msg = "Invalid input variable %d" % var
+                raise ReadWriteException(msg)
+            self.partialVariables.add(var)
+
 
     def processTseitin(self, fields):
         self.tseitinVariables = set([])
@@ -223,12 +241,17 @@ class CnfReader():
     def processComment(self, line):
         if self.nvar == 0:
             fields = line.split()
-            if len(fields) == 3 and fields[1] == 't' and fields[2] in ['pmc', 'pwmc']:
+            if len(fields) == 3 and fields[1] == 't' and fields[2] in ['pmc', 'pwmc', 'pgmc']:
                 self.showVariables = set([])
+            if len(fields) == 3 and fields[1] == 't' and fields[2] in ['gmc', 'pgmc']:
+                self.partialVariables = set([])
+
         else:
             fields = line.split()
             if self.showVariables is not None and len(fields) >= 3 and fields[1] == 'p' and fields[2] == 'show':
                 self.processShow(fields)
+            if self.partialVariables is not None and len(fields) >= 3 and fields[1] == 'p' and fields[2] == 'partial':
+                self.processPartial(fields)
             elif self.tseitinVariables is not None and len(fields) >= 3 and fields[1] == 'p' and fields[2] == 'forget':
                 self.processTseitin(fields)
             elif len(fields) == 5 and fields[1] == 'p' and fields[2] == "weight":
@@ -352,6 +375,16 @@ class CnfWriter(Writer):
             self.mcClass = "pmc"
         elif self.mcClass == "wmc":
             self.mcClass = "pwmc"
+        elif self.mcClass == "gmc":
+            self.mcClass = "pgmc"
+
+    def addPartial(self, vars):
+        svars = [str(var) for var in vars]
+        self.doComment("p partial %s 0" % " ".join(svars))
+        if self.mcClass in ["mc", "wmc"]:
+            self.mcClass = "gmc"
+        elif self.mcClass in ["pmc", "pwmc"]:
+            self.mcClass = "pgmc"
 
     def addWeight(self, lit, weight):
         self.doComment("p weight %d %s 0" % (lit, str(weight)))
