@@ -277,7 +277,7 @@ void run_combo(const char *cnf_name) {
 	return;
     }
     mpf_class ccount = 0.0;
-    combo_ev = new Evaluator_combo(eg, weights, target_precision, instrument);
+    combo_ev = new Evaluator_combo(eg, weights, target_precision, bit_precision, instrument);
     bool abort_mpq = detail_level == 0;
     combo_ev->evaluate(ccount, abort_mpq);
     double precision = combo_ev->guaranteed_precision;

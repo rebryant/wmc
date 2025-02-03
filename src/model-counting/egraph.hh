@@ -266,11 +266,12 @@ private:
     Egraph *egraph;
     Egraph_weights *weights;
     double target_precision;
+    int bit_precision;
     int instrument;
 
 public:
 
-    Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int instrument);
+    Evaluator_combo(Egraph *egraph, Egraph_weights *weights, double target_precision, int bit_precision, int instrument);
     // literal_weights == NULL for unweighted
     void evaluate(mpf_class &count, bool no_mpq);
 

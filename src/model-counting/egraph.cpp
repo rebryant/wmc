@@ -1268,10 +1268,11 @@ Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and 
 
 static const char* method_name[6] = {"MPF", "MPFI", "MPQ", "MPF_ONLY", "MPFI_ONLY", "MPQ_ABORT"};
 
-Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecision, int instr) {
+Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecision, int bprecision, int instr) {
     egraph = eg;
     weights = wts;
     target_precision = tprecision;
+    bit_precision = bprecision;
     instrument = instr;
     computed_method = COMPUTE_MPF;
     max_bytes = 24;
@@ -1295,7 +1296,8 @@ void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
     else
 	computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
     int constant = egraph->is_smoothed ? 3 : 5;
-    int bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
+    if (bit_precision == 0)
+	bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
     int save_precision = mpf_get_default_prec();
     max_bytes = 8 + bit_precision/8;
     if (bit_precision > MPQ_THRESHOLD)
