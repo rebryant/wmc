@@ -5,7 +5,7 @@ c: CNT:      COMBO used MPFI with 0.000 seconds and 48 max bytes
 c: CNT:   WEIGHTED MPQ COUNT    = -3.83999999999999998464e344
 c: CNT:     MPQ required 0.000 seconds, 288 max bytes
 c: CNT:   WEIGHTED MPF COUNT    = -3.83999999999999998464e344   precision = 37.220
-c: CNT:     MPF required -0.000 seconds
+c: CNT:     MPF required 0.000 seconds
 c: CNT:   WEIGHTED DBL COUNT    = -inf   precision = 0.000
 c: CNT:     DBL required 0.000 seconds
 c: CNT:   WEIGHTED MPFI COUNT   = -3.83999999999999998464e344   precision est = 35.866 actual = 37.626
