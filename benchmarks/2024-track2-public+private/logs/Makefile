@@ -5,7 +5,7 @@ MERGE = $(TDIR)/merge_csv.py
 EXTRACT = $(TDIR)/extract_columns.py
 LTDIR = ~/repos/wmc/tools
 MINIMIZE = $(LTDIR)/combine_data.py
-
+PREC256 = prec256
 
 clean:
 	rm -f *~
@@ -31,11 +31,20 @@ data:
 	# Combo times
 	$(INTERP) $(GRAB) "COMBO used MPF " mc2024_track2-random_*_*.count > combo-mpf-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPFI " mc2024_track2-random_*_*.count > combo-mpfi-secs.csv
+	$(INTERP) $(GRAB) "MPFI gave only" mc2024_track2-random_*_*.count > combo-mpfi-fail-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPQ " mc2024_track2-random_*_*.count > combo-mpq-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPQ_ABORT" mc2024_track2-random_*_*.count > combo-mpfi-abort-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" mc2024_track2-random_*_*.count > combo-mpf-only-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPFI_ONLY" mc2024_track2-random_*_*.count > combo-mpfi-only-secs.csv
-	# MPQ time
+	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256)/mc2024_track2-random_*_*.count > combo-mpfi2-secs.csv
+	$(INTERP) $(GRAB) "MPFI gave only" $(PREC256)/mc2024_track2-random_*_*.count > combo-mpfi2-fail-secs.csv
+	# Times
+	$(INTERP) $(GRAB) "MPF required " mc2024_track2-random_*_*.count > normal-mpf-secs.csv
+	$(INTERP) $(GRAB) "MPFI required " mc2024_track2-random_*_*.count > normal-mpfi-secs.csv
 	$(INTERP) $(GRAB) "MPQ required " mc2024_track2-random_*_*.count > all-mpq-secs.csv
+	cat normal-mpf-secs.csv combo-mpf-only-secs.csv | sort > all-mpf-secs.csv
+	cat normal-mpfi-secs.csv combo-mpfi-only-secs.csv combo-mpfi-abort-secs.csv | sort > all-mpfi-secs.csv
+	cat combo-mpfi2-secs.csv combo-mpfi2-fail-secs.csv | sort > all-mpfi2-secs.csv
 	# Minimize across runs
 	$(INTERP) $(MINIMIZE) all-variables-multi.csv > all-variables.csv
 	$(INTERP) $(MINIMIZE) upos-mpf-prec-multi.csv > upos-mpf-prec.csv
@@ -58,4 +67,15 @@ data:
 	# MPQ TIMES
 	$(INTERP) $(MERGE) -f combo-mpf-secs.csv all-mpq-secs.csv > combo-mpf+mpq.csv
 	$(INTERP) $(MERGE) -f combo-mpfi-secs.csv all-mpq-secs.csv >  combo-mpfi+mpq.csv
-	$(INTERP) $(MERGE) -f combo-mpq-secs.csv all-mpq-secs.csv > combo-mpq+mpq.csv
+	$(INTERP) $(MERGE) -s 1:2 -f combo-mpfi-fail-secs.csv combo-mpfi2-secs.csv all-mpq-secs.csv > combo-mpfi2+mpq.csv
+	$(INTERP) $(MERGE) -s 1:2:3 -f combo-mpfi-fail-secs.csv combo-mpfi2-fail-secs.csv all-mpq-secs.csv > combo-mpq+mpq.csv
+	# Modalities
+	cat combo-mpf-secs.csv combo-mpf-only-secs.csv | sort > used-mpf-secs.csv
+	cat combo-mpfi-secs.csv combo-mpfi-only-secs.csv | sort > used-mpfi-secs.csv
+	$(INTERP) $(MERGE) -t -1:5000:1 used-mpf-secs.csv > modality-mpf.csv
+	$(INTERP) $(MERGE) -t -1:5000:2 used-mpfi-secs.csv > modality-mpfi.csv
+	$(INTERP) $(MERGE) -t -1:5000:3 combo-mpfi2-secs.csv > modality-mpfi2.csv
+	$(INTERP) $(MERGE) -t -1:5000:4 combo-mpfi2-fail-secs.csv > modality-mpq.csv
+	cat modality-mpf.csv modality-mpfi.csv modality-mpfi2.csv modality-mpq.csv | sort | $(INTERP) $(EXTRACT) 1:3 > modality-all.csv
+	$(INTERP) $(MERGE) -l bench,mode,mpf,mpfi,mpfi2,mpq modality-all.csv all-mpf-secs.csv all-mpfi-secs.csv all-mpfi2-secs.csv all-mpq-secs.csv > tabulate-all.csv
+
