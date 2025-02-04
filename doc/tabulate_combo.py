@@ -24,141 +24,189 @@ import sys
 
 
 
+
 directory = "."
 
-method_count = 5
+method_count = 4
 
-method_mpf, method_mpfi, method_mpq, method_mpf_only, method_mpfi_only = range(method_count)
-method_name = ["MPF", "MPFI", "MPQ", "MPF_ONLY", "MPFI_ONLY"]
-file_name = ["combo-mpf+mpq.csv", "combo-mpfi+mpq.csv", "combo-mpq+mpq.csv", "combo-mpf-only-secs.csv", "combo-mpfi-only-secs.csv"]
+method_mpf, method_mpfi, method_mpfi2, method_mpq = range(method_count)
+method_name = ["MPF", "MPFI", "MPFI2", "MPQ"]
+file_name = "tabulate-all.csv"
+
+def err(fatal, msg):
+    if fatal:
+        sys.stderr.write("ERROR: %s\n" % msg)
+        sys.exit(1)
+    else:
+        sys.stderr.write("WARNING: %s\n" % msg)
 
 class Instance:
     name = None
     method = None
-    mpf_seconds = 0.0
-    mpfi_seconds = 0.0
-    mpq_seconds = 0.0
+    mpf_seconds = None
+    mpfi_seconds = None
+    mpfi2_seconds = None
+    mpq_seconds = None
     
-    def __init__(self, name, method, total_seconds, mpq_seconds):
-        self.name = name
-        self.mpf_seconds = 0
-        self.mpfi_seconds = 0
-        self.method = method
-        self.mpq_seconds = mpq_seconds
-        if method in [method_mpf, method_mpf_only]:
-            self.mpf_seconds = total_seconds
-        elif method in [method_mpfi, method_mpfi_only]:
-            self.mpfi_seconds = total_seconds
-        else:
-            self.mpfi_seconds = total_seconds - mpq_seconds
+    def __init__(self, dict):
+        self.name = dict["bench"]
+        smethod = dict["mode"]
+        try:
+            self.method = int(float(smethod)) - 1
+        except:
+            err(True, "Instance %s.  Couldn't extract method from '%s'" % (self.name, smethod))
+        if self.method < 0 or self.method > method_mpq:
+            err(True, "Instance %s.  Invalid method number %d" % (self.name, self.method))
+        smpf = dict["mpf"]
+        self.mpf_seconds = None
+        try:
+            self.mpf_seconds = float(smpf)
+        except:
+            pass
+        smpfi = dict["mpfi"]
+        self.mpfi_seconds = None
+        try:
+            self.mpfi_seconds = float(smpfi)
+        except:
+            pass
+        smpfi2 = dict["mpfi2"]
+        self.mpfi2_seconds = None
+        try:
+            self.mpfi2_seconds = float(smpfi2)
+        except:
+            pass
+        smpq = dict["mpq"]
+        self.mpq_seconds = None
+        try:
+            self.mpq_seconds = float(smpq)
+        except:
+            pass
+        if self.method == method_mpf and self.mpf_seconds is None: 
+            err(True, "Instance %s.  Need MPF seconds" % str(self))
+        elif self.method == method_mpfi and self.mpfi_seconds is None:
+            err(True, "Instance %s.  Need MPFI seconds" % str(self))
+        elif self.method == method_mpfi2 and (self.mpfi_seconds is None or self.mpfi2_seconds is None):
+            err(True, "Instance %s.  Need MPFI and MPFI2 seconds" % str(self))
+        elif self.method == method_mpq and (self.mpfi_seconds is None or self.mpfi2_seconds is None or self.mpq_seconds is None):
+            err(True, "Instance %s.  Need MPFI, MPFI2, and MPQ seconds" % str(self))
 
     def __str__(self):
-        return "I.%s (%s) MPF:%.3f MPFI:%.3f MPQ:%.3f" % (self.name, method_name[self.method], self.mpf_seconds, self.mpfi_seconds, self.mpq_seconds)
+        return "I.%s (%s) MPF:%s MPFI:%s MPFI2:%s MPQ:%s" % (self.name, method_name[self.method], str(self.mpf_seconds), str(self.mpfi_seconds), str(self.mpfi2_seconds), str(self.mpq_seconds))
 
 instances = []
 average_time = [0] * method_count
 
 def load(verbose):
     global instances
-    for method in range(method_count):
-        icount = 0
-        fname = directory + "/" + file_name[method]
-        try:
-            file = open(fname)
-        except:
-            print("Couldn't open file '%s'" % fname)
-            sys.exit(1)
-        creader = csv.reader(file)
-        line = 0
-        for entry in creader:
-            line+=1
-            if len(entry) < 2:
-                print("File %s, Line %s.  Bad entry: Not enough fields" % (fname, line))
-                sys.exit(1)
-            name = entry[0]
-            mpq_seconds = 0
-            try:
-                total_seconds = float(entry[1])
-                if len(entry) > 2:
-                    mpq_seconds = float(entry[2])
-            except:
-                print("File %s, Line %s (%s).  Bad entry: Couldn't parse numbers" % (fname, line, name))
-                sys.exit(1)
-
-            imethod = method
-            instance = Instance(name, method, total_seconds, mpq_seconds)
-            if (verbose):
-                print("Created %s" % str(instance))
-            instances.append(instance)
-            icount += 1
-        file.close()
+    fname = directory + "/" + file_name
+    try:
+        infile = open(fname, "r")
+    except:
+        err(True, "Couldn't open file '%s'" % fname)
+    creader = csv.DictReader(infile)
+    for dict in creader:
+        instance = Instance(dict)
         if verbose:
-            print("Created %d instances from %s" % (icount, fname))
+            print("Created instance %s" % str(instance))
+        instances.append(instance)
 
 # Here, method refers to final strategy:
-# MPF: Use MPF + MPQ
-# MPFI: Use MPF + MPFI + MPQ
 # MPQ: Use MPQ
+# MPF: Use MPF + MPQ
+# MPFI: Use MPFI + MPQ
+# MPFI: Use MPF + MPFI + MPFI2 + MPQ
+
 def tabulate(target_method, label):
     global average_time
-    count = [0] * 3
-    time = [0] * 3
+    count = [0] * 4
+    time = [0] * 4
     total_count = 0
     total_time = 0
     for instance in instances:
-        if instance.method == method_mpf:
-            total_count += 1
-            if target_method in [method_mpf, method_mpfi]:
-                count[method_mpf] += 1
-                time[method_mpf] += instance.mpf_seconds
-                total_time += instance.mpf_seconds
-            else:
+        if target_method == method_mpq:
+            if instance.mpq_seconds is not None:
                 count[method_mpq] += 1
                 time[method_mpq] += instance.mpq_seconds
-                total_time += instance.mpq_seconds
-        elif instance.method == method_mpfi:
-            total_count += 1
-            if target_method in [method_mpf, method_mpq]:
-                count[method_mpq] += 1
-                time[method_mpq] += instance.mpq_seconds
-                total_time += instance.mpq_seconds
-            else:
-                count[method_mpfi] += 1
-                time[method_mpfi] += instance.mpfi_seconds
-                total_time += instance.mpfi_seconds
-        elif instance.method == method_mpq:
-            total_count += 1
-            count[method_mpq] += 1
-            time[method_mpq] += instance.mpq_seconds
-            total_time += instance.mpq_seconds
-            if target_method == method_mpfi:
-                count[method_mpfi] += 1
-                time[method_mpfi] += instance.mpfi_seconds
-                total_time += instance.mpfi_seconds
-        elif instance.method == method_mpf_only:
-            if target_method in [method_mpf, method_mpfi]:
                 total_count += 1
+                total_time += instance.mpq_seconds
+        elif target_method == method_mpf:
+            if instance.method == method_mpf:
                 count[method_mpf] += 1
                 time[method_mpf] += instance.mpf_seconds
-                total_time += instance.mpf_seconds
-        elif instance.method == method_mpfi_only:
-            if target_method == method_mpfi:
                 total_count += 1
+                total_time += instance.mpf_seconds
+            elif instance.mpq_seconds is not None:
+                count[method_mpq] += 1
+                time[method_mpq] += instance.mpq_seconds
+                total_count += 1
+                total_time += instance.mpq_seconds
+        elif target_method == method_mpfi:
+            if instance.method == method_mpf:
+                count[method_mpf] += 1
+                time[method_mpf] += instance.mpf_seconds
+                total_count += 1
+                total_time += instance.mpf_seconds
+            elif instance.method == method_mpfi:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_count += 1
+                total_time += instance.mpfi_seconds
+            elif instance.mpq_seconds is not None:
                 count[method_mpfi] += 1
                 time[method_mpfi] += instance.mpfi_seconds
                 total_time += instance.mpfi_seconds
-    fields = [label]
-    for comp_method in range(3):
+                count[method_mpq] += 1
+                time[method_mpq] += instance.mpq_seconds
+                total_count += 1
+                total_time += instance.mpq_seconds
+        elif target_method == method_mpfi2:
+            if instance.method == method_mpf:
+                count[method_mpf] += 1
+                time[method_mpf] += instance.mpf_seconds
+                total_count += 1
+                total_time += instance.mpf_seconds
+            elif instance.method == method_mpfi:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_count += 1
+                total_time += instance.mpfi_seconds
+            elif instance.method == method_mpfi2:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_time += instance.mpfi_seconds
+                count[method_mpfi2] += 1
+                time[method_mpfi2] += instance.mpfi2_seconds
+                total_count += 1
+                total_time += instance.mpfi2_seconds
+            elif instance.mpq_seconds is not None:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_time += instance.mpfi_seconds
+                count[method_mpfi2] += 1
+                time[method_mpfi2] += instance.mpfi2_seconds
+                total_time += instance.mpfi2_seconds
+                count[method_mpq] += 1
+                time[method_mpq] += instance.mpq_seconds
+                total_count += 1
+                total_time += instance.mpq_seconds
+    fields_top = [label, "Runs"]
+    fields_bottom = ["", "Hours"]
+    for comp_method in range(method_count):
         mtime = time[comp_method]/3600.0
-        fields += [str(count[comp_method]), "%.2f" % mtime]
+        fields_top += ["" if count[comp_method] == 0 else str(count[comp_method])]
+        fields_bottom +=  ["" if mtime == 0.0 else "%.2f" % mtime]
     avg = total_time/total_count
     average_time[target_method] = avg
     ttime = total_time/3600.0
-    fields += [str(total_count), "%.2f" % ttime, "%.1f" % avg]
-    return fields
+    fields_top += [str(total_count), "%.1f" % avg]
+    fields_bottom += ["%.2f" % ttime, ""]
+    return (fields_top, fields_bottom)
 
 def table_entry(fields):
     print(" & ".join(fields) + ' \\\\')
+
+def table_line():
+    print("\\midrule")
 
 def command(name, value):
     print("\\newcommand[\\global]{\\%s}{%s}" % (name, "%.2f" % value))
@@ -172,23 +220,29 @@ def run(name, args):
             sys.exit(0)
         directory = args[0]
     load(False)
-    fields = tabulate(method_mpq, "MPQ only")
-    table_entry(fields)
-    fields = tabulate(method_mpf, "MPF+MPQ")
-    table_entry(fields)
-    fields = tabulate(method_mpfi, "Hybrid")
-    table_entry(fields)
-    compare_mpq_hybrid = average_time[method_mpq]/average_time[method_mpfi]
-    compare_mpq_mpf = average_time[method_mpq]/average_time[method_mpf]
-    compare_mpf_hybrid = average_time[method_mpf]/average_time[method_mpfi]
-    command("avgMpqHybrid", compare_mpq_hybrid)
-    command("avgMpqMpf", compare_mpq_mpf)
-    command("avgMpfHybrid", compare_mpf_hybrid)
+    ft, fb = tabulate(method_mpq, "MPQ only")
+    table_entry(ft)
+    table_entry(fb)
+    table_line()
+    ft, fb = tabulate(method_mpf, "MPF|MPQ")
+    table_entry(ft)
+    table_entry(fb)
+    table_line()
+    ft, fb = tabulate(method_mpfi, "MPF|MPFI+MPQ")
+    table_entry(ft)
+    table_entry(fb)
+    table_line()
+    ft, fb = tabulate(method_mpfi2, "MPF|MPFIx2+MPQ")
+    table_entry(ft)
+    table_entry(fb)
+
+#    compare_mpq_hybrid = average_time[method_mpq]/average_time[method_mpfi]
+#    compare_mpq_mpf = average_time[method_mpq]/average_time[method_mpf]
+#    compare_mpf_hybrid = average_time[method_mpf]/average_time[method_mpfi]
+#    command("avgMpqHybrid", compare_mpq_hybrid)
+#    command("avgMpqMpf", compare_mpq_mpf)
+#    command("avgMpfHybrid", compare_mpf_hybrid)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
     sys.exit(0)
-              
-        
-            
-

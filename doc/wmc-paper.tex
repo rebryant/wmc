@@ -635,10 +635,12 @@ incorrectly predict a precision less than the target of 30.0.}
 
     \input{data-formatted/combo-mpf+mpq}
     \input{data-formatted/combo-mpfi+mpq}
+    \input{data-formatted/combo-mpfi2+mpq}
     \input{data-formatted/combo-mpq+mpq}
     \legend{
       \scriptsize \textsf{MC2024, Hybrid-MPF},
-      \scriptsize \textsf{MC2024, Hybrid-MPFI},
+      \scriptsize \textsf{MC2024, Hybrid-MPFI128},
+      \scriptsize \textsf{MC2024, Hybrid-MPFI256},
       \scriptsize \textsf{MC2024, Hybrid-MPQ}
     }
     \addplot[mark=none] coordinates{(0.001,0.001) (10000.0,10000.0)};
@@ -660,10 +662,9 @@ incorrectly predict a precision less than the target of 30.0.}
   \caption{Performance Comparision of Different Implementation Strategies}
   \label{tab:compare}
   \centering{
-  \begin{tabular}{lrrrrrrrrr}
+  \begin{tabular}{llrrrrrr}
     \toprule
-    Strategy & \multicolumn{2}{c}{MPF Runs} & \multicolumn{2}{c}{MPFI Runs} & \multicolumn{2}{c}{MPQ Runs} & \multicolumn{3}{c}{Combined} \\
-             & Cnt & Hours             &  Cnt & Hours             &  Cnt & Hours            &  Cnt & Hours & Avg (s) \\
+    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined} & \multicolumn{1}{c}{Avg (s)}\\
     \midrule
     \input{method_table}
     \\[-1em]
@@ -671,6 +672,11 @@ incorrectly predict a precision less than the target of 30.0.}
   \end{tabular}
   } % Centering
 \end{table}
+
+\newpage
+\bibliography{references}
+
+\end{document}
 
 Comparisons:
 \begin{center}
@@ -685,10 +691,6 @@ Comparisons:
   \end{tabular}
 \end{center}
 
-\newpage
-\bibliography{references}
-
-\end{document}
 
 %%
 %% End of file
