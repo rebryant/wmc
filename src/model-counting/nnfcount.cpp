@@ -195,7 +195,7 @@ void run(const char *cnf_name) {
 	start_time = tod();
 	Evaluator_mpf mpfev = Evaluator_mpf(eg, weights);
 	mpfev.evaluate(fcount);
-	mpf_seconds = start_time - tod();
+	mpf_seconds = tod() - start_time;
     }
     double precision = digit_precision_mpf(fcount.get_mpf_t(), mpq_count.get_mpq_t());
     const char *sfcount = mpf_string(fcount.get_mpf_t(), (int) target_precision);
