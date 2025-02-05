@@ -19,6 +19,7 @@
 \newcommand{\Dfour}{\progname{D4}}
 
 \newcommand{\approximate}[1]{\hat{#1}}
+\newcommand{\approxP}{\approximate{P}}
 \newcommand{\approxx}{\approximate{x}}
 \newcommand{\approxy}{\approximate{y}}
 \newcommand{\approxw}{\approximate{w}}
@@ -151,7 +152,7 @@ $\assign(x) = 0$, for each variable $x \in \varset$.
   assignment} $w$, associating rational values $w(x)$ and
 $w(\obar{x})$ for each variable $x \in \varset$.
 The weight of an
-assignment $\assign$ is then defined to be the product of its literal weights. and the weight
+assignment $\assign$ is then defined to be the product of its literal weights, and the weight
 of a formula is the sum of the weights of its satisfying assignments:
 \begin{eqnarray}
   w(\phi) & = & \sum_{\assign \in \modelset(\phi)} \prod_{\lit \in \assign} w(\lit) \label{eqn:model:count}
@@ -174,9 +175,9 @@ There are several ways to compute the weighted count of d-DNNF formula $\phi$, a
 based on an \emph{algebraic evaluation} of $\phi$ to compute a value $W(\phi)$:
 \begin{enumerate}
 \item Each literal $\lit$ is a assigned a rational value $W(\lit)$.
-\iten Each subformula $\phi_1 \land \phi_2$ is evaluated as $W(\phi_1 \land \phi_2) = W(\phi_1) \cdot W(\phi_2)$.
-\iten Each subformula $\phi_1 \lor \phi_2$ is evaluated as $W(\phi_1 \lor \phi_2) = W(\phi_1) + W(\phi_2)$.
-\end{enumuerate}
+\item Each subformula $\phi_1 \land \phi_2$ is evaluated as $W(\phi_1 \land \phi_2) = W(\phi_1) \cdot W(\phi_2)$.
+\item Each subformula $\phi_1 \lor \phi_2$ is evaluated as $W(\phi_1 \lor \phi_2) = W(\phi_1) + W(\phi_2)$.
+\end{enumerate}
 The number of rational operations in this evaluation is linear in the size of the formula.
 
 There are three ways to use this evaluation to perform weighted model counting for weight assignment $w$:
@@ -191,19 +192,21 @@ letting $W(\lit) = w(\lit)$ for each literal $\lit$, the algebraic evaluation $W
   and letting $W(x) = w(x)/s(x)$ and $W(\obar{x}) = w(\obar{x})/s(x)$.  
   Following the algebraic evaluation $W(\phi)$, the weighted count is computed as:
   \begin{eqnarray}
-$w(\phi) &=& \prod_{x\in\varset} s(x) \; \cdot \; W(\phi)$ \label{eqn:rescale}
+w(\phi) &=& \prod_{x\in\varset} s(x) \; \cdot \; W(\phi) \label{eqn:rescale}
   \end{eqnarray}
 \end{enumerate}
 
-An arbitrary formula can be smoothed by inserting \emph{smoothing terms} of the form $\x \lor \obar{x}$.
+An arbitrary formula can be smoothed by inserting \emph{smoothing terms} of the form $x \lor \obar{x}$.
 That is,
   a disjunction $\phi_1 \lor \phi_2$ having some variable $x \in \dependencyset(\phi_1)$ but
   $x \not\in \dependencyset(\phi_2)$ is rewritten as $\phi_1 \lor [(x \lor \obar{x}) \land \phi_2]$.
   
   These three methods can be combined by rescaling some variables and
   inserting smoothing terms for others.  In particular, for any
-  variable $x$ having $w(x) + w(\obar{x}) = 0$, inserting a smoothing term for $x$
-  will effectively cause the product to evaluate to $0$.
+  variable $x$ having $w(x) + w(\obar{x}) = 0$, we can insert smoothing terms to enable the weighted count to be computed using rescaling.
+This case is easily handled, since
+inserting a smoothing term for $x$
+  will effectively cause the subformula to evaluate to $0$.
 
 \section{Approximations and Number Representations}
 
@@ -243,7 +246,7 @@ where:
 \item Fraction $f$ is encoded as a $p$-bit binary number with an implicit binary point on the left.  That is $0 \leq f \leq 1-2^{-p}$.
 \item Exponent $e$ is an integer, possibly with some limitation on its range.
 \end{itemize}
-As examples, consider these two different floating-point formats:
+As examples, consider two different floating-point formats:
 \begin{itemize}
 \item The IEEE~754 double-precision format uses a slightly different representation, but it maps to the notation of Equation~\ref{eqn:floating-point} with $p=53$ and an exponent range of
   $-1021 \leq e \leq 1024$.  Unfortunately, the small exponent range limits the suitability of
@@ -266,10 +269,10 @@ has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, 
 
 Floating-point arithmetic is implemented in such a way that any
 operation effectively computes an exact result and then rounds it to
-encode the result.  The maximum error from a sequence of operations
-therefore tends to accumulate as integral multiples of $\epsilon$.
+encode the result as a floating-point value.  The maximum error from a sequence of operations
+therefore tends to accumulate in multiples of $\roundepsilon$.
 This yields error bounds of the form $\aerror[\approxx, x] \leq t\,\roundepsilon$,
-which we  refer to as $t$ units of
+which we  refer to as having at most $t$ units of
 rounding error.
 
 As a third representation, the MPFI interval arithmetic library
@@ -301,7 +304,7 @@ This value will range from $0.0$ for a very large interval to $\infty$ when the 
 
 Here we evaluate how rounding errors accumulate via a series of
 arithmetic operations when all arguments are nonnegative.
-That is, we assume the exact arguments $x$ and $y$ to each operation to satisfy $x \geq 0$ and $y \geq 0$.
+That is, we assume the exact arguments $x$ and $y$ to each operation satisfy $x \geq 0$ and $y \geq 0$.
 Rounding never causes a result to be negated, and therefore, we can
 consider the approximations $\approxx$ of  $x$ and $\approxy$ of $y$ to satisfy $\approxx \geq 0$ and $\approxy \geq 0$.
 In addition, neither the multiplication nor the addition of
@@ -326,7 +329,7 @@ $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t+1)\,\roundepsilon)$.
 A similar analysis gives
 $(x\cdot y) (1 - (s+t+1)\,\roundepsilon) \leq \approxx \cdot \approxy$, and therefore
 $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
-Rounding this result introduces an additional error of $\roundepsilon$, and therefore
+Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
 
 Thus, for suitable values of $s$, $t$, and $\roundepsilon$,
@@ -337,7 +340,7 @@ multiplication, at most, propagates the errors of its arguments as their sum and
 When $\approxx$ and $\approxy$ are added, their sum will satisfy
 $(x + y) (1 - r\,\roundepsilon) \leq \approxx + \approxy \leq (x + y) (1 + r\,\roundepsilon)$, where $r = \frac{sx + ty}{x+y}$.  That is, the resulting error $r$ will bounded by a weighted average
 of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the maximum of $s$ and $t$.
-Rounding the sum can add one more unit of rounding error, and so we have
+Rounding the sum can add at most one unit of rounding error, and so we have
 $\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
 
 Thus, addition, at most, propagates the maximum error of its arguments and adds a unit of rounding error.
@@ -355,15 +358,15 @@ We can then bound the error of the computed value $W(\phi)$ as follows:
   \label{lemma:approx:pos}
 \end{lemma}
 
-The proof of this theorem proceeds by induction on the structure of $\phi$:
+The proof of this lemma proceeds by induction on the structure of $\phi$:
 \begin{enumerate}
-\item For Literal with weight $W(\lit)$, its approximation $\approxW(\lit)$ satisfies
+\item For literal $\lit$ with weight $W(\lit)$, its approximation $\approxW(\lit)$ satisfies
 $\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$, which is within the error bound of $(4n-2)\,\roundepsilon$ for $n=1$.
 \item For formula $\phi$ of the form $\phi_1 \land \phi_2$, there must be some $k$, with $1 \leq k < n$, such that $|\dependencyset(\phi_1)| = k$
   and $|\dependencyset(\phi_2)| = n-k$.
 \begin{enumerate}
   \item Let us first test whether the conditions for the induction hypothesis hold: for $s = 4k-2$ and $t = 4(n-k)-2$
-    we require that $s\,t \leq 1/\roundepsilon$.  We can see that $s\,t \leq 16\,n\,(n-k)$. This quantity will be maximized when $k = n/2$,
+    we require that $s\,t \leq 1/\roundepsilon$.  We can see that $s\,t \leq 16\,k\,(n-k)$. This quantity will be maximized when $k = n/2$,
     and therefore $s \, t \leq 4\,n^2$.
     Given our limit on $n$ with respect to $\roundepsilon$, we have $s \, t \leq 1/\roundepsilon$.
   \item
@@ -383,7 +386,7 @@ $\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) +
   $\aerror[\approxW(\lit_i), W(\lit_i)] \leq \roundepsilon$.  Let $y_i$ denote the product $W(\lit_i) \cdot W(\phi_i)$ for $i \in \{1,2\}$.
   Its rounded value will satisfy
   $\aerror[\approxy_i, y_i] \leq (4n-3) \,\roundepsilon$.  Summing $\approxy_1$ and $\approxy_2$ and rounding the result will therefore give
-  an approximation $\approxw(\phi)$ to $w(\phi) = y_1 + y_2$ with
+  an approximation $\approxW(\phi)$ to $W(\phi) = y_1 + y_2$ with
 $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.  
 \end{enumerate}
 
@@ -392,77 +395,67 @@ conjunctions to bound the error induced by multiplication operations.
 It relies on the decision structure of the formula only to bound the
 depth of the additions.
 
+In the event of rescaling, we must also consider the error introduced
+when computing the product $P = \prod_{x\in\varset} s(x)$.  We assume that
+each term $s(x)$ is represented by a floating-point value
+$\approxs(x)$ such that $\aerror[\approxs(x), s(x)] \leq
+\roundepsilon$.  In practice, this requires using rational arithmetic
+to represent $w(x)$ and $w(\obar{x})$ and to compute their sum.  The
+only error introduced will then be when converting the sum into
+a floating-point representation.
 
+We can then bound the error of the product as
+\begin{lemma}
+  The computation of the product $P = \prod_{x\in\varset} s(x)$ having
+$|\varset| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$ using floating-point arithmetic will yield an approximation $\approxP$ satisfying
+  $\aerror[\approxP, P] \leq (3n-2)\,\roundepsilon$.
+  \label{lemma:approx:product}
+\end{lemma}
+
+The proof of this lemma proceeds much like that for Lemma~\ref{lemma:approx:pos}.  We assume an arbitrary association of the subproducts, and so $P$ can be computed as
+$P_1 \cdot P_2$, where $P_1$ is the product of $k$ elements and $P_2$ is the product of $n-k$ elements, with $1 < k < n$.
+The smaller coefficient of $3$ arises due to the lack of any addition operations.
+
+Combining these two results, we can state the following result about weighted model counting when all weights are nonnegative:
 \begin{theorem}
   \label{thm:approx:pos}
 Computing the weighted model count of a
 a decision-DNNF formula $\phi$ having $|\dependencyset(\phi)| = n$, using floating-point arithmetic with a $p$-bit fraction, such that $\log_2 n \leq p/2-1$
 will yield an approximation $\approxw(\phi)$ to the true weighted count $w(\phi)$, such that
 \begin{eqnarray}
-\digitprecision(\approxw(\phi), w(\phi)) & \geq & 0.30\,p - c - \log_{10}(n) \label{eqn:precision:wmc}
+\digitprecision(\approxw(\phi), w(\phi)) & \geq & p\,\log_{10} 2 - c - \log_{10} n \label{eqn:precision:wmc}
 \end{eqnarray}
-where $c = 0.85$ when rescaling is required and $c = 0.61$ when no rescaling is required.
+where $c = \log_{10} 7$ when rescaling is required and $c = \log_{10} 4$ when no rescaling is required
 \end{theorem}
 
-This theorem shows that, in many cases, floating-point arithmetic will suffice for weighted model counting.  In particular, consider $p=128$, and let us set as a target to have a decimal precision of at least $30$.
-Even using rescaling, we could achieve the target precision for $n \leq 3 \times 10^7$, and that would give $\log_2 n \leq 25$, which satisfies the constraint on $n$ relative to $p$.
+Let us examine the practical implications of this theorem.  In particular, assume we use the MPF library with $p=128$.
+Only a single formula from the 2024 weighted model competition had over one million variables, and so we can assume a
+bound of $n \leq 10^7$.  The conditions for Equation~\ref{eqn:dnnf:digitprecision} to hold will readily be satisfied, since
+$\log_2 n \leq 23.3$ and $p/2-1 = 63$.  We will therefore have 
+$\digitprecision(\approxw(\phi), w(\phi)) \geq 38.53 - 0.85 - 7 = 30.68$.  That is, even though the floating-point format provides only around 38 digits of precision for a single rounding,
+computing the weighted model count of a decision-DNNF formula over 10 million variables, and using rescaling, is still guaranteed to yield a result with 30 digits of precision.
 
-Overall, each time
+In scaling to larger formulas, each time
 the number of variables is increased by a factor of 10, at most one
 digit of precision is lost.
-Importantly, this bound holds independent of the formula size, as well as of the values of the weights, as long as they are nonnegative.
-
-
-\subsection{Eliminating smoothing}
-
-As long as no variable $x$ has $w(x) + w(\obar{x}) = 0$, we can 
-compute the weighted model count of non-smoothed formula $\phi$ by a method we call
-\emph{rescaling}.  That is, for each variable $x$, define $s(x) = w(x)
-+ w(\obar{x})$.  We then rescale the weights for $x$ and its
-complement as $w'(x) = w(x)/s(x)$ and $w'(\obar{x}) = w(\obar{x})/s(x)$.  The formula is evaluated as before, but with
-scaled literal weights, to compute a scaled weight for the formula $w'(\phi)$.  We then
-compute $w(\phi) = \prod_{x\in\varset} s(x) \; \cdot \; w'(\phi)$.
-
-This approach has the advantage that it avoids the need to add
-smoothing terms to the formula, a time-consuming process that can
-increase the formula size by up to a factor of $n$.  To handle the
-case where some variable $x$ has weights summing to zero:
-$w(x) + w(\obar{x}) = 0$, we can employ \emph{selective disabling}.  That is,
-we traverse the formula and identify subformulas of the form
-$\phi_1 \lor \phi_2$ such that
-$x in \dependencyset(\phi_1)$, but $x \not \in \dependencyset(\phi_2)$.
-Smoothing would replace $\phi_2$ by $\phi'_2 \land (x \lor \obar{x})$.
-Instead, we simply record that $w(\phi_2) = 0$.  A similar case holds when the roles of $\phi_1$ and $\phi_2$ are reversed.
-
-
-Let us consider the possible error introduced by rescaling.  To maximize precision, we
-use a rational arithmetic package to exactly compute $s(x)$, $w'(x)$, and $w'(\obar{x})$.  We then round these to produce
-approximations $\approxs(x)$, $\approxw'(x)$, and $\approxw'(\obar{x})$ with at most one unit of rounding error.
-Computing the product $y = \prod_{x\in\varset} s(x)$ will yield an approximation $\approxy$ such that
-$\aerror[\approxy, y] \leq (2n-1) \,\roundepsilon$, due to the rounding errors of the arguments, plus the $n-1$ rounding errors of the successive products.
-The formula evaluation will yield an approximation $\approxw'(\phi)$, such that
-$\aerror[\approxw'(\phi), w'(\phi)] \leq (3n-1) \,\roundepsilon$.  The final product will combine these and add one more unit of rounding error to give
-$\aerror[\approxw(\phi), w(\phi)] \leq (5n-1) \,\roundepsilon$.
-
-Thus, computing the count by rescaling can have greater error than by smoothing, but the impact will be very small.
-Compared to smoothing, rescaling will reduce the bound of Equation~\ref{eqn:precision:wmc} by $\log_{10} 5/3 \approx 0.22$ digits of precision.
+Importantly, this bound holds regardless of the formula size, as well as for any weight assignment, 
+as long as all weights are nonnegative.
 
 \subsection{Allowing non-decision disjunctions}
 
-Weighted model counting can be computed as we have shown, as long as
-all sum operations are \emph{deterministic}.  That is, the formula can
-contain disjunctions of the form $\phi_1 \lor \phi_2$, as long as
-$\modelset(\phi_1) \cap \modelset(\phi_2) = \emptyset$.  This class of formulas is referred to as ``d-DNNF.''
-
-Our previous requirement that each disjunction have a decision variable
-had the effect of limiting the depth of the sum operations in a
-formula to $n$.  Without this requirement, the depth can become exponential.
-For example, consider a d-DNNF formula encoding a tautology over $n$
-variables, constructed as follows.  For each possible assignment
-$\assign$, we use conjunction operations to encode 
-$\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then use a sequence of $2^n-1$ disjunctions to combine these products to form $\phi$.
-The accumulated error from these operations could grow exponentially with $n$.
-Of course, such a formula is completely impractical for $n \geq 30$, and there are better ways to encode tautology.
+Our previous requirement that each disjunction have a decision
+variable had the effect of limiting the depth of the sum operations in
+a formula to $n$.  Without this requirement, the depth can become
+exponential.  For example, consider a d-DNNF formula encoding a
+tautology over $n$ variables, constructed as follows.  For each of the
+$2^n$ possible assignment $\assign$, we use conjunction operations to
+encode $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
+use a sequence of $2^n-1$ disjunctions to combine these products to
+form $\phi$.  The accumulated error from these operations could grow
+exponentially with $n$.  Of course, such a formula is completely
+impractical for even modest values of $n$, but this construct
+demonstrates that, without further restriction on the structure of a
+d-DNNF formula, we cannot guarantee a reasonable bound on the error incurred by an algebraic evaluation.
 
 The only
 cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
@@ -508,31 +501,34 @@ We set as a target to have digit precisions of at least 30.0.}
 \label{fig:pos:mpf}
 \end{figure}
 
-To evaluate the implications of Equation~\ref{eqn:precision:wmc}, we
-evaluated the benchmark formulas from the 2024 Weighted Model Counting
-Competition.  We attempted to convert these into decision-DNNF using
-version 2 of the the D4 knowledge compiler.  We were able to compile
-100 of them with a time limit on 3600 minutes on a machine with 64~GB
-of random-access memory.  For each of these formulas, we then generated two different collections, each with five sets of literal weights:
+To experimentally test the bound of Equation~\ref{eqn:precision:wmc},
+we evaluated 200 benchmark formulas from public and private portions
+of the 2024 Weighted Model Counting Competition.  We attempted to
+convert these into decision-DNNF using version 2 of the the D4
+knowledge compiler.  We were able to compile 100 of them with a time
+limit on 3600 minutes on a machine with 64~GB of random-access memory.
+We define a problem \emph{instance} to be a combination of a formula
+plus a weight assignment for all of its literals.
+
+For each of these formulas, we then generated two different collections of instances, each with five weight assignments:
 \begin{itemize}
-\item \textsf{Uniform$+$}: For each variable $x$, weight $w(x)$
-  is drawn from a uniform distribution in the range
+\item \textsf{Uniform$+$}: For each variable $x$, weight $w(x)$ is represented by a 9-digit decimal number selected uniformly in the range
   $[10^{-9},\,1-10^{-9}]$. The weight for $\obar{x}$ is then set to
-  $w(\obar{x}) = 1-w(x)$.  Such a weight assignment is typical of those used in recent weighted model counting competitions
+  $w(\obar{x}) = 1-w(x)$.  Such a weight assignment is typical of those used in recent weighted model counting competitions.
 \item \textsf{Exponential$+$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$
-  are drawn from an exponential distribution in the range
-  $[10^{-9},\,10^{9}]$.
+  are drawn independently from an exponential distribution in the range
+  $[10^{-9},\,10^{9})$.  Each weight is represented by a decimal number with at most 9 digits to the left of the decimal point, and at most 9 digits to the right.
 \end{itemize}
-For each combination of formula and weight assignment, we evaluated
-the weights using MPF to get an approximate weight $\approxw$ and
+For each instance, we evaluated
+the weighted count using MPF to get an approximate weight $\approxw$ and
 using MPQ to get an exact weight $w$.  We then evaluated the digit precision according to Equation~\ref{eqn:digitprecision}.
-In addition, we evaluated formulas of the form $\bigwedge_{1\leq i \leq 10^p} x_i$ for values of $p$ ranging from $0$ to $6$ using a single weight for every variable.
+In addition, we evaluated formulas of the form $\bigwedge_{1\leq i \leq 10^d} x_i$ for values of $d$ ranging from $0$ to $6$ using a single weight for every variable.
 We swept a parameter space of weights of the form $1 + k\cdot 10^{-9}$ for $1 \leq k \leq 100$ and chose the value of $k$ that minimized the digit precision.
 
 Figure~\ref{fig:pos:mpf} shows the results of these evaluations for
 the three collections.  For the two collections of weight assignments for each 2024 competition formula,
 we show only the minimum precision for each of the five randomly
-generated sets of weights.  Each data point
+generated  weight assignments.  Each data point
 represents one combination of formula and weight selection method and is placed
 along the X-axis according to the number of variables
 and on the Y-axis according to the computed digit precision.
@@ -550,7 +546,7 @@ combinations of formula and weight assignment can come very close to
 the precision bound.
 
 
-\section{Negative weights}
+\section{Error Analysis: Negative Weights}
 \label{sect:neg}
 
 The analysis of Section~\ref{sect:nonneg} is no longer valid when
@@ -622,19 +618,19 @@ The Limits~$\pm$ weight assignment was designed to maximize precision loss.}
 \end{figure}
 
 Interestingly, however, using MPF with a fixed precision of $p=128$ does surprisingly well on many formulas, even in the presence of negative weights.
-In Figure~\ref{fig:posneg:mpf}, we see a similar plot to that of Figure~\ref{fig:pos:mpf}.  The first two weight distributions are simple generalizations of those used earlier:
+In Figure~\ref{fig:posneg:mpf}, we see a similar plot to that of Figure~\ref{fig:pos:mpf}.  The first two collections of weight assignments are simple generalizations of those used earlier:
 \begin{itemize}
 \item \textsf{Uniform$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes drawn independently
 from a uniform distribution in the range  $[10^{-9},\,1-10^{-9}]$.  Each is negated with probability $0.5$.
 \item \textsf{Exponential$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes
-  drawn indepdently from an exponential distribution in the range $[10^{-9},\,10^{9}]$.  Each is negated with probability $0.5$.
+  drawn independently from an exponential distribution in the range $[10^{-9},\,10^{9}]$.  Each is negated with probability $0.5$.
 \end{itemize}
 As can be see for these plots, the results mostly stay above the precision bound of Equation~\ref{eqn:digitprecision},
 even though that bound does not apply.  All stay above the target precision of $30.0$.
 
 On deeper inspection, we can see that setting up the conditions for a
-cancellation of the form $(s + T) - T'$ (where $T \approx T'$) require
-1) a large dynamic range among the computed values, and 2) sufficient
+cancellation of the form $(s + T) - T'$, where $T \approx T'$, require
+1) a large dynamic range among the computed values to give widely different values $s$ and $T$, and 2) sufficient
 homogeneity in the computed values that we can get two values $T$ and
 $T'$ such that $T \approx T'$.  A uniform distribution has neither of
 these properties.  An exponential distribution has a large dynamic
@@ -736,8 +732,8 @@ incorrectly predict a precision less than the target of 30.0.}
     \input{data-formatted/combo-mpq+mpq}
     \legend{
       \scriptsize \textsf{MC2024, Hybrid-MPF},
-      \scriptsize \textsf{MC2024, Hybrid-MPFI128},
-      \scriptsize \textsf{MC2024, Hybrid-MPFI256},
+      \scriptsize \textsf{MC2024, Hybrid-MPFI-128},
+      \scriptsize \textsf{MC2024, Hybrid-MPFI-256},
       \scriptsize \textsf{MC2024, Hybrid-MPQ}
     }
     \addplot[mark=none] coordinates{(0.001,0.001) (10000.0,10000.0)};
