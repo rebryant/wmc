@@ -22,6 +22,7 @@
 \newcommand{\approxx}{\approximate{x}}
 \newcommand{\approxy}{\approximate{y}}
 \newcommand{\approxw}{\approximate{w}}
+\newcommand{\approxW}{\approximate{W}}
 \newcommand{\approxs}{\approximate{s}}
 \newcommand{\round}{\mathit{Round}}
 \newcommand{\aerror}{\delta}
@@ -29,6 +30,8 @@
 \newcommand{\minvalue}{\omega}
 \newcommand{\maxValue}{\Omega}
 \newcommand{\roundepsilon}{\varepsilon}
+\newcommand{\xmin}{x_{\textrm{min}}}
+\newcommand{\xmax}{x_{\textrm{max}}}
 
 \newcommand{\varset}{X}
 \newcommand{\dependencyset}{{\cal V}}
@@ -88,7 +91,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  Weighted model counting effectively computes the sum of the weights
+  Weighted model counting computes the sum of the weights
   associated with the satisfying assignments for a Boolean formula,
   where the weight of an assignment is given by the product of the
   weights associated with the positive and negated variables
@@ -118,29 +121,117 @@
   arithmetic can reliably detect cases where a desired precision
   cannot be achieved.  Using a program that combines floating-point,
   interval, and rational arithmetic, we achieve the twin goals of
-  effiency and guaranteed precision.
+  efficiency and guaranteed precision.
 \end{abstract}
 
-\section{Preliminaries}
+\section{Boolean Formulas and Weighted Model Counting}
 
-When approximating real number $x$ with value $\approximate{x}$, we
+We consider Boolean formulas over a set of variables $\varset$ in
+\emph{negation normal form}, where negation can only be applied to the
+variables.  We refer to a variable $x$ or its negation $\obar{x}$ as a
+\emph{literal}.  We use the symbol $\lit$ to indicate an arbitrary
+literal.  The set of all formulas is defined recursively to consist of
+literals, \emph{conjunctions} of the form $\phi_1 \land \phi_2$, and
+\emph{disjunctions} of the form $\phi_1 \lor \phi_2$.  The set of
+variables occuring in formula $\phi$ is denoted
+$\dependencyset(\phi)$.  Typically, a formula is represented as a
+directed acyclic graph, allowing a sharing of subformulas.  We
+therefore defined the \emph{size} of a formula to be the number of
+unique subformulas.
+
+A (total) assignment is a mapping $\assign \colon \varset \rightarrow
+\{0, 1\}$.  An assignment $\assign$ is said to be a \emph{model} of
+formula $\phi$ if the formula evaluates to $1$ under that assignment.
+The set of models of a formula $\phi$ is written $\modelset(\phi)$.
+We can also consider an assignment to be a set of literals, where $x \in \assign$
+when $\assign(x) = 1$, and $\obar{x} \in \assign$ when
+$\assign(x) = 0$, for each variable $x \in \varset$.
+
+\emph{Weighted model counting} is defined in terms of a \emph{weight
+  assignment} $w$, associating rational values $w(x)$ and
+$w(\obar{x})$ for each variable $x \in \varset$.
+The weight of an
+assignment $\assign$ is then defined to be the product of its literal weights. and the weight
+of a formula is the sum of the weights of its satisfying assignments:
+\begin{eqnarray}
+  w(\phi) & = & \sum_{\assign \in \modelset(\phi)} \prod_{\lit \in \assign} w(\lit) \label{eqn:model:count}
+\end{eqnarray}
+
+Computing the weighted count of an arbitrary formula is thought to be intractable.  However, it becomes
+feasible when the formula is the in deterministic decomposable negation-normal form (d-DNNF):
+\begin{enumerate}
+\item The formula is in negation-normal form.  
+\item All conjunctions are \emph{decomposable}.  That is, every subformula of the form $\phi_1 \land \phi_2$
+  satisfies $\dependencyset(\phi_1) \cap \dependencyset(\phi_2) = \emptyset$.
+\item All disjunctions are \emph{deterministic}.  That is, every subformula of the form $\phi_1 \lor \phi_2$ satisfies
+  $\modelset(\phi_1) \cap \modelset(\phi_2) = \emptyset$.
+\end{enumerate}
+As an important subclass of d-DNNF, a formula is said to be in 
+decision decomposable negation-normal form (decision-DNNF) when every occurrence of a disjunction has the form 
+$(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ for some decision variable $x$.
+
+There are several ways to compute the weighted count of d-DNNF formula $\phi$, all
+based on an \emph{algebraic evaluation} of $\phi$ to compute a value $W(\phi)$:
+\begin{enumerate}
+\item Each literal $\lit$ is a assigned a rational value $W(\lit)$.
+\iten Each subformula $\phi_1 \land \phi_2$ is evaluated as $W(\phi_1 \land \phi_2) = W(\phi_1) \cdot W(\phi_2)$.
+\iten Each subformula $\phi_1 \lor \phi_2$ is evaluated as $W(\phi_1 \lor \phi_2) = W(\phi_1) + W(\phi_2)$.
+\end{enumuerate}
+The number of rational operations in this evaluation is linear in the size of the formula.
+
+There are three ways to use this evaluation to perform weighted model counting for weight assignment $w$:
+\begin{enumerate}
+\item If the weight assignment for each variable and its complement satisfies $w(x) + w(\obar{x}) = 1$,
+  then letting $W(\lit) = w(\lit)$ for each literal $\lit$, the algebraic evaluation $W(\phi)$ will yield the weighted model count $w(\phi)$.
+\item Formula $\phi$ is said to be \emph{smooth} if every disjunction $\phi_1 \lor \phi_2$ satisfies
+  $\dependencyset(\phi_1) = \dependencyset(\phi_2)$.  For a smooth formula, 
+letting $W(\lit) = w(\lit)$ for each literal $\lit$, the algebraic evaluation $W(\phi)$ will yield the weighted model count $w(\phi)$.
+\item If the weight assignment for each variable and its complement satisfies $w(x) + w(\obar{x}) \not = 0$,
+  we can apply \emph{rescaling}, first computing $s(x) = w(x) + w(\obar{x})$ for each variable $x$
+  and letting $W(x) = w(x)/s(x)$ and $W(\obar{x}) = w(\obar{x})/s(x)$.  
+  Following the algebraic evaluation $W(\phi)$, the weighted count is computed as:
+  \begin{eqnarray}
+$w(\phi) &=& \prod_{x\in\varset} s(x) \; \cdot \; W(\phi)$ \label{eqn:rescale}
+  \end{eqnarray}
+\end{enumerate}
+
+An arbitrary formula can be smoothed by inserting \emph{smoothing terms} of the form $\x \lor \obar{x}$.
+That is,
+  a disjunction $\phi_1 \lor \phi_2$ having some variable $x \in \dependencyset(\phi_1)$ but
+  $x \not\in \dependencyset(\phi_2)$ is rewritten as $\phi_1 \lor [(x \lor \obar{x}) \land \phi_2]$.
+  
+  These three methods can be combined by rescaling some variables and
+  inserting smoothing terms for others.  In particular, for any
+  variable $x$ having $w(x) + w(\obar{x}) = 0$, inserting a smoothing term for $x$
+  will effectively cause the product to evaluate to $0$.
+
+\section{Approximations and Number Representations}
+
+When approximating rational number $x$ with value $\approximate{x}$, we
 define the \emph{approximation error} $\aerror(\approxx, x)$ as:
 \begin{eqnarray}
 \aerror[\approxx, x] & = & \left\{ \begin{array}{ll}
-  \frac{|\approxx - x|}{|x|} \label{eqn:approx:error} & x \not = 0\\[0.8em]
+  \frac{|\approxx - x|}{|x|}  & x \not = 0\\[0.8em]
   |\approxx| & x = 0\\
-  \end{array} \right.
+  \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $x$ is nonzero, and absolute error when $x=0$.  This value will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
+That is, we consider relative error when $x$ is nonzero, and absolute error when $x=0$.
+This value will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
 
 We then define the \emph{digit precision} of the approximation as
 \begin{eqnarray}
 \digitprecision(\approxx, x) & = & \max(0, -\log_{10} \aerror[\approxx, x]) \label{eqn:digitprecision} 
 \end{eqnarray}
 This value will range from $0$ for a poor approximation, up to $\infty$ when $\approxx=x$.
-When both $\approxx$ and $x$ are written as (possibly infinite-length)
-decimal numbers, $\digitprecision(\approxx,x)$ indicates the number of
-leading digits they have in common.  
+Intuitively, it indicates the number of digits in a decimal representation of $\approxx$ that are
+trustworthy.
+
+The rational arithmetic library MPQ represents a rational number $x$
+as a pair $p$, $q$, such that $p$ and $q$ are relatively prime, and $x
+= p/q$.  The space for both $p$ and $q$ is allocated dynamically, and
+so their size is limited only by the avaiable memory.  We can
+therefore use MPQ to compute an exact representation of a weighted
+count from a d-DNNF formula, but the space and time required can be very high.
 
 We consider floating-point numbers of the form
 \begin{eqnarray}
@@ -149,7 +240,7 @@ x & = & (-1)^s \; \times \; f \; \times 2^{e} \label{eqn:floating-point}
 where:
 \begin{itemize}
 \item Sign bit $s$ equals $0$ for nonnegative numbers and $1$ for negative numbers
-\item Fraction $f$ is a $p$-bit binary number with an implicit binary point on the left.  That is $0 \leq f \leq 1-2^{-p}$.
+\item Fraction $f$ is encoded as a $p$-bit binary number with an implicit binary point on the left.  That is $0 \leq f \leq 1-2^{-p}$.
 \item Exponent $e$ is an integer, possibly with some limitation on its range.
 \end{itemize}
 As examples, consider these two different floating-point formats:
@@ -157,44 +248,80 @@ As examples, consider these two different floating-point formats:
 \item The IEEE~754 double-precision format uses a slightly different representation, but it maps to the notation of Equation~\ref{eqn:floating-point} with $p=53$ and an exponent range of
   $-1021 \leq e \leq 1024$.  Unfortunately, the small exponent range limits the suitability of
   this representation for weighted model counting.
-\item As will be shown, the MPF software floating-point package can be very effective for weighted model counting.
-We configured it to have $p=128$. On most 64-bit architectures, it represents
+\item The MPF software floating-point library allows the value of $p$ to be set arbitrarily.
+Our default configuration has
+$p=128$. On most 64-bit architectures, it represents
   the exponent as a 64-bit signed number.  This provides an ample exponent range.
 \end{itemize}
 
-When representing a real-number $x$, its value must be rounded to a
+When converting a rational number $x$ into a floating-point encoding, its value must be rounded to a
 value $\round(x)$.  In doing so, it introduces a \emph{rounding
-error}.  We use $\roundepsilon$ to denote the maximum value of
-$\aerror[\round(x), x]$.  Depending how the rounding
-is performed, $\roundepsilon$ is either $2^{-p}$ or $2^{-p-1}$.  Here, we assume that the exponent range suffices to represent $x$.
-As examples, the double-precision representation has $\roundepsilon = 2^{-54} \approx 5.55 \times 10^{-17}$, while the 128-bit MPF format
-has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bound of $\digitprecision(\round(x), x)$ is around $15.95$ and $38.53$, respectively.
+error}.  
+Letting $\roundepsilon = 2^{-p}$, and assuming that
+the exponent range suffices to represent $x$,
+we can assume that
+$\aerror[\round(x), x] \leq \roundepsilon$.
+As examples, the double-precision representation has $\roundepsilon = 2^{-53} \approx 1.11 \times 10^{-16}$, while the 128-bit MPF format
+has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the upper bound of $\digitprecision(\round(x), x)$ is around $15.95$ and $38.53$, respectively.
 
-\section{Error analysis: Nonnegative weights}
+Floating-point arithmetic is implemented in such a way that any
+operation effectively computes an exact result and then rounds it to
+encode the result.  The maximum error from a sequence of operations
+therefore tends to accumulate as integral multiples of $\epsilon$.
+This yields error bounds of the form $\aerror[\approxx, x] \leq t\,\roundepsilon$,
+which we  refer to as $t$ units of
+rounding error.
+
+As a third representation, the MPFI interval arithmetic library
+represent a contiguous ranges of numbers $[\xmin, \xmax]$, where
+$\xmin$ and $\xmax$ are floating-point numbers.  The endpoints of the
+range are represented using the MPFR package, and extension of MPF to
+provide more careful rounding.  Arithmetic on intervals is performed
+in such a way that the result of any operation is an interval that
+spans the range of possible values of that operation applied to any
+combination of values spanned by the argument intervals.
+
+For interval $[\xmin, \xmax]$, we define the interval approxmiation error $\aerror([\xmin, \xmax])$ as
+\begin{eqnarray}
+\aerror([\xmin, \xmax]) & = & \left\{ \begin{array}{ll}
+  \frac{|\xmax - \xmin|}{\min(|\xmin|, |\xmax|)}  & 0 \not \in [\xmin, \xmax]\\[0.8em]
+  |\xmax - \xmin| &  0 \in [\xmin, \xmax]\\
+  \end{array} \right. \label{eqn:interval:error}
+\end{eqnarray}
+For any values $\approxx, x \in [\xmin, \xmax]$, we can see that
+$\aerror[\approxx, x] \leq \aerror(([\xmin, \xmax])$.
+We then define the digit precision of the interval as:
+\begin{eqnarray}
+\digitprecision([\xmin, \xmax]) & = & \max(0, -\log_{10} \aerror([\xmin, \xmax]) \label{eqn:interval:digitprecision} 
+\end{eqnarray}
+This value will range from $0.0$ for a very large interval to $\infty$ when the interval is tight with $\xmin = \xmax$.
+
+\section{Error Analysis: Nonnegative Weights}
 \label{sect:nonneg}
 
-Here we evaluate how rounding errors accumulate via a series of arithmetic operations.  We assume that each operation is performed in a way that effectively computes the exact
-arithmetic value, but this value is then rounded to produce the final result.  We assume that $\roundepsilon$ is sufficiently small that $\roundepsilon^2 \approx 0$.
-
-Suppose during some computation, an accumulation of rounding errors has yielded an approximation $\approxx$ to a true value $x > 0$.
-Let $\aerror[\approxx, x] \leq s\, \roundepsilon$, i.e., $(1-s\,\roundepsilon)\, x \leq \approxx \leq (1+s\,\roundepsilon)\, x$.  Similarly, let true value $y > 0$ be
-approximated by a value $\approxy$ such that 
-$\aerror[\approxy, y] \leq t\, \roundepsilon$, i.e., $(1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
-
-In the following, we consider only the case where the true values of
-all arguments are nonnegative.  That is $x \geq 0$ and $y \geq 0$.
+Here we evaluate how rounding errors accumulate via a series of
+arithmetic operations when all arguments are nonnegative.
+That is, we assume the exact arguments $x$ and $y$ to each operation to satisfy $x \geq 0$ and $y \geq 0$.
 Rounding never causes a result to be negated, and therefore, we can
-consider the approximations to satisfy $\approxx \geq 0$ and $\approxy \geq 0$.
+consider the approximations $\approxx$ of  $x$ and $\approxy$ of $y$ to satisfy $\approxx \geq 0$ and $\approxy \geq 0$.
 In addition, neither the multiplication nor the addition of
 nonnegative values can yield a negative result.  We can therefore
 assume that all actual and approximate values under consideration will
 be nonnegative.
 
+Suppose for nonnegative values $s$ and $t$, we have
+$\aerror[\approxx, x] \leq s\, \roundepsilon$ and
+$\aerror[\approxy, y] \leq t\, \roundepsilon$, respectively.
+Therefore
+$0 \leq (1-s\,\roundepsilon)\, x \leq \approxx \leq (1+s\,\roundepsilon)\, x$ and
+$0 \leq (1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
+
+
 \subsection{Multiplication}
 
 When $\approxx$ and $\approxy$ are multiplied, let us impose the constraint that $s\,t \leq 1/\roundepsilon$.
 Their product will satisfy
-$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and our assumption gives
+$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and our additional constraint gives
 $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t+1)\,\roundepsilon)$.
 A similar analysis gives
 $(x\cdot y) (1 - (s+t+1)\,\roundepsilon) \leq \approxx \cdot \approxy$, and therefore
@@ -202,7 +329,8 @@ $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result introduces an additional error of $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
 
-Thus, multiplication, at most, propagates the errors of its arguments as their sum and adds two units of rounding error.
+Thus, for suitable values of $s$, $t$, and $\roundepsilon$,
+multiplication, at most, propagates the errors of its arguments as their sum and adds two units of rounding error.
 
 \subsection{Addition}
 
@@ -212,75 +340,38 @@ of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the
 Rounding the sum can add one more unit of rounding error, and so we have
 $\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
 
-Thus, addition, at most,  propagates the maximum error of its arguments and adds a unit of rounding error.
+Thus, addition, at most, propagates the maximum error of its arguments and adds a unit of rounding error.
 
 \subsection{Evaluating a decision-DNNF formula}
 \label{sect:error:formula}
 
-Consider a Boolean formula over a set of Boolean variables $\varset$
-with operations conjunction $\land$, disjunction $\lor$, and negation
-$\neg$, satisfying the following conditions:
-\begin{itemize}
-\item The formula is in negation normal form, i.e., negation is only
-  applied to the variables.  We refer to positive and negated
-  variables as \emph{literals}.  The negation of variable $x$ is
-  written $\obar{x}$. We use the symbol $\lit$ to denote a literal.
-\item Conjunctions are \emph{decomposable}.  That is, for formula $\phi$, let $\dependencyset(\phi)$ denote the set of variables that occur in it.  Then for a conjunction of the form
-  $\phi_1 \land \phi_2$, we require $\dependencyset(\phi_1) \cap \dependencyset(\phi_2) = \emptyset$.
-\item Every disjunction has a \emph{decision variable}.  That is, disjunctions are of the form $(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ for some decision variable $x$. 
-\item The formula is \emph{smooth}: Every disjunction of the form $(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ 
-also satisfies the property that $\dependencyset(\phi_1) = \dependencyset(\phi_2)$.
-\end{itemize}
-
-A (total) assignment is a mapping $\assign \colon \varset \rightarrow \{0, 1\}$.  An assignment $\assign$ is said to be a \emph{model} of formula
-$\phi$ if the formula evaluates to $1$ under that assignment.  The
-set of models of a formula $\phi$ is written $\modelset(\phi)$.  We
-can also consider an assignment to be a set of literals, where
-$x \in \assign$ when $\assign(x) = 1$, and  $\obar{x} \in \assign$ when $\assign(x) = 0$, for each variable $x$.
-
-With \emph{weighted model counting}, each literal $\lit$ is assigned a
-real-valued weight $w(\lit)$.  We then compute the weight of an
-assignment $\assign$ to be the product of its literals. and the weight
-of a formula to be the sum of the weights of its satisfying assignments:
-\begin{eqnarray}
-  w(\phi) & = & \sum_{\assign \in \modelset(\phi)} \prod_{\lit \in \assign} w(\lit) \label{eqn:model:count}
-\end{eqnarray}
-
-We use the following recursive algorithm to \emph{evaluate} a decision-DNNF formula $\phi$ with respect to a weight assignment, yielding a value $w(\phi)$:
-\begin{enumerate}
-\item The weight for literal $\lit$ is computed as $w(\lit)$.
-\item The weight for  conjunction $\phi$ of the form $\phi_1 \land \phi_2$ is computed as $w(\phi) = w(\phi_1) \cdot w(\phi_2)$.
-\item The weight for disjunction $\phi$ of the form 
-  $(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ is computed as
-  $w(\phi) = [w(x) \cdot w(\phi_1)] + [w(\obar{x}) \cdot w(\phi_2)]$.
-\end{enumerate}
-
-Suppose we use floating-point arithmetic to compute the sums and products in the evaluation of decision-DNNF formula $\phi$, yielding
-an approximation $\approxw(\phi)$ to the true value $w(\phi)$.  When all literal weights are nonnegative, and we limit the number of variables $n$ with respect to $\roundepsilon$ appropriately,
-we can bound the error of this approximation as follows:
+Suppose we use floating-point arithmetic to compute the sums and products in an algebraic evaluation of a decision-DNNF formula $\phi$.
+We assume that the value $W(\lit)$ for each literal $\lit$ is represented by a floating-point number $\approxW(\lit)$ such that
+$\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$.  We also assume $W(\lit) \geq 0$.
+We can then bound the error of the computed value $W(\phi)$ as follows:
 \begin{lemma}
-  Evaluating a decision-DNNF formula $\phi$ having $|\dependencyset(\phi)| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$, according to a weight assignment where every literal $\lit$ has weight $w(\lit) \geq 0$,
-the approximation $\approxw(\phi)$ satisfies
-  $\aerror[\approxw(\phi), w(\phi)] \leq (4n-2)\,\roundepsilon$.
+  The algebraic evaluation of a decision-DNNF formula $\phi$ having $|\dependencyset(\phi)| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$ using floating-point arithmetic will yield an approximation $\approxW(\phi)$ satisfying
+  $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.
   \label{lemma:approx:pos}
 \end{lemma}
 
 The proof of this theorem proceeds by induction on the structure of $\phi$:
 \begin{enumerate}
-\item For Literal with weight $w(\lit)$, its approximation $\approxw(\lit)$ will be due to a single rounding error:
-$\aerror[\approxw(\lit), w(\lit)] \leq \roundepsilon$, which is within the error bound of $(4n-2)\,\roundepsilon$ for $n=1$.
+\item For Literal with weight $W(\lit)$, its approximation $\approxW(\lit)$ satisfies
+$\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$, which is within the error bound of $(4n-2)\,\roundepsilon$ for $n=1$.
 \item For formula $\phi$ of the form $\phi_1 \land \phi_2$, there must be some $k$, with $1 \leq k < n$, such that $|\dependencyset(\phi_1)| = k$
   and $|\dependencyset(\phi_2)| = n-k$.
 \begin{enumerate}
-  \item Let us first test whether the conditions for the induction hypothesis hold: for $s = 4(k-2)$ and $t = 4(n-k)-2$
-    we require that $s\,t \leq 1/\roundepsilon$.  We can see that $s\,t \leq 16\,n\,(n-k)$. This quantity will be maximized when $k = n/2$, and therefore $s \, t \leq 4\,n^2$.
+  \item Let us first test whether the conditions for the induction hypothesis hold: for $s = 4k-2$ and $t = 4(n-k)-2$
+    we require that $s\,t \leq 1/\roundepsilon$.  We can see that $s\,t \leq 16\,n\,(n-k)$. This quantity will be maximized when $k = n/2$,
+    and therefore $s \, t \leq 4\,n^2$.
     Given our limit on $n$ with respect to $\roundepsilon$, we have $s \, t \leq 1/\roundepsilon$.
   \item
 We can therefore assume by induction that 
- $\aerror[\approxw(\phi_1), w(\phi_1)] \leq (4 k-2) \,\roundepsilon$
-  and $\aerror[\approxw(\phi_2), w(\phi_2)] \leq (4 (n-k)-2) \,\roundepsilon$.  Their product, after rounding
+ $\aerror[\approxW(\phi_1), W(\phi_1)] \leq (4 k-2) \,\roundepsilon$
+  and $\aerror[\approxW(\phi_2), W(\phi_2)] \leq (4 (n-k)-2) \,\roundepsilon$.  Their product, after rounding
   will satisfy 
-$\aerror[\approxw(\phi_1 \land \phi_2), w(\phi_1 \land \phi_2)] \leq [(4 k -2) + (4 (n-k) -2) + 2]\,\roundepsilon = (4n-2) \,\roundepsilon$.
+$\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) + (4 (n-k) -2) + 2]\,\roundepsilon = (4n-2) \,\roundepsilon$.
 \end{enumerate}
 \item For a sum of the form
   $\phi = (x \land \phi_1) \lor (\obar{x} \land \phi_2)$, let us use the notation $\lit_1 = x$ and $\lit_2 = \obar{x}$
@@ -288,13 +379,19 @@ $\aerror[\approxw(\phi_1 \land \phi_2), w(\phi_1 \land \phi_2)] \leq [(4 k -2) +
   Since all products are decomposable, we must have $x \not \in \dependencyset(\phi_i)$,
   and therefore $|\dependencyset(\phi_i)| = n-1$.
   By induction, we can therefore assume that
-  $\aerror[\approxw(\phi_i), w(\phi_i)] \leq (4(n-1)-2) \,\roundepsilon = (4n-6)\,\roundepsilon$.  Rounding the literal weights will yield
-  $\aerror[\approxw(\lit_i), w(\lit_i)] \leq \roundepsilon$.  Let $y_i$ denote the product $w(\lit_i) \cdot w(\phi_i)$ for $i \in \{1,2\}$.
+  $\aerror[\approxW(\phi_i), W(\phi_i)] \leq (4(n-1)-2) \,\roundepsilon = (4n-6)\,\roundepsilon$.  Rounding the literal weights will yield
+  $\aerror[\approxW(\lit_i), W(\lit_i)] \leq \roundepsilon$.  Let $y_i$ denote the product $W(\lit_i) \cdot W(\phi_i)$ for $i \in \{1,2\}$.
   Its rounded value will satisfy
   $\aerror[\approxy_i, y_i] \leq (4n-3) \,\roundepsilon$.  Summing $\approxy_1$ and $\approxy_2$ and rounding the result will therefore give
   an approximation $\approxw(\phi)$ to $w(\phi) = y_1 + y_2$ with
-$\aerror[\approxw(\phi), w(\phi)] \leq (4n-2)\,\roundepsilon$.  
+$\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.  
 \end{enumerate}
+
+Observe that this proof relies on the decomposability of the
+conjunctions to bound the error induced by multiplication operations.
+It relies on the decision structure of the formula only to bound the
+depth of the additions.
+
 
 \begin{theorem}
   \label{thm:approx:pos}
