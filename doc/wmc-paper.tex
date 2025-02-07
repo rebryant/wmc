@@ -71,13 +71,16 @@
 
 \title{Numeric Considerations in Weighted Model Counting}
 
-\titlerunning{Arithmetic Considerations for Weighted Model Counting}
+\titlerunning{Numeric Considerations for Weighted Model Counting}
 
 \author{Randal E. Bryant}{Computer Science Department, Carnegie Mellon University, Pittsburgh, PA 15213 USA}{Randy.Bryant@cs.cmu.edu}{https://orcid.org/0000-0001-5024-6613}{}
 
 \authorrunning{R. E. Bryant} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
 
 \Copyright{Randal E. Bryant} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+
+\ccsdesc[500]{Theory of computation~Automated reasoning}
+\keywords{Weighted model counting, floating-point arithmetic, interval arithmetic}
 
 %%
 %% end of the preamble, start of the body of the document source.
@@ -92,7 +95,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  Weighted model counting computes the sum of the rational-valued weights
+ Weighted model counting computes the sum of the rational-valued weights
   associated with the satisfying assignments for a Boolean formula,
   where the weight of an assignment is given by the product of the
   weights associated with the positive and negated variables
@@ -101,28 +104,21 @@
   and quantitative risk assignment.
 
   Most weighted model counting programs avoid enumerating all
-  assignments to a formula by converting it, either explicitly or
-  implicity, into a set of conjunction and disjunction operations,
+  satisfying assignments by converting the formula, either explicitly or
+  implicitly, into a set of conjunction and disjunction operations,
   such that the count can be evaluating using multiplication for
-  conjunctions and addition for disjunctions.
+  conjunctions and addition for disjunctions.  Performing these
+  computations using floating-point arithmetic, however, can yield
+  inaccurate results.  Moreover, there is no way to quantify the
+  level of precision achieved.
 
-  Although computing these operations with rational arithmetic
-  yields exact results, the precision required for most applications
-  does not warrant the required space and time.  On
-  the other hand, the precision when using floating-point arithmetic
-  cannot be guaranteed, especially when some of the weights are
-  negative.
-
-  In this paper, we prove that, when all weights are nonnegative, the
-  precision of floating-point arithmetic will degrade, in the worst case, as the logarithm
-  of the number of variables.  This result, along with our
-  experiments, demonstrate that a high level of precision can be
-  achieved using a software floating-point implementation.  For
-  formulas with negative weights, we show that interval floating-point
-  arithmetic can reliably detect cases where a desired precision
-  cannot be achieved.  Using a program that combines floating-point,
-  interval, and rational arithmetic, we achieve the twin goals of
-  efficiency and guaranteed precision.
+  In this paper, we show, both theoretically and experimentally, that
+  floating-point arithmetic can provide a guaranteed level of accuracy
+  when used for weighted model counting when all weights are
+  nonnegative.  For problems with negative weights, we show that a
+  combination of interval floating-point arithmetic and rational
+  arithmetic can achieve the twin goals of efficiency and guaranteed
+  precision.
 \end{abstract}
 
 \section{Introduction}
@@ -136,26 +132,28 @@ including 2-SAT, become intractable when the goal is to count models
 and not just determine satisfiability \cite{valiant:siam:1979}.
 
 Weighted model counting extends standard model counting by having
-real-valued weights associated with the assignments, and then
+rational-valued weights associated with the assignments, and then
 computing the sum of the weights of the satisfying assignments.  The
-most common variant of weighted model counting to have weights $w(x)$ and $w(\obar{x})$
+most common variant has weights $w(x)$ and $w(\obar{x})$
 associated with each variable $x$ and its negation $\obar{x}$.  The
 weight of an assignment is then the product of the weights associated
 with the positive and negated variables comprising the assignment.
-Standard model counting is then just a special case of weighted model
-counting with all variables and their complements having unit weights.
+Standard model counting can be seen as a special case of weighted model
+counting with all variables and their negations having unit weights.
 
 Weighted model counting has applications in a variety of domains,
 including probabilistic inference~\cite{chavira:ai:2008}, Bayesian
 inference~\cite{sang:aaai:2005}, and probabilistic
 planning~\cite{domshlak:jair:2007}.  In addition, many of the
-applications for binary decision diagrams (BDDs)s~\cite{knuth:bdd:2011}
-are, in fact, applications of weighted model counting based on BDD
-representations of Boolean formulas.
+applications for binary decision diagrams (BDDs) for
+combinatorics~\cite{knuth:bdd:2011} and for quantitative risk
+assessment~\cite{xing:wiley:2015} are, in fact, applications of
+weighted model counting based on BDD representations of Boolean
+formulas.
 
 Despite the intractability, a variety of weighted model counting
 programs have been developed that work well in practice.  They
-generally fall into two categories. \emph{Top-down} programs
+generally fall into two categories~\cite{shaw:kr:2024}. \emph{Top-down} programs
 recursively branch on the variables of a formula, performing unit
 propagation and conflict analysis similar to a CDCL SAT solver.  Most
 of these programs are, in fact, \emph{knowledge compilers} that
@@ -168,7 +166,7 @@ cases, the strategy is to convert the formula into a form for which
 weighted model counting becomes tractable.
 
 Weighted model counting can be computationally intensive.  In
-experiemental results described in this paper, some evaluations can
+experimental results described in this paper, some evaluations can
 require over one billion multiplication and addition operations.
 Furthermore, the computed values are often either too small or too
 large in magnitude to encode with standard floating-point
@@ -179,35 +177,30 @@ that bear little relation to the actual values.  In general, even when the resul
 floating-point evaluation does not guarantee any level of precision.
 
 One way to guarantee high precision is to perform all of the
-computations using a rational-arithmetic software package, such as the
-MPQ libray within the GNU Multiprecision Arithmetic
+computations using a rational-arithmetic software package~\cite{knuth:rational:1981}, such as the
+MPQ library within the GNU Multiprecision Arithmetic
 Library (GMP)~\cite{granlund:gmp:2015}.  It represents each number $x$ as a
 pair of integers $p$ and $q$ with $x = p/q$.  It dynamically allocates
 the memory for these two integers such that the only limitation on
 their sizes is the available memory.  Assuming all of the weights
-associated with the variables and their complements are rational, MPQ
+associated with the variables and their negations are rational, MPQ
 can compute the exact rational values of all multiplication and
 addition operations, yielding an exact weighted count.  Unfortunately,
-both the time and space for manipulating these numbers can be very
-large.  In this paper, we report examples requiring over one gigabyte
+both the time and space required for storing and manipulating these numbers can be very
+large.  In this paper, for example, we report experiments requiring over one gigabyte
 to store the arguments and result of a single addition operation.
 
-Indeed, rational arithmetic provides more precision than is required
-for most applications.  It would be preferable to have floating-point
+Rational arithmetic provides more precision than is required
+for most applications.  It would be preferable to have a floating-point
 representation of the weighted count, with a guarantee that this
 representation meets some standard of precision with respect to the
 actual count.
 
-In this paper, we apply two strategies to providing a
-guaranteed-precision weighted model count.  First, we consider the
-case where all weights $w(x)$ and $w(\obar{x})$ are nonnegative, and
+In this paper, we apply two strategies to compute 
+guaranteed-precision weighted model counts.  First, we consider the
+case where the weights $w(x)$ and $w(\obar{x})$ for all variables $x$ are nonnegative, and
 where the values are computed over a decision-DNNF Boolean
-formula~\cite{beame:uai:2013,huang:jair:2007}.  For many applications
-of weighted model counting, the weights are probabilities between
-$0.0$ and $1.0$; negative weights are never encountered.
-Furthermore most top-down and bottom-up weighted model
-counters either explicitly or implicitly operate on decision-DNNF
-representations.
+formula~\cite{beame:uai:2013,huang:jair:2007,oztok:cp:2014}.
 We prove under these restrictions
 that the degradation of
 precision caused by rounding errors will be bounded by the logarithm
@@ -215,8 +208,15 @@ of the number of variables in the formula.  In practical terms, this
 implies that floating-point arithmetic can be fully trusted in these
 cases.  For example, by using the MPF software floating-point library
 within GMP with a 128-bit fraction, we can guarantee that the computed
-count for a formula with up to ten million variables will be correct within
+count for a formula with up to ten million variables will provide at least
 30 decimal digits of precision.
+This result has broad applicability.
+For many applications
+of weighted model counting, the weights are probabilities between
+$0.0$ and $1.0$, or they are unit weights.  For these applications,  negative weights are never encountered.
+Furthermore most top-down and bottom-up weighted model
+counters either explicitly or implicitly operate on decision-DNNF
+representations~\cite{beame:uai:2013}.
 
 For formulas with negative weights, we demonstrate a family of
 formulas where no bounded-precision numeric representation will
@@ -225,18 +225,18 @@ On the other hand, we show experimentally that floating-point
 arithmetic suffices for standard ways to generate weight assignments,
 but there is no way to be certain of the precision.  We also
 demonstrate a strategy for generating random weight assignments that
-often causes floating-point arithmetic to yield imprecise results.
+often causes floating-point arithmetic to yield erroneous results.
 
 We address the lack of certainty in a standard floating-point
-evaluation by introducing \emph{interval} floating-point arithmetic
+evaluation by introducing \emph{interval} floating-point arithmetic~\cite{hickey:jacm:2001}
 using the MPFI software library~\cite{revol:rc:2005}. With this
 library, values are approximated as intervals of the form $[\xmin,  \xmax]$ such that the true value lies within the interval, and both
-$\xmin$ and $\xmax$ are represented in floating-point.  The result of
+$\xmin$ and $\xmax$ are represented in floating point.  The result of
 every operation is an interval that is guaranteed to include the true
 result value, as long as the argument intervals include their true
 values.  We show experimentally that the intervals maintained during
 the computations of weighted model counting are generally tight enough
-that they provide useful guarantees of precision.
+to provide useful precision guarantees.
 
 Putting these together, we present experimental results from a program
 that performs weighted model counting of a decision-DNNF formula
@@ -260,10 +260,9 @@ Section~\ref{sect:neg} we describe the challenges that negative
 weights can present, but also experimental results showing that
 floating-point arithmetic suffices in many cases.
 Section~\ref{sect:hybrid} then describes the use of interval
-arithmetic and our hybrid approach.  Section~\ref{sect:techniques}
-presents some subtleties of using rational arithmetic that we learned
-in the course of this work.  Finally, Section~\ref{sect:conclusion}
-presents some concluding remarks and ideas for possible areas for
+arithmetic and our hybrid approach.  
+Finally, Section~\ref{sect:conclusion}
+presents some concluding remarks and  areas for
 further research.
 
 
@@ -277,7 +276,7 @@ variables.  We refer to a variable $x$ or its negation $\obar{x}$ as a
 literal.  The set of all formulas is defined recursively to consist of
 literals, \emph{conjunctions} of the form $\phi_1 \land \phi_2$, and
 \emph{disjunctions} of the form $\phi_1 \lor \phi_2$.  The set of
-variables occuring in formula $\phi$ is denoted
+variables occurring in formula $\phi$ is denoted
 $\dependencyset(\phi)$.  Typically, a formula is represented as a
 directed acyclic graph, allowing a sharing of subformulas.  We
 therefore define the \emph{size} of a formula to be the number of
@@ -298,39 +297,39 @@ The weight of an
 assignment $\assign$ is then defined to be the product of its literal weights, and the weight
 of a formula is the sum of the weights of its satisfying assignments:
 \begin{eqnarray}
-  w(\phi) & = & \sum_{\assign \in \modelset(\phi)} \prod_{\lit \in \assign} w(\lit) \label{eqn:model:count}
+  w(\phi) & = & \sum_{\assign \in \modelset(\phi)} \prod_{\lit \in \assign} w(\lit) \label{eqn:wmc}
 \end{eqnarray}
 
 Computing the weighted count of an arbitrary formula is thought to be intractable.  However, it becomes
-feasible when the formula is the in deterministic decomposable negation-normal form (d-DNNF):
+feasible when the formula is in \emph{deterministic decomposable} negation-normal form (d-DNNF):
 \begin{enumerate}
 \item The formula is in negation-normal form.  
-\item All conjunctions are \emph{decomposable}.  That is, every subformula of the form $\phi_1 \land \phi_2$
+\item All conjunctions are \emph{decomposable}~\cite{darwiche:jacm:2001,darwiche:jair:2002}.  That is, every subformula $\phi' = \phi_1 \land \phi_2$
   satisfies $\dependencyset(\phi_1) \cap \dependencyset(\phi_2) = \emptyset$.
-\item All disjunctions are \emph{deterministic}.  That is, every subformula of the form $\phi_1 \lor \phi_2$ satisfies
+\item All disjunctions are \emph{deterministic}~\cite{darwiche:jancl:2001,darwiche:jair:2002}.  That is, every subformula $\phi' = \phi_1 \lor \phi_2$ satisfies
   $\modelset(\phi_1) \cap \modelset(\phi_2) = \emptyset$.
 \end{enumerate}
 As an important subclass of d-DNNF, a formula is said to be in 
-decision decomposable negation-normal form (decision-DNNF) when every occurrence of a disjunction has the form 
-$(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ for some decision variable $x$.
+\emph{decision decomposable} negation-normal form (decision-DNNF) when every occurrence of a disjunction has the form 
+$(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ for some variable $x$, referred to as the \emph{decision variable}.
 
 There are several ways to compute the weighted count of d-DNNF formula $\phi$, all
 based on an \emph{algebraic evaluation} of $\phi$ to compute a value $W(\phi)$:
 \begin{enumerate}
 \item Each literal $\lit$ is a assigned a rational value $W(\lit)$.
-\item Each subformula $\phi_1 \land \phi_2$ is evaluated as $W(\phi_1 \land \phi_2) = W(\phi_1) \cdot W(\phi_2)$.
-\item Each subformula $\phi_1 \lor \phi_2$ is evaluated as $W(\phi_1 \lor \phi_2) = W(\phi_1) + W(\phi_2)$.
+\item Each subformula $\phi' = \phi_1 \land \phi_2$ is evaluated as $W(\phi') = W(\phi_1) \cdot W(\phi_2)$.
+\item Each subformula $\phi' = \phi_1 \lor \phi_2$ is evaluated as $W(\phi') = W(\phi_1) + W(\phi_2)$.
 \end{enumerate}
-The number of rational operations in this evaluation is linear in the size of the formula.
+The number of arithmetic operations in this evaluation is linear in the size of the formula.
 
 There are three ways to use this evaluation to perform weighted model counting for weight assignment $w$:
 \begin{enumerate}
-\item If the weight assignment for each variable and its complement satisfies $w(x) + w(\obar{x}) = 1$,
+\item If the weight assignments for each variable $x$ satisfy $w(x) + w(\obar{x}) = 1$,
   then by letting $W(\lit) = w(\lit)$ for each literal $\lit$, the algebraic evaluation $W(\phi)$ will yield the weighted model count $w(\phi)$.
 \item Formula $\phi$ is said to be \emph{smooth} if every disjunction $\phi_1 \lor \phi_2$ satisfies
-  $\dependencyset(\phi_1) = \dependencyset(\phi_2)$.  For a smooth formula, 
+  $\dependencyset(\phi_1) = \dependencyset(\phi_2)$~\cite{darwiche:jancl:2001,darwiche:jair:2002}.  For a smooth formula, 
 by letting $W(\lit) = w(\lit)$ for each literal $\lit$, the algebraic evaluation $W(\phi)$ will yield the weighted model count $w(\phi)$.
-\item If the weight assignment for each variable and its complement satisfies $w(x) + w(\obar{x}) \not = 0$,
+\item If the weight assignments for each variable $x$ satisfy $w(x) + w(\obar{x}) \not = 0$,
   we can apply \emph{rescaling}, first computing $s(x) = w(x) + w(\obar{x})$ for each variable $x$
   and letting $W(x) = w(x)/s(x)$ and $W(\obar{x}) = w(\obar{x})/s(x)$.  
   Following the algebraic evaluation $W(\phi)$, the weighted count is computed as:
@@ -339,10 +338,13 @@ w(\phi) &=& \prod_{x\in\varset} s(x) \; \cdot \; W(\phi) \label{eqn:rescale}
   \end{eqnarray}
 \end{enumerate}
 
-An arbitrary formula can be smoothed by inserting \emph{smoothing terms} of the form $x \lor \obar{x}$.
+An arbitrary formula can be smoothed by inserting \emph{smoothing terms} of the form $x \lor \obar{x}$~\cite{darwiche:jancl:2001}.
 That is,
   a disjunction $\phi_1 \lor \phi_2$ having some variable $x \in \dependencyset(\phi_1)$ but
   $x \not\in \dependencyset(\phi_2)$ is rewritten as $\phi_1 \lor [(x \lor \obar{x}) \land \phi_2]$.
+  Adding smoothing terms can expand the size of a formula significantly, and it can be time consuming.
+  More precisely, for $n = |X|$, and a formula with $m$ unique subformulas, it can require time $\Theta(m\cdot n)$ and increase the formula size by a factor of $n$.
+  Some restricted formula classes allow more space- and time-efficient smoothing~\cite{shih:neurips:2019}, but the required properties do not hold for the formulas generated by most weighted model counters.
   
   These three methods can be combined by rescaling some variables and
   inserting smoothing terms for others.  In particular, for any
@@ -362,7 +364,7 @@ define the \emph{approximation error} $\aerror(\approxx, x)$ as:
   |\approxx| & x = 0\\
   \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $x$ is nonzero, and absolute error when $x=0$.
+That is, we consider relative error when $x$ is nonzero and absolute error when $x=0$.
 This value will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
 
 We then define the \emph{digit precision} of the approximation as
@@ -370,14 +372,12 @@ We then define the \emph{digit precision} of the approximation as
 \digitprecision(\approxx, x) & = & \max(0, -\log_{10} \aerror[\approxx, x]) \label{eqn:digitprecision} 
 \end{eqnarray}
 This value will range from $0$ for a poor approximation, up to $+\infty$ when $\approxx=x$.
-Intuitively, it indicates the number of digits in a decimal representation of $\approxx$ that represent the true decimal representation of
-$x$
-
+Intuitively, it indicates the number of matching digits in the decimal representations of $\approxx$ and $x$.
 
 The rational arithmetic library MPQ represents a rational number $x$
-as a pair $p$, $q$, such that $p$ and $q$ are relatively prime, and $x
-= p/q$.  The space for both $p$ and $q$ is allocated dynamically, and
-so their size is limited only by the avaiable memory.  We can
+as a pair $p$, $q$, such that $p$ and $q$ are relatively prime, and $x = p/q$~\cite{knuth:rational:1981}.
+The space for both $p$ and $q$ is allocated dynamically, and
+so their size is limited only by the available memory.  We can
 therefore use MPQ to compute an exact representation of a weighted
 count from a d-DNNF formula, but the space and time required can be very high.
 
@@ -394,23 +394,23 @@ where:
 As examples, consider two different floating-point formats:
 \begin{itemize}
 \item The IEEE~754 double-precision format uses a slightly different representation, but it maps to the notation of Equation~\ref{eqn:floating-point} with $p=53$ and an exponent range of
-  $-1021 \leq e \leq 1024$.  Unfortunately, the small exponent range limits the suitability of
+  $-1021 \leq e \leq 1024~\cite{overton:siam:2001}$.  Unfortunately, the small exponent range (giving a magnitude range for the numbers of around $10^{\pm 308}$) limits the suitability of
   this representation for weighted model counting.
 \item The MPF software floating-point library allows the value of $p$ to be set arbitrarily.
 Our default configuration has
 $p=128$. On most 64-bit architectures, it represents
-  the exponent as a 64-bit signed number.  This provides an ample exponent range.
+  the exponent as a 64-bit signed number.  This provides an ample exponent range, giving a magnitude range of over $10^{\pm 10^{18}}$.
 \end{itemize}
 
 When converting a rational number $x$ into a floating-point encoding, its value must be rounded to a
-value $\round(x)$.  In doing so, it introduces a \emph{rounding
+value $\round(x)$.  In doing so, it can introduce a \emph{rounding
 error}.  
 Letting $\roundepsilon = 2^{-p}$, and assuming that
 the exponent range suffices to represent $x$,
 we can assume that
-$\aerror[\round(x), x] \leq \roundepsilon$.
+$\aerror[\round(x), x] \leq \roundepsilon$~\cite{knuth:fp:1981}.
 As examples, the double-precision representation has $\roundepsilon = 2^{-53} \approx 1.11 \times 10^{-16}$, while the 128-bit MPF format
-has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bound of $\digitprecision(\round(x), x)$ is around $15.95$ and $38.53$, respectively.
+has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bounds of $\digitprecision(\round(x), x)$ are around $15.95$ and $38.53$, respectively.
 
 Floating-point arithmetic is implemented in such a way that any
 operation effectively computes an exact result and then rounds it to
@@ -421,50 +421,51 @@ which we  refer to as having at most $t$ units of
 rounding error.
 
 As a third representation, the MPFI interval arithmetic library
-represent a contiguous ranges of numbers $[\xmin, \xmax]$, where
-$\xmin$ and $\xmax$ are floating-point numbers.  The endpoints of the
+supports operations on
+contiguous ranges of numbers $[\xmin, \xmax]$, where
+$\xmin$ and $\xmax$ are floating-point numbers~\cite{revol:rc:2005}.  The endpoints of the
 range are represented using the MPFR package, an extension of MPF to
-provide more control over rounding.  Arithmetic on intervals is performed
+provide more control over rounding~\cite{fousse:tms:2007}.  Arithmetic on intervals is performed
 in such a way that the result of any operation is an interval that
 spans the range of possible values of that operation applied to any
-combination of values spanned by the argument intervals.  The interval representation of $[\xmin, \xmax]$ is converted to
+combination of values spanned by the argument intervals~\cite{hickey:jacm:2001}.  The interval representation of $[\xmin, \xmax]$ is converted to
 a single value as
-the floating-point number closest to $(\xmin + \xmax)/2$.
+the floating-point number closest to its midpoint $(\xmin + \xmax)/2$.
 
 For interval $[\xmin, \xmax]$, we define the interval approximation error $\aerror([\xmin, \xmax])$ as
 \begin{eqnarray}
 \aerror([\xmin, \xmax]) & = & \left\{ \begin{array}{ll}
-  \frac{|\xmax - \xmin|}{\min(|\xmin|, |\xmax|)}  & 0 \not \in [\xmin, \xmax]\\[0.8em]
-  |\xmax - \xmin| &  0 \in [\xmin, \xmax]\\
+  \frac{\xmax - \xmin}{\min(|\xmin|, |\xmax|)}  & 0 \not \in [\xmin, \xmax]\\[0.8em]
+  \xmax - \xmin &  0 \in [\xmin, \xmax]\\
   \end{array} \right. \label{eqn:interval:error}
 \end{eqnarray}
 For any values $\approxx, x \in [\xmin, \xmax]$, we can see that
-$\aerror[\approxx, x] \leq \aerror(([\xmin, \xmax])$.
+$\aerror[\approxx, x] \leq \aerror([\xmin, \xmax])$.
 We then define the digit precision of the interval as:
 \begin{eqnarray}
-\digitprecision([\xmin, \xmax]) & = & \max(0, -\log_{10} \aerror([\xmin, \xmax]) \label{eqn:interval:digitprecision} 
+\digitprecision([\xmin, \xmax]) & = & \max[0, -\log_{10} \aerror([\xmin, \xmax])] \label{eqn:interval:digitprecision} 
 \end{eqnarray}
-This value will range from $0.0$ for a very large interval to $+\infty$ when the interval is tight with $\xmin = \xmax$.
+This value will range from $0.0$ for a very large interval, relative to the magnitudes of its endpoints, to $+\infty$ when the interval is tight with $\xmin = \xmax$.
 
 \section{Error Analysis: Nonnegative Weights}
 \label{sect:nonneg}
 
 Here we evaluate how rounding errors accumulate via a series of
 arithmetic operations when all arguments are nonnegative.
-That is, we assume the exact arguments $x$ and $y$ to each operation satisfy $x \geq 0$ and $y \geq 0$.
-Rounding never causes a result to be negated, and therefore, we can
+That is, we assume the exact arguments $x$ and $y$ for each operation satisfy $x \geq 0$ and $y \geq 0$.
+Rounding never causes a nonnegative number to become negative, and therefore we can
 consider the approximations $\approxx$ of  $x$ and $\approxy$ of $y$ to satisfy $\approxx \geq 0$ and $\approxy \geq 0$.
 In addition, none of the operations multiplication, addition, or division yield negative results when their arguments are nonnegative.
 We can therefore
 assume that all actual and approximate values under consideration will
 be nonnegative.
 
-Suppose for nonnegative values $s$ and $t$, we have
+Suppose for positive values $s$ and $t$, we have
 $\aerror[\approxx, x] \leq s\, \roundepsilon$ and
 $\aerror[\approxy, y] \leq t\, \roundepsilon$, respectively.
 Therefore
-$0 \leq (1-s\,\roundepsilon)\, x \leq \approxx \leq (1+s\,\roundepsilon)\, x$ and
-$0 \leq (1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
+$(1-s\,\roundepsilon)\, x \leq \approxx \leq (1+s\,\roundepsilon)\, x$ and
+$(1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
 
 
 \subsection{Multiplication}
@@ -473,8 +474,9 @@ When $\approxx$ and $\approxy$ are multiplied, let us impose the constraint that
 Their product will satisfy
 $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and our additional constraint gives
 $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t+1)\,\roundepsilon)$.
-A similar analysis gives
-$(x\cdot y) (1 - (s+t+1)\,\roundepsilon) \leq \approxx \cdot \approxy$, and therefore
+In the other direction, there product will satisfy
+$(x\cdot y) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxx \cdot \approxy$, and therefore
+$(x\cdot y) (1 - (s+t)\,\roundepsilon) \leq \approxx \cdot \approxy$.  These two bounds guarantee that
 $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
@@ -504,10 +506,11 @@ this implies that rescaling must use rational arithmetic to
 compute exact representations of $s(x)$, $w(x)/s(x)$, and
 $w(\obar{x})/s(x)$ for each variable $x$, so that only one unit of
 rounding error is introduced when representing each value $W(\lit)$.
-We also assume $W(\lit) \geq 0$.
 We can then bound the error of the computed value $W(\phi)$ as follows:
 \begin{lemma}
-  The algebraic evaluation of a decision-DNNF formula $\phi$ having $|\dependencyset(\phi)| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$ using floating-point arithmetic will yield an approximation $\approxW(\phi)$ satisfying
+  The algebraic evaluation of a decision-DNNF formula $\phi$  having $|\dependencyset(\phi)| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$ using floating-point arithmetic,
+  and where all literals $\ell$ satisfy $W(\lit) \geq 0$
+  will yield an approximation $\approxW(\phi)$ satisfying
   $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.
   \label{lemma:approx:pos}
 \end{lemma}
@@ -526,7 +529,7 @@ $\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$, which is within the error
   \item
 We can therefore assume by induction that 
  $\aerror[\approxW(\phi_1), W(\phi_1)] \leq (4 k-2) \,\roundepsilon$
-  and $\aerror[\approxW(\phi_2), W(\phi_2)] \leq (4 (n-k)-2) \,\roundepsilon$.  Their product, after rounding
+  and also that $\aerror[\approxW(\phi_2), W(\phi_2)] \leq (4 (n-k)-2) \,\roundepsilon$.  Their product, after rounding
   will satisfy 
 $\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) + (4 (n-k) -2) + 2]\,\roundepsilon = (4n-2) \,\roundepsilon$.
 \end{enumerate}
@@ -547,7 +550,7 @@ $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.
 Observe that this proof relies on the decomposability of the
 conjunctions to bound the error induced by multiplication operations.
 It relies on the decision structure of the formula only to bound the
-depth of the additions.
+depth of the additions.  It does not rely on the formula being deterministic.
 
 In the event of rescaling, we must also consider the error introduced
 when computing the product $P = \prod_{x\in\varset} s(x)$.  We assume that
@@ -574,7 +577,7 @@ Combining these two results, we can state the following result about weighted mo
 \begin{theorem}
   \label{thm:approx:pos}
 Computing the weighted model count of a
-a decision-DNNF formula $\phi$ having $|\dependencyset(\phi)| = n$, using floating-point arithmetic with a $p$-bit fraction, such that $\log_2 n \leq p/2-1$
+a decision-DNNF formula $\phi$, where all literal weights are nonnegative, with $|\dependencyset(\phi)| = n$, and using floating-point arithmetic with a $p$-bit fraction, such that $\log_2 n \leq p/2-1$
 will yield an approximation $\approxw(\phi)$ to the true weighted count $w(\phi)$, such that
 \begin{eqnarray}
 \digitprecision(\approxw(\phi), w(\phi)) & \geq & p\,\log_{10} 2 - c - \log_{10} n \label{eqn:precision:wmc}
@@ -582,21 +585,33 @@ will yield an approximation $\approxw(\phi)$ to the true weighted count $w(\phi)
 where $c = \log_{10} 7$ when rescaling is required and $c = \log_{10} 4$ when no rescaling is required
 \end{theorem}
 
-Let us examine the practical implications of this theorem.  In particular, assume we use the MPF library with $p=128$.
-Only a single formula from the 2024 weighted model competition had over one million variables, and so we can assume a
-bound of $n \leq 10^7$.  The conditions for Equation~\ref{eqn:precision:wmc} to hold will readily be satisfied, since
-$\log_2 n \leq 23.3$ and $p/2-1 = 63$.  We will therefore have 
-$\digitprecision(\approxw(\phi), w(\phi)) \geq 38.53 - 0.85 - 7 = 30.68$.  That is, even though the floating-point format provides only around 38 digits of precision for a single rounding,
-computing the weighted model count of a decision-DNNF formula over 10 million variables, and using rescaling, is still guaranteed to yield a result with 30 digits of precision.
+Let us examine the practical implications of this theorem.  In
+particular, assume we use the MPF library with $p=128$.  Only a single
+formula from the 2024 weighted model competition had over one million
+variables, and so we can assume a bound of $n \leq 10^7$.  The
+conditions for Equation~\ref{eqn:precision:wmc} to hold will readily
+be satisfied, since $\log_2 n \leq 23.3$ and $p/2-1 = 63$.  We will
+therefore have $\digitprecision(\approxw(\phi), w(\phi)) \geq 38.53 -
+0.85 - 7 = 30.68$.  That is, even though the floating-point format
+provides only around 38 digits of precision for a single rounding,
+computing the weighted model count of a decision-DNNF formula over 10
+million variables, and using rescaling, is still guaranteed to yield a
+result with 30 digits of precision.
+
+For the remainder of this paper, we set a target precision of 30 decimal digits for
+weighted model counting.  This number is chosen because 1) it should be
+sufficient for most applications, and 2) it
+is achievable, at least for nonnegative weights, with a standard software floating-point package.
 
 In scaling to larger formulas, each time
 the number of variables is increased by a factor of 10, at most one
 digit of precision is lost.  For example, we could scale to $n=10^{12}$, while keeping $p=128$, and still have over 25 digits of precision.  That is over nine digits greater than the precision
-provided by the IEEE double-precision representation.
+provided by the IEEE double-precision representation.  If that precision is not sufficient, we could increase $p$ to $192$ and be guaranteed a decimal precision of over $44$.
 Importantly, this bound holds regardless of the formula size, as well as for any weight assignment, 
 as long as all weights are nonnegative.
 
 \subsection{Allowing non-decision disjunctions}
+\label{sect:ddnnf}
 
 Our previous requirement that each disjunction have a decision
 variable had the effect of limiting the depth of the sum operations in
@@ -605,19 +620,38 @@ exponential.  For example, consider a d-DNNF formula encoding a
 tautology over $n$ variables, constructed as follows.  For each of the
 $2^n$ possible assignment $\assign$, we use conjunction operations to
 encode $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
-use a sequence of $2^n-1$ disjunctions to combine these products to
-form $\phi$.  The accumulated error from the disjunction operations could grow
+use a linear sequence of $2^n-1$ disjunctions to combine these products to
+form $\phi$.  The accumulated error from the resulting summation operations could grow
 exponentially with $n$.  Of course, such a formula is completely
 impractical for even modest values of $n$, but this construct
-demonstrates that, without further restriction on the structure of a
+demonstrates that, without further restrictions on the structure of a
 d-DNNF formula, we cannot guarantee a reasonable bound on the error incurred by an algebraic evaluation.
 
-The only
-cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
-instances of a decision variable or its complement are removed by projection.
-In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
-but we must include all variables, included those projected away, in the
-variable count $n$.
+%% The only
+%% cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
+%% instances of a decision variable or its negation are removed by projection~\cite{derkinderen:ictai:2024}.
+%% In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
+%% but we must include all variables, included those projected away, in the
+%% variable count $n$.
+
+Rather than trying to find a general bound for all d-DNNF formulas, we
+can evaluate each formula individually to estimate the maximum
+rounding error that might be encountered in its algebraic evaluation.  That is,
+define the integer-valued error measure $e(\phi)$ for formula $\phi$
+recursively.  For a literal, $\lit$, let $e(\lit) = 1$.
+For a subformula of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$.
+For a subformula of the form $\phi'= \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
+Letting $e = e(\phi)$, we can then first perform the test $\log_2 e \leq p/2$.  With that condition satisfied,
+we can ensure that an algebraic evaluation of $\phi$ will yield an approximation $\approxW$, such that
+$\digitprecision(\approxW, W) \geq p \log_{10} 2 - \log_{10} e$.
+
+For example, with our tautology construction, we would have $e = 2\,n
++ 2^{n-1} -3$, and that would indicate that a floating-point
+evaluation is not feasible.  On the other hand, if we were to
+restructure the disjunctions into a balanced binary tree, we would get
+$e = 2\,n + n = 3\,n$, indicating that a floating-point evaluation would
+be viable.
+
 
 \subsection{Experimental Validation}
 
@@ -657,10 +691,12 @@ We set as a target to have digit precisions of at least 30.0.}
 \end{figure}
 
 To experimentally test the bound of Equation~\ref{eqn:precision:wmc},
-we evaluated 200 benchmark formulas from public and private portions
-of the 2024 Weighted Model Counting Competition.  We attempted to
-convert these into decision-DNNF using version 2 of the the D4
-knowledge compiler.  We were able to compile 100 of them with a time
+we evaluated 200 benchmark formulas from the public and private portions
+of the 2024 Weighted Model Counting Competition.\footnote{\url{https://mccompetition.org/2024/mc_description.html}}  We attempted to
+convert these into decision-DNNF using version 2 of the D4
+knowledge compiler.\footnote{
+Available at \url{https://github.com/crillab/d4v2}}
+We were able to compile 100 of them with a time
 limit on 3600 minutes on a machine with 64~GB of random-access memory.
 We define a problem \emph{instance} to be a combination of a formula
 plus a weight assignment for all of its literals.
@@ -669,13 +705,22 @@ For each of these formulas, we then generated two different collections of insta
 \begin{itemize}
 \item \textsf{Uniform$+$}: For each variable $x$, weight $w(x)$ is represented by a 9-digit decimal number selected uniformly in the range
   $[10^{-9},\,1-10^{-9}]$. The weight for $\obar{x}$ is then set to
-  $w(\obar{x}) = 1-w(x)$.  Such a weight assignment is typical of those used in recent weighted model counting competitions.
+  $w(\obar{x}) = 1-w(x)$.  Such a weight assignment is typical of those used in recent weighted model counting competitions~\cite{fichte:jea:2020}.
 \item \textsf{Exponential$+$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$
   are drawn independently from an exponential distribution in the range
-  $[10^{-9},\,10^{+9})$.  Each weight is represented by a decimal number with at most 9 digits to the left of the decimal point, and at most 9 digits to the right.
+  $[10^{-9},\,10^{+9}]$.  Each weight is represented by a decimal number with 9 digits to the right of the decimal point.
 \end{itemize}
+
+By comparison, Dilkas~\cite{dilkas:cpaior:2023} devised a number
+of benchmarks problems for evaluating weighted model counters, but his
+focus was more on the formula structure than on the weight
+assignment.  The assignments he generated all had weights represented
+as two-digit decimal numbers between $0$ and $1$, and such that $w(x)
++ w(\obar{x}) = 1$ for all variables $x$.  His weight
+assignments should be easier to handle numerically than ours.
+
 For each instance, we evaluated
-the weighted count using MPF to get an approximate weight $\approxw$ and
+the weighted count using MPF (with $p=128$) to get an approximate weight $\approxw$ and
 using MPQ to get an exact weight $w$.  We then evaluated the digit precision according to Equation~\ref{eqn:digitprecision}.   Our implementation used rescaling for all variables
 with $w(x) + w(\obar{x}) \not \in \{0, 1\}$.
 Although not required for the instances used in this evaluation,
@@ -696,6 +741,7 @@ represents one combination of formula and weight selection method and is placed
 along the X-axis according to the number of variables
 and on the Y-axis according to the computed digit precision.
 The plot also shows the precision bound of Equation~\ref{eqn:precision:wmc} for $c=\log_{10} 7$.
+Results are shown for 98 of the 100 formulas, since the evaluation ran out of memory when using rational arithmetic for two of the formulas.
 
 As can
 be expected, all data points stay above the precision bound.  Indeed,
@@ -703,7 +749,7 @@ most exceed the bound by several decimal digits.  Our bound assumes
 that rounding either consistently decreases or consistently
 increases each computed result by a single unit of rounding error.  In
 practice, rounding goes in both directions, and
-therefore the computed results stay closer to the true value.
+therefore the computed results stay closer to the true values.
 
 The optimized products, on the other hand, demonstrate that particular
 combinations of formula and weight assignment can come within 2 decimal digits of the
@@ -715,14 +761,14 @@ precision bound and to track its general trend.
 The analysis of Section~\ref{sect:nonneg} no longer holds when
 some literals have negative weights.  With a floating-point
 representation, summing combinations of negative and nonnegative
-values can cause \emph{cancellation}, where arbitary levels of
+values can cause \emph{cancellation}, where arbitrary levels of
 precision are lost.  Consider, for example, the computation
 $s + T - T$, where $s$ and $T$ are nonnegative, but $s \ll T$.  Using
 bounded-precision arithmetic, evaluating the sum as $s + (T - T)$ will yield a value
 that is very close to $s$.
 Evaluating it as $(s + T) - T$, however, can yield $0$ or some other value that bears little relation to $s$.
 
-Cancellation can arise when evaluating decision-DNNF formulas to such a degree that no bounded precision $p$ that grows sublinearly with $n$ will suffice.
+Cancellation can arise when evaluating decision-DNNF formulas to such a degree that no precision $p$ that grows sublinearly with $n$ will suffice.
 As an example, consider the following smooth, decision-DNNF formula over $n+1$ variables:
 \begin{eqnarray}
 \phi_n  & = & z \land \left[\bigwedge_{i = 1}^{n} \obar{x}_i \; \lor \; \bigwedge_{i = 1}^{n} x_i\right] \quad \lor \quad \obar{z} \land \left [\bigwedge_{i = 1}^{n} x_i\right] \label{eqn:max:precision}
@@ -740,7 +786,7 @@ Computing $w(\phi_n)$  evaluates the sum $(s + T) - T$, where
 $s = 10^{-9n}$ and $T = 10^{+9n}$.  Avoiding cancellation requires using a floating-point representation with a fraction of at least
 $p = n \cdot 18 \cdot \log_2 10 \approx 59.79 \, n$ bits.
 On the other hand, using MPQ, $w(\phi_{10^7})$ can be computed exactly in around 35 seconds, even though the final step requires a total of 1.87~gigabytes to store the arguments
-$s+T$ and $-T$, and the result $s$.
+$s+T$ and $-T$, and the result $s$.  In general, however, rational arithmetic can be very time and memory intensive.
 
 
 \begin{figure}
@@ -774,20 +820,25 @@ $s+T$ and $-T$, and the result $s$.
 \end{tikzpicture}
 } % centering
 \caption{Digit Precision Achieved by MPF for Benchmarks with Negative Weights.  There is no guaranteed bound for precision, but many cases remain above the nonnegative weight bound.
-The Limits~$\pm$ weight assignment was designed to maximize precision loss.}
+The Limits$\pm$ weight assignment was designed to maximize precision loss.}
 \label{fig:posneg:mpf}
 \end{figure}
 
-Interestingly, however, using MPF with a fixed precision of $p=128$ does surprisingly well on many formulas, even in the presence of negative weights.
-In Figure~\ref{fig:posneg:mpf}, we see a similar plot to that of Figure~\ref{fig:pos:mpf}.  The first two collections of weight assignments are simple generalizations of those used earlier:
+Contrary to the example of
+Equation~\ref{eqn:max:precision},
+floating-point arithmetic performs surprisingly well for
+many real-life
+situations, even in the presence of negative weights.
+In Figure~\ref{fig:posneg:mpf}, we see a similar plot to that of Figure~\ref{fig:pos:mpf} for
+three collections of weight assignments having negative weights.  The first two collections are generalizations of those used earlier:
 \begin{itemize}
 \item \textsf{Uniform$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes drawn independently
-from a uniform distribution in the range  $[10^{-9},\,1-10^{-9}]$.  Each is negated with probability $0.5$.
+from a uniform distribution in the range  $[10^{-9},\,1-10^{-9}]$ and are represented as 9-digit decimal numbers.  Each is negated with probability $0.5$.
 \item \textsf{Exponential$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes
-  drawn independently from an exponential distribution in the range $[10^{-9},\,10^{+9})$.  Each is negated with probability $0.5$.
+  drawn independently from an exponential distribution in the range $[10^{-9},\,10^{+9}]$ and are represented with 9-digits to the right of the decimal point.  Each is negated with probability $0.5$.
 \end{itemize}
 As can be see for these plots, the results mostly stay above the precision bound of Equation~\ref{eqn:digitprecision},
-even though that bound does not apply.  All stay above the target precision of $30.0$.
+even though this bound is not guaranteed to hold.  All stay above the target precision of $30.0$.
 
 On deeper inspection, we can see that setting up the conditions for a
 cancellation of the form $(s + T) - T'$, where $T \approx T'$, require
@@ -797,45 +848,30 @@ $T'$ such that $T \approx T'$.  A uniform distribution has neither of
 these properties.  An exponential distribution has a large dynamic
 range, but the computed values tend to be very heterogenous.
 
-To create a weight assignment that has more chance of cancellation, we devised the following asignment:
+To create a weight assignment that has more chance of cancellation, we devised the following class of assignments:
 \begin{itemize}
-\item\textsf{Limits$\pm$}:  Each weight $w(x)$ and $w(\obar{x})$ has a magnitude of either $10^{-9}$ or $10^{+9}$, and they are each set negative with probability $0.5$.
+\item\textsf{Limits$\pm$}:  Each weight $w(x)$ and $w(\obar{x})$ has a magnitude, chosen at random, of either $10^{-9}$ or $10^{+9}$, and they are each set negative with probability $0.5$.
   However, we exclude assignments with $w(x) + w(\obar{x}) = 0$.
 \end{itemize}
 The idea here is to give large dynamic ranges plus a high degree of
 homogeneity.  The plots for this assignment in
-Figure~\ref{fig:posneg:mpf} demonstrate that it achieves the desired
-effect.  Although over one-half of the assignments yield computed
-values that remain above the precision bound, many have digit
-precision below the target of $30.0$.  We can also see how our choice
-of weights leads to two bands of low precision: those where values $s$ and
-$T$ are encountered that differ by a factor of around $10^{18}$, and those where they
-differ by a factor of around $10^{36}$.
+Figure~\ref{fig:posneg:mpf} demonstrate that this strategy achieves
+the desired effect, with many results falling below the target precision of $30.0$.
+
+The plot presents a somewhat pessimistic
+perspective for these instances, since it only shows the minimum
+precision achieved out of five instances for each formula.  Considering all 490 instances
+for the 98 formulas evaluated, 221 (45\%) yielded results above the
+target precision of $30.0$.  We can also see how our choice of weights
+leads to two bands of low precision.  129 instances (26\%) had digit
+precisions in a band between $19.0$ and $23.3$.  These were ones where
+the evaluation encountered values of $s$ and $T$ that
+differ by a factor of around $10^{18}$.  The remaining 140 instances
+(29\%) had digit precisions below $5.0$.  These were ones where the
+encountered values of $s$ and $T$ differed by a factor of around
+ $10^{36}$.
 
 \section{Reliable and Efficient Weight Computation}
-\label{sect:hybrid}
-
-Our results with the formula of Equation~\ref{eqn:max:precision} and
-with the \textsf{Limits$\pm$} weight assignment show that simply
-computing weights with fixed-precision floating-point arithmetic can
-yield inaccurate results.  Even worse, such an approach cannot
-detect whether the computed result provides any level of accuracy.
-
-One way to achieve accuracy is to perform all computations with
-rational arithmetic.  Unfortunately, this can be very time consuming,
-and it provides a higher level of accuracy than is required for most
-applications.  Furthermore, the memory required can exceed
-the resources available.
-
-A second strategy is to use floating point arithmetic for problems
-where all weights are nonnegative and rational arithmetic otherwise.
-This would provide guaranteed accuracy, but it can still be resource
-intensive.  On the other hand, the example of
-Equation~\ref{eqn:max:precision} shows us that some problems can only
-be solved with rational arithmetic, and  therefore we must be prepared to fall back on this.
-
-
-
 
 \begin{figure}
 \centering{%
@@ -873,7 +909,202 @@ incorrectly predict a precision less than the target of 30.0.}
 \label{fig:mpfi}
 \end{figure}
 
-\begin{figure}
+
+We can see from Figure~\ref{fig:posneg:mpf} that floating-point
+evaluations generate accurate results in many cases, but we must be
+able to discern when those occur.  Given that capability, we can
+devise a strategy to use progressively more costly evaluation methods
+to reliably compute weighted counts.
+
+\subsection{Interval Computation applied to weighted model counting}
+
+Interval arithmetic provides a mechanism for using the approximate
+computations of floating-point arithmetic, while providing a
+guaranteed precision for the result.  It will only be beneficial,
+however, if the interval bounds remain tight enough that the digit
+precision bound of Equation~\ref{eqn:interval:digitprecision} meets
+our target digit precision.  Our target bound of 30 seems fairly
+aggressive in this respect: the width of the interval $\xmax-\xmin$
+must be over 30 orders of magnitude smaller than the magnitudes of
+$\xmin$ and $\xmax$.  Even the instances with only nonnegative weights
+had digit precisions as low as 34.5, and so there is not much
+room for further degradation.
+
+Figure~\ref{fig:mpfi} shows the result of evaluating 100 formulas for
+the three weight assignment collections containing negative weights,
+with five instances per collection for each formula.  
+The evaluation used
+MPFI (with $p=128$) to get an estimated digit precision and
+a nominal weight (the midpoint of the interval), along with MPQ to get
+the exact weight.  The actual precision was then computed based on the
+nominal and actual weights.  The evaluations using MPQ ran out of
+memory for two of the formulas, and hence the plot shows 1470
+data points.  The X-axis shows estimated precision, while the Y-axis
+shows the actual precision, with the diagonal line indicating when the
+two precisions are equal.  As is expected, every point lies above this
+line---the interval computation never overestimated the digit
+precision.
+
+Overall, we can see that the interval estimates were quite reliable,
+especially for predicting which computed weights exceeded the target
+threshold of 30.
+The
+interval computations determined that 1196 instances were
+above the target threshold: 490 from \textsf{Exponential$\pm$}, 487 from
+\textsf{Uniform$\pm$}, and 219 from \textsf{Limits$\pm$}.
+Points lying in the blue rectangle
+indicate instances where the estimate was overly pessimistic: they
+estimated a target precision below 30, while the actual precision was
+above.  This occurred for only 36 of the 1470 instances ($2.4\%$).  Of
+these, 3 were from the \textsf{Uniform$\pm$} collection, while 33 were
+from the \textsf{Limits$\pm$} collection.  
+
+The interval analysis captures the general trend shown in
+Figure~\ref{fig:posneg:mpf} that, even in the presence of negative
+weights, the floating-point evaluations only encounter major
+cancellation errors for the benchmarks designed explicitly to maximize
+this effect.  This gives us hope that we can use interval computation
+to handle a large portion of instances having negative weights.
+
+\subsection{A Hybrid Approach}
+\label{sect:hybrid}
+
+We are now ready to combine our three approaches: floating-point
+arithmetic, interval computation, and rational arithmetic into a
+single, hybrid approach.  We devised the following scheme, and we can
+measure its success based on 2500 instances---100 formulas, each with five collections of five instances.
+\begin{enumerate}
+\item For instances where all weights are nonnegative, use MPF,
+  relying on the bound of Equation~\ref{eqn:precision:wmc} to
+  guarantee sufficient precision.  This evaluation succeeded for all 1000 such
+  instances, including 20 for which the evaluation with rational arithmetic failed.
+\item For instances with negative weights, we perform a sequence of evaluations having successively greater cost:
+\begin{enumerate}
+\item 
+  Use MPFI with $p=128$.  If the estimated precision
+  bound meets the target bound, then we are done.  This succeeded for
+  1222 of the 1500 instances evaluated, including 26 for which the evaluation with rational arithmetic failed.
+\item For instances where the estimated precision does not meet the target, perform a second run with MPFI, but with $p=256$.  This succeeded
+  for 168 of the 278 instances evaluated, including 4 for which the evaluation with rational arithmetic failed.
+\item When the second attempt at interval computation fails, perform
+  an evaluation using MPQ to perform rational arithmetic.  This
+  succeeded for the remaining 110 instances.
+\end{enumerate}
+\end{enumerate}
+Overall this strategy succeeded for all 2500 instances.
+
+
+\begin{table}
+  \caption{Performance Comparison of Different Implementation Strategies}
+  \label{tab:compare}
+  \centering{
+  \begin{tabular}{llrrrrrr}
+    \toprule
+    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined} & \multicolumn{1}{c}{Avg (s)}\\
+    \midrule
+    \input{method_table}
+    \\[-1em]
+   \bottomrule
+  \end{tabular}
+  } % Centering
+\end{table}
+
+Table~\ref{tab:compare} summarizes the total time taken by the
+different levels of evaluation and presents a comparison of four
+different evaluation strategies.  We can see that if all 2500
+instances were evaluated with MPQ, we would complete 2450 of them in a
+total of $70.91$ hours, for an average time of $104.2$ seconds per
+instance.  Using MPF for the instances with nonnegative weights would
+enable completing an additional 20 instances and would drop the total
+time to $45.4$ hours and the average time per instance to $66.2$ seconds.
+Using MPF when possible has a clear benefit.  Using one pass with MPFI
+(for $p=128$) for the instances with negative weights and then using
+MPQ for those that do not meet the target precision would complete all
+but 4 instances and drop the total time to $20.62$ hours and the
+average time per instance to $29.7$ seconds.  Although this approach yields
+an increased time when MPQ is ultimately used, this is more than
+offset by the many cases that were successfully evaluated using
+MPFI\@.  Finally, our full hybrid approach completes all 2500
+instances in a total of $17.74$ hours with an average time per instance of
+$25.5$ seconds.  The performance gain with the second run of MPFI is
+small, but being able to complete all instances is a significant
+achievement.
+Appendix~\ref{app:performance} provides more details on the performance of the hybrid strategy.
+
+Of course, finding an optimal strategy depends heavily on the formulas
+to be evaluated and the weight assignments.  Overall, however, our
+approach of using MPF for assignments with all weights nonnegative and
+some combination of MPFI and MPQ for assignments with negative weights
+should yield the best combination of completion percentage and
+performance, while guaranteeing a desired precision level.
+
+\section{Conclusions}
+\label{sect:conclusion}
+
+For most applications, using floating-point arithmetic can introduce
+significant errors due to rounding.  The result may equal the correct
+value, be slightly off due to minor rounding errors, or be completely
+incorrect due catastrophic cancellations.  More troubling, there is no
+reliable way to discern what level of error has been introduced.
+
+This
+paper shows that such uncertainty can be avoided for weighted model
+counting.  When all weights are nonnegative, results can be computed
+using floating point with guaranteed precision bounds, where the
+conditions for these bounds to hold are not difficult to meet.  When some weights
+are negative, the program can attempt one or more layers of interval
+computation, and these should handle a large fraction of the instances.  Ultimately,
+the program may need to use full rational arithmetic, but the number
+of such cases should be small.
+
+Several extensions of this work bear investigation.  Going beyond
+d-DNNF formulas, it would be useful to apply these computation methods when computing weighted model counting based on 
+Sentential Decision Diagrams (SDDs)~\cite{darwiche:ijcai:2011}.  These
+generalize BDDs such that each node can have $k$ pairs of subformulas
+(each subformula being a node in the SDD) of the form $p_i, s_i$,
+where the set of variables occurring in each $p_i$ is disjoint from  the set of those
+occurring in the corresponding $s_i$, and where the models of $p_i$ and
+$p_j$ are disjoint for all $i$ and $j$ such that $1 \leq i < j \leq
+k$.  An SDD can be transformed into a d-DNNF formula by expanding each
+node as $k$ conjunction operations of the form $p_i \land s_i$ and to
+use $k-1$ disjunction operations to combine their results.  For nonnegative
+weight assignments, we could compute the error bound for the formula
+as described in Section~\ref{sect:ddnnf} and then set a suitable
+floating-point bit precision $p$ to achieve the desired digit precision.  In performing the
+conversion from SDDs to d-DNNF, the disjunctions for the nodes should
+structured as balanced binary trees to minimize the rounding errors
+introduced by the corresponding addition operations.  For weight
+assignments with negative weights, we could proceed with the same
+layered approach as for decision-DNNF formulas.
+
+Kimmig, Van~den~Broeck and De~Raedt presented a generalization of
+weighted model counting they call \emph{algebraic model
+counting}~\cite{kimmig:jal:2017}, that can solve a variety of
+problems by replacing the ring operations on rational numbers with
+operations on different semirings.  Of these, the \emph{gradient}
+semiring~\cite{eisner:acl:2002} is intriguing from our perspective, in that the evaluation requires adding and multiplying both positive and negative numbers.
+This semiring allows the computation
+of partial derivatives of the weighted count of Equation~\ref{eqn:wmc}
+with respect to the weights assigned to one or more variable.
+Most applications of this computation have probabilities for the
+weights, where variable $x$ has probability $P(x)$ of being assigned $1$, and
+so the weighted model count of a formula gives the probability that it will
+evaluate to $1$.  We therefore expect this application to have numeric
+values similar to those encountered with the $\textsf{Uniform$\pm$}$
+collection of weight assignments, and therefore evaluations based on interval computations will work well.
+
+
+
+\newpage
+\bibliography{references}
+
+\newpage
+\appendix
+
+\section{Analysis of Evaluation Performance}
+\label{app:performance}
+
+\begin{figure}[t]
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
   \begin{axis}[mark options={scale=1.0},height=10cm,width=10cm,grid=both, grid style={black!10},
@@ -907,35 +1138,41 @@ incorrectly predict a precision less than the target of 30.0.}
  \end{axis}
 \end{tikzpicture}
 } % centering
-\caption{Runtime for hybrid method vs.~for MPQ.  When the value can be computed with MPF or MPFI, the runtime is signficantly better than using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
+\caption{Runtime for hybrid method vs.~for MPQ.  When the value can be computed with MPF or MPFI, the runtime is significantly better than using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
 \label{fig:runtime}
 \end{figure}
 
-\subsection{Comparing Implementation Strategies}
+Figure~\ref{fig:runtime} compares the runtimes (Y-axis) for the hybrid
+strategy versus that for performing an evaluation using rational
+arithmetic (X-axis) for the 2450 instances that succeeded in the
+latter case.  These are categorized by the method by which the hybrid
+method completed.  The diagonal lines show the relative time for the
+hybrid approach versus rational arithmetic.
 
-\begin{table}
-  \caption{Performance Comparision of Different Implementation Strategies}
-  \label{tab:compare}
-  \centering{
-  \begin{tabular}{llrrrrrr}
-    \toprule
-    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined} & \multicolumn{1}{c}{Avg (s)}\\
-    \midrule
-    \input{method_table}
-    \\[-1em]
-   \bottomrule
-  \end{tabular}
-  } % Centering
-\end{table}
+Of the 2450 instances, the 980 with nonnegative weights could be evaluated using MPF\@.  Many of these also had very small runtimes, even for MPQ\@.
+Considering just the 670 instances for which MPQ required more than $1.0$ seconds, we find that MPF ran between $4.8$ and $112.9$ times faster than MPQ, with an average of $23.3$ and a median of $18.6$.  This shows a clear performance benefit in using MPF when all weights are nonnegative.
 
-\section{Implementation Techniques}
-\label{sect:techniques}
+Of the 1470 instances containing negative weights, 1196 ($81.4\%$)
+were successfully evaluated using MPFI with $p=128$.  Considering the
+825 instances for which MPQ required more than $1.0$ seconds, we find
+that MPFI ran between $2.0$ and $7.1$ times faster, with an average of
+$8.8$ and a median of $7.1$.  Again, this level of evaluation had a
+clear benefit for performance.  An additional 164 instances
+($11.1\%$) were successfully evaluated using MPFI with $p=256$.  Of
+the 96 instances for which MPQ required more than $1.0$ seconds, we
+find that the combined time for two runs with MPFI was, in the worst
+case, $1.04$ times higher than just running MPQ\@.  Overall, however,
+the combination ran faster by as much as $9.8\times$, with an average
+of $3.1$ and a median of $2.6$.  Again, using this level of evaluation
+proved worthwhile.  Finally, 110 instances ($7.5\%$) required an
+evaluation using MPQ\@.  In these cases, the hybrid runtime was
+greater than that for MPQ alone, since the program also performed two
+evaluations using MPFI\@.  Of the 82 instances for which MPQ required
+more than $1.0$ seconds, we find that the hybrid approach ran between
+$1.1$ and $1.7$ times slower, with an average and a median of $1.2$.
+Fortunately, this performance penalty was more than offset by the gains achieved by the less costly evaluation methods.
 
-\section{Conclusions}
-\label{sect:conclusion}
 
-\newpage
-\bibliography{references}
 
 \end{document}
 
