@@ -396,10 +396,16 @@ As examples, consider two different floating-point formats:
 \item The IEEE~754 double-precision format uses a slightly different representation, but it maps to the notation of Equation~\ref{eqn:floating-point} with $p=53$ and an exponent range of
   $-1021 \leq e \leq 1024~\cite{overton:siam:2001}$.  Unfortunately, the small exponent range (giving a magnitude range for the numbers of around $10^{\pm 308}$) limits the suitability of
   this representation for weighted model counting.
-\item The MPF software floating-point library allows the value of $p$ to be set arbitrarily.
-Our default configuration has
-$p=128$. On most 64-bit architectures, it represents
-  the exponent as a 64-bit signed number.  This provides an ample exponent range, giving a magnitude range of over $10^{\pm 10^{18}}$.
+\item The MPF software floating-point library allows the value of $p$
+  to be set arbitrarily.  Our default configuration has $p=128$. On
+  most 64-bit architectures, it represents the exponent as a 64-bit
+  signed number.  This provides an ample exponent range, giving a
+  magnitude range of over $10^{\pm 10^{18}}$.  For example, consider a
+  tautological formula over $n$ variables where every literal has
+  weight $w$.  The the weighted count for the formula would be
+  $2^n\cdot w^n = (2w)^n$.  Let $w = 10^{10}$ and $n = 10^{12}$, values that are far larger than are likely to be encountered in practice.  Then
+  the weight of the formula would be $(2 \times 10^{10})^{10^{12}}
+  \approx 10^{10^{12.15}}$.
 \end{itemize}
 
 When converting a rational number $x$ into a floating-point encoding, its value must be rounded to a
@@ -995,12 +1001,16 @@ Overall this strategy succeeded for all 2500 instances.
 
 
 \begin{table}
-  \caption{Performance Comparison of Different Implementation Strategies}
+  \caption{Performance Comparison of Different Implementation Strategies.  Run entries of the form $S$+$F$ indicate that $S$ runs
+  were successful and $F$ runs either ran out of memory or failed to meet the target precision.}
   \label{tab:compare}
   \centering{
-  \begin{tabular}{llrrrrrr}
+%  \begin{tabular}{llrrrrrr}
+  \begin{tabular}{llrrrrr}
     \toprule
-    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined} & \multicolumn{1}{c}{Avg (s)}\\
+    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined}
+    % & \multicolumn{1}{c}{Avg (s)}
+    \\
     \midrule
     \input{method_table}
     \\[-1em]
@@ -1013,21 +1023,21 @@ Table~\ref{tab:compare} summarizes the total time taken by the
 different levels of evaluation and presents a comparison of four
 different evaluation strategies.  We can see that if all 2500
 instances were evaluated with MPQ, we would complete 2450 of them in a
-total of $70.91$ hours, for an average time of $104.2$ seconds per
+total of $93.1$ hours, including over $22$ hours for failed runs of MPQ, for an average time of $134.4$ seconds per
 instance.  Using MPF for the instances with nonnegative weights would
 enable completing an additional 20 instances and would drop the total
-time to $45.4$ hours and the average time per instance to $66.2$ seconds.
+time to $55.97$ hours and the average time per instance to $84.7$ seconds.
 Using MPF when possible has a clear benefit.  Using one pass with MPFI
 (for $p=128$) for the instances with negative weights and then using
 MPQ for those that do not meet the target precision would complete all
-but 4 instances and drop the total time to $20.62$ hours and the
-average time per instance to $29.7$ seconds.  Although this approach yields
+but 4 instances and drop the total time to $22.42$ hours and the
+average time per instance to $32.3$ seconds.  Although this approach yields
 an increased time when MPQ is ultimately used, this is more than
 offset by the many cases that were successfully evaluated using
 MPFI\@.  Finally, our full hybrid approach completes all 2500
 instances in a total of $17.74$ hours with an average time per instance of
 $25.5$ seconds.  The performance gain with the second run of MPFI is
-small, but being able to complete all instances is a significant
+not dramatic, but being able to complete all instances is a significant
 achievement.
 Appendix~\ref{app:performance} provides more details on the performance of the hybrid strategy.
 
