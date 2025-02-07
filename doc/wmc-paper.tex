@@ -488,17 +488,19 @@ $(1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
 \subsection{Multiplication}
 
 When $\approxx$ and $\approxy$ are multiplied, let us impose the constraint that $s\,t \leq 1/\roundepsilon$.
-Their product will satisfy
-$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and our additional constraint gives
+The product $\approxx \cdot \approxy$  satisfies
+$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
+giving
 $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t+1)\,\roundepsilon)$.
-In the other direction, there product will satisfy
-$(x\cdot y) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxx \cdot \approxy$, and therefore
+In the other direction, $\approxx \cdot \approxy$ satisfies
+$(x\cdot y) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxx \cdot \approxy$.  We can drop the term
+$s\,t\,\roundepsilon^2$ to give
 $(x\cdot y) (1 - (s+t)\,\roundepsilon) \leq \approxx \cdot \approxy$.  These two bounds guarantee that
 $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
 
-Thus, for suitable values of $s$, $t$, and $\roundepsilon$,
+Thus, forvalues of $s$, $t$, and $\roundepsilon$ satisfying our additional constraint,
 a multiplication operation, at most, propagates the errors of its arguments as their sum and adds two units of rounding error.
 
 \subsection{Addition}
