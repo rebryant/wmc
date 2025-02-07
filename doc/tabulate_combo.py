@@ -151,6 +151,15 @@ def tabulate(target_method, label):
                 time[method_mpfi] += instance.mpfi_seconds
                 total_count += 1
                 total_time += instance.mpfi_seconds
+            elif instance.method == method_mpfi2:
+                count[method_mpfi] += 1
+                time[method_mpfi] += instance.mpfi_seconds
+                total_time += instance.mpfi_seconds
+                if instance.mpq_seconds is not None:
+                    count[method_mpq] += 1
+                    time[method_mpq] += instance.mpq_seconds
+                    total_count += 1
+                    total_time += instance.mpq_seconds
             elif instance.mpq_seconds is not None:
                 count[method_mpfi] += 1
                 time[method_mpfi] += instance.mpfi_seconds
