@@ -527,7 +527,9 @@ $w(\obar{x})/s(x)$ for each variable $x$, so that only one unit of
 rounding error is introduced when representing each value $W(\lit)$.
 We can then bound the error of the computed value $W(\phi)$ as follows:
 \begin{lemma}
-  The algebraic evaluation of a decision-DNNF formula $\phi$  having $|\dependencyset(\phi)| = n$, with $n \leq 1/(2\sqrt{\roundepsilon})$ using floating-point arithmetic,
+  The algebraic evaluation of a decision-DNNF formula $\phi$  having $|\dependencyset(\phi)| = n$, with
+  $n \leq 1/(2\sqrt{\roundepsilon})$
+  using floating-point arithmetic,
   and where all literals $\ell$ satisfy $W(\lit) \geq 0$
   will yield an approximation $\approxW(\phi)$ satisfying
   $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.
@@ -541,10 +543,15 @@ $\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$, which is within the error
 \item For formula $\phi$ of the form $\phi_1 \land \phi_2$, there must be some $k$, with $1 \leq k < n$, such that $|\dependencyset(\phi_1)| = k$
   and $|\dependencyset(\phi_2)| = n-k$.
 \begin{enumerate}
-  \item Let us first test whether the conditions for the induction hypothesis hold: for $s = 4k-2$ and $t = 4(n-k)-2$
+\item Let us first test whether the requirement that $n \leq 1/(2\sqrt{\roundepsilon})$ 
+  guarantees that the conditions on $s$, $t$, and $\roundepsilon$ required for the multiplication bound  hold.
+For $s = 4k-2$ and $t = 4(n-k)-2$
     we require that $s\,t \leq 1/\roundepsilon$.  We can see that $s\,t \leq 16\,k\,(n-k)$. This quantity will be maximized when $k = n/2$,
     and therefore $s \, t \leq 4\,n^2$.
     Given our limit on $n$ with respect to $\roundepsilon$, we have $s \, t \leq 1/\roundepsilon$.
+  \item
+    We can also see that if $n \leq 1/(2\sqrt{\roundepsilon})$, then both
+    $k \leq 1/(2\sqrt{\roundepsilon})$ and  $n-k \leq 1/(2\sqrt{\roundepsilon})$.
   \item
 We can therefore assume by induction that 
  $\aerror[\approxW(\phi_1), W(\phi_1)] \leq (4 k-2) \,\roundepsilon$
@@ -556,7 +563,8 @@ $\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) +
   $\phi = (x \land \phi_1) \lor (\obar{x} \land \phi_2)$, let us use the notation $\lit_1 = x$ and $\lit_2 = \obar{x}$
   and consider the two subformulas $\lit_i \land \phi_i$ for $i \in \{1,2\}$.
   Since all products are decomposable, we must have $x \not \in \dependencyset(\phi_i)$,
-  and therefore $|\dependencyset(\phi_i)| = n-1$.
+  and therefore $|\dependencyset(\phi_i)| = n-1$.  We can also see that the condition 
+  $n \leq 1/(2\sqrt{\roundepsilon})$ implies that   $n-1 \leq 1/(2\sqrt{\roundepsilon})$.
   By induction, we can therefore assume that
   $\aerror[\approxW(\phi_i), W(\phi_i)] \leq (4(n-1)-2) \,\roundepsilon = (4n-6)\,\roundepsilon$.  Rounding the literal weights will yield
   $\aerror[\approxW(\lit_i), W(\lit_i)] \leq \roundepsilon$.  Let $y_i$ denote the product $W(\lit_i) \cdot W(\phi_i)$ for $i \in \{1,2\}$.
