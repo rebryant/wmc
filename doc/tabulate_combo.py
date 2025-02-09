@@ -27,10 +27,9 @@ import sys
 
 directory = "."
 
-method_count = 4
-target_method_count = 5
+method_count = 5
 
-method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(target_method_count)
+method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(method_count)
 method_name = ["MPF", "MPFI", "MPFI2", "MPQ", "MPFI2-D"]
 file_name = "tabulate-all.csv"
 
@@ -132,9 +131,9 @@ def load(verbose):
 
 def tabulate(target_method, label):
     global average_time
-    ok_count = [0] * 4
-    fail_count = [0] * 4
-    time = [0] * 4
+    ok_count = [0] * method_count
+    fail_count = [0] * method_count
+    time = [0] * method_count
     total_ok_count = 0
     total_fail_count = 0
     total_time = 0
@@ -260,6 +259,8 @@ def tabulate(target_method, label):
     fields_top = [label, "Runs"]
     fields_bottom = ["", "Hours"]
     for comp_method in range(method_count):
+        if comp_method == method_mpfi2_direct:
+            continue
         mtime = time[comp_method]/3600.0
         fields_top += ["" if mtime == 0.0 else str(ok_count[comp_method]) + "+" + str(fail_count[comp_method])]
         fields_bottom +=  ["" if mtime == 0.0 else "%.2f" % mtime]
@@ -306,6 +307,7 @@ def run(name, args):
     ft, fb = tabulate(method_mpfi2, "MPF|MPFIx2+MPQ")
     table_entry(ft)
     table_entry(fb)
+    table_line()
     ft, fb = tabulate(method_mpfi2_direct, "MPF|MPFI2+MPQ")
     table_entry(ft)
     table_entry(fb)
