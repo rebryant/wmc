@@ -27,10 +27,10 @@ import sys
 
 directory = "."
 
-method_count = 4
+method_count = 5
 
-method_mpf, method_mpfi, method_mpfi2, method_mpq = range(method_count)
-method_name = ["MPF", "MPFI", "MPFI2", "MPQ"]
+method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(method_count)
+method_name = ["MPF", "MPFI", "MPFI2", "MPQ", "MPFI2-D"]
 file_name = "tabulate-all.csv"
 
 def err(fatal, msg):
@@ -220,6 +220,29 @@ def tabulate(target_method, label):
                 fail_count[method_mpfi] += 1
                 time[method_mpfi] += instance.mpfi_seconds
                 total_time += instance.mpfi_seconds
+                fail_count[method_mpfi2] += 1
+                time[method_mpfi2] += instance.mpfi2_seconds
+                total_time += instance.mpfi2_seconds
+                time[method_mpq] += instance.mpq_seconds
+                total_time += instance.mpq_seconds
+                if instance.mpq_seconds is not None:
+                    ok_count[method_mpq] += 1
+                    total_ok_count += 1
+                else:
+                    fail_count[method_mpq] += 1
+                    total_fail_count += 1
+        elif target_method == method_mpfi2_direct:
+            if instance.method == method_mpf:
+                ok_count[method_mpf] += 1
+                time[method_mpf] += instance.mpf_seconds
+                total_ok_count += 1
+                total_time += instance.mpf_seconds
+            elif instance.method in [method_mpfi, method_mpfi2]:
+                ok_count[method_mpfi2] += 1
+                time[method_mpfi2] += instance.mpfi2_seconds
+                total_ok_count += 1
+                total_time += instance.mpfi2_seconds
+            else:
                 fail_count[method_mpfi2] += 1
                 time[method_mpfi2] += instance.mpfi2_seconds
                 total_time += instance.mpfi2_seconds
