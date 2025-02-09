@@ -27,9 +27,10 @@ import sys
 
 directory = "."
 
-method_count = 5
+method_count = 4
+target_method_count = 5
 
-method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(method_count)
+method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(target_method_count)
 method_name = ["MPF", "MPFI", "MPFI2", "MPQ", "MPFI2-D"]
 file_name = "tabulate-all.csv"
 
@@ -238,6 +239,8 @@ def tabulate(target_method, label):
                 total_ok_count += 1
                 total_time += instance.mpf_seconds
             elif instance.method in [method_mpfi, method_mpfi2]:
+                if instance.mpfi2_seconds is None:
+                    err(True, "Oops.  Can't process instance %s with MPFI2-direct" % (str(instance)))
                 ok_count[method_mpfi2] += 1
                 time[method_mpfi2] += instance.mpfi2_seconds
                 total_ok_count += 1
@@ -301,6 +304,9 @@ def run(name, args):
     table_entry(fb)
     table_line()
     ft, fb = tabulate(method_mpfi2, "MPF|MPFIx2+MPQ")
+    table_entry(ft)
+    table_entry(fb)
+    ft, fb = tabulate(method_mpfi2_direct, "MPF|MPFI2+MPQ")
     table_entry(ft)
     table_entry(fb)
 
