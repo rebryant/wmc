@@ -1023,7 +1023,7 @@ Overall this strategy succeeded for all 2500 instances.
 
 \begin{table}
   \caption{Performance Comparison of Different Implementation Strategies.  Run entries of the form $S$+$F$ indicate that $S$ runs
-  were successful and $F$ runs either ran out of memory or failed to meet the target precision.}
+  were successful and $F$ runs either ran out of memory or failed to meet the target precision.  The strategy yielding the least total time is shown in red.}
   \label{tab:compare}
   \centering{
 %  \begin{tabular}{llrrrrrr}
@@ -1041,26 +1041,31 @@ Overall this strategy succeeded for all 2500 instances.
 \end{table}
 
 Table~\ref{tab:compare} summarizes the total time taken by the
-different levels of evaluation and presents a comparison of four
+different levels of evaluation and presents a comparison of five
 different evaluation strategies.  We can see that if all 2500
 instances were evaluated with MPQ, we would complete 2450 of them in a
-total of $93.1$ hours, including over $22$ hours for the 50 failed runs, for an average time of $134.4$ seconds per
-instance.  Using MPF for the instances with nonnegative weights
-enables completing an additional 20 instances and drops the total
-time to $55.97$ hours and  the average time per instance to $84.7$ seconds.
-Using MPF when possible has a clear benefit.  Using one pass with MPFI
-(for $p=128$) for the instances with negative weights and then using
-MPQ for those that do not meet the target precision completes all
-but 4 instances and drops the total time to $22.42$ hours and the
-average time per instance to $32.3$ seconds.  Although this approach yields
-an increased time when MPQ is ultimately used, this is more than
-offset by the many cases that were successfully evaluated using
-MPFI\@.  Finally, our full hybrid approach completes all 2500
-instances in a total of $17.74$ hours with an average time per instance of
-$25.5$ seconds.  The performance gain with the second run of MPFI is
-not dramatic, but being able to complete all instances is a significant
-achievement.
-Appendix~\ref{app:performance} provides more details on the performance of the hybrid strategy.
+total of $93.1$ hours, including over $22$ hours for the 50 failed
+runs.  Using MPF
+for the instances with nonnegative weights enables completing an
+additional 20 instances and drops the total time to $55.97$ hours.
+Using MPF when
+possible has a clear benefit.  Using one pass with MPFI (for $p=128$)
+for the instances with negative weights and then using MPQ for those
+that do not meet the target precision completes all but 4 instances
+and drops the total time to $22.42$ hours
+Although this approach yields an
+increased time when MPQ is ultimately used, this is more than offset
+by the many cases that were successfully evaluated using MPFI\@.  Our
+full hybrid approach completes all 2500 instances in a total of
+$17.74$ hours.
+The performance gain with the second run of MPFI is not dramatic, but
+being able to complete all instances is a significant achievement.
+The fifth entry shows the performance when skipping the
+evaluation using MPFI with $p=128$, using only $p=256$.  It shows
+that avoiding 278 failed evaluations using MPFI with $p=128$ does not
+compensate for the time required to perform all 1500 evaluations using
+MPFI with $p=256$.  Appendix~\ref{app:performance} provides more
+details on the performance of the hybrid strategy.
 
 Of course, finding an optimal strategy depends heavily on the formulas
 to be evaluated and the weight assignments.  Overall, however, our

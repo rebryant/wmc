@@ -5,7 +5,8 @@ MERGE = $(TDIR)/merge_csv.py
 EXTRACT = $(TDIR)/extract_columns.py
 LTDIR = ~/repos/wmc/tools
 MINIMIZE = $(LTDIR)/combine_data.py
-PREC256 = prec256
+PREC256-LIMITED = prec256-postmpfi
+PREC256-ALL = prec256-all
 
 clean:
 	rm -f *~
@@ -36,8 +37,9 @@ data:
 	$(INTERP) $(GRAB) "COMBO used MPQ_ABORT" mc2024_track2-random_*_*.count > combo-mpfi-abort-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" mc2024_track2-random_*_*.count > combo-mpf-only-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPFI_ONLY" mc2024_track2-random_*_*.count > combo-mpfi-only-secs.csv
-	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256)/mc2024_track2-random_*_*.count > combo-mpfi2-secs.csv
-	$(INTERP) $(GRAB) "MPFI gave only" $(PREC256)/mc2024_track2-random_*_*.count > combo-mpfi2-fail-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256-LIMITED)/mc2024_track2-random_*_*.count > combo-mpfi2-postmpfi-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256-ALL)/mc2024_track2-random_*_*.count > combo-mpfi2-secs.csv
+	$(INTERP) $(GRAB) "MPFI gave only" $(PREC256-LIMITED)/mc2024_track2-random_*_*.count > combo-mpfi2-fail-secs.csv
 	# Times
 	$(INTERP) $(GRAB) "MPF required " mc2024_track2-random_*_*.count > normal-mpf-secs.csv
 	$(INTERP) $(GRAB) "MPFI required " mc2024_track2-random_*_*.count > normal-mpfi-secs.csv
@@ -74,7 +76,7 @@ data:
 	cat combo-mpfi-secs.csv combo-mpfi-only-secs.csv | sort > used-mpfi-secs.csv
 	$(INTERP) $(MERGE) -t -1:5000:1 used-mpf-secs.csv > modality-mpf.csv
 	$(INTERP) $(MERGE) -t -1:5000:2 used-mpfi-secs.csv > modality-mpfi.csv
-	$(INTERP) $(MERGE) -t -1:5000:3 combo-mpfi2-secs.csv > modality-mpfi2.csv
+	$(INTERP) $(MERGE) -t -1:5000:3 combo-mpfi2-postmpfi-secs.csv > modality-mpfi2.csv
 	$(INTERP) $(MERGE) -t -1:5000:4 combo-mpfi2-fail-secs.csv > modality-mpq.csv
 	cat modality-mpf.csv modality-mpfi.csv modality-mpfi2.csv modality-mpq.csv | sort | $(INTERP) $(EXTRACT) 1:3 > modality-all.csv
 	$(INTERP) $(MERGE) -l bench,mode,mpf,mpfi,mpfi2,mpq modality-all.csv all-mpf-secs.csv all-mpfi-secs.csv all-mpfi2-secs.csv all-mpq-secs.csv > tabulate-all.csv
