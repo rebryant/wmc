@@ -1,21 +1,14 @@
-c: CNT:     Reading files and constructing graph required 4.941 seconds
+c: CNT:     Reading files and constructing graph required 4.901 seconds
 c: CNT:     Using weights from file 'mc2024_track2-random_027_102.cnf'
-c: CNT:    COMBO COUNT    = 1.17846605196840129540737176465e-5  guaranteed precision = 36.013
-c: CNT:      COMBO used MPF with 1.098 seconds and 24 max bytes
-c: CNT:   WEIGHTED MPQ COUNT    = 1.17846605196840129540737176465e-5
-c: CNT:     MPQ required 9.563 seconds, 1008 max bytes
-c: CNT:   WEIGHTED MPF COUNT    = 1.17846605196840129540737176465e-5   precision = 38.723
-c: CNT:     MPF required 1.090 seconds
-c: CNT:   WEIGHTED DBL COUNT    = 1.178466051968401854e-05   precision = 15.324
-c: CNT:     DBL required 0.176 seconds
-c: CNT:   WEIGHTED MPFI COUNT   = 1.17846605196840129540737176465e-5   precision est = 36.319 actual = 38.244
-c: CNT:     MPFI required 2.897 seconds
+c: CNT:    COMBO COUNT    = 1.17846605196840129540737176465e-5  guaranteed precision = 74.545
+c: CNT:      COMBO used MPF_ONLY with 1.252 seconds and 40 max bytes
 c: CNT:   Options           : 
 c: CNT:     Smooth:         : false
 c: CNT:     Digit precision : 30.0
-c: CNT:     Bit precision   : 128
+c: CNT:     Bit precision   : 256
 c: CNT:   Data variables    : 66
 c: CNT:     Smooth variables: 0
+c: CNT:   Disabled edges    : 0
 c: CNT:   Operations 
 c: CNT:     Sums            : 1778804
 c: CNT:     Edge products   : 6955784
