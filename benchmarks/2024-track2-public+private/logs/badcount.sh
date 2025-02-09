@@ -1,0 +1,31 @@
+#!/bin/sh
+git rm mc2024_track2-random_011_400.count
+git rm mc2024_track2-random_011_401.count
+git rm mc2024_track2-random_011_402.count
+git rm mc2024_track2-random_011_403.count
+git rm mc2024_track2-random_011_404.count
+git rm mc2024_track2-random_014_400.count
+git rm mc2024_track2-random_014_401.count
+git rm mc2024_track2-random_014_404.count
+git rm mc2024_track2-random_016_404.count
+git rm mc2024_track2-random_049_400.count
+git rm mc2024_track2-random_049_401.count
+git rm mc2024_track2-random_049_404.count
+git rm mc2024_track2-random_050_400.count
+git rm mc2024_track2-random_050_401.count
+git rm mc2024_track2-random_050_402.count
+git rm mc2024_track2-random_050_403.count
+git rm mc2024_track2-random_050_404.count
+git rm mc2024_track2-random_058_400.count
+git rm mc2024_track2-random_059_400.count
+git rm mc2024_track2-random_059_401.count
+git rm mc2024_track2-random_059_402.count
+git rm mc2024_track2-random_059_403.count
+git rm mc2024_track2-random_059_404.count
+git rm mc2024_track2-random_064_400.count
+git rm mc2024_track2-random_064_404.count
+git rm mc2024_track2-random_065_400.count
+git rm mc2024_track2-random_065_404.count
+git rm mc2024_track2-random_066_400.count
+git rm mc2024_track2-random_066_404.count
+
