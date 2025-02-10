@@ -360,11 +360,12 @@ When approximating rational number $x$ with value $\approximate{x}$, we
 define the \emph{approximation error} $\aerror[\approxx, x]$ as:
 \begin{eqnarray}
 \aerror[\approxx, x] & = & \left\{ \begin{array}{ll}
-  \frac{|\approxx - x|}{|x|}  & x \not = 0\\[0.8em]
-  |\approxx| & x = 0\\
+  \frac{|\approxx - x|}{|x|}  & x \not = 0\\
+  0 & x  = \approxx = 0\\
+  1 & x = 0 \; \textrm{and} \; \approxx \not = 0
   \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $x$ is nonzero and absolute error when $x=0$.
+That is, we consider relative error when $x$, and we do not allow any approximation for $0$.
 This value will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
 
 We then define the \emph{digit precision} of the approximation as
@@ -453,7 +454,8 @@ For interval $[\xmin, \xmax]$, we define the interval approximation error $\aerr
 \begin{eqnarray}
 \aerror([\xmin, \xmax]) & = & \left\{ \begin{array}{ll}
   \frac{\xmax - \xmin}{\min(|\xmin|, |\xmax|)}  & 0 \not \in [\xmin, \xmax]\\[0.8em]
-  \xmax - \xmin &  0 \in [\xmin, \xmax]\\
+  0 & \xmin = 0 = \xmax \\
+  1 & \xmin = 0 \; \textrm{and} \; |\xmax - \xmin|  > 0 
   \end{array} \right. \label{eqn:interval:error}
 \end{eqnarray}
 For any values $\approxx, x \in [\xmin, \xmax]$, we can see that
@@ -477,7 +479,14 @@ We can therefore
 assume that all actual and approximate values under consideration will
 be nonnegative.
 
-Suppose for positive values $s$ and $t$, we have
+Our analysis builds on historic work for bounding the error produced
+by a series of floating-point
+multiplications~\cite{wilkinson:nm:1960,wilkinson:rounding:1963} or
+additions~\cite{higham:siam:1993}.  Our formulation relaxes the error
+bounds in order to simplify the analysis, and it relies
+on the property that all arguments are nonnegative.
+
+Suppose for positive values of $x$ and $y$ and nonnegative values $s$ and $t$, we have
 $\aerror[\approxx, x] \leq s\, \roundepsilon$ and
 $\aerror[\approxy, y] \leq t\, \roundepsilon$, respectively.
 Therefore
@@ -487,7 +496,8 @@ $(1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
 
 \subsection{Multiplication}
 
-When $\approxx$ and $\approxy$ are multiplied, let us impose the constraint that $s\,t \leq 1/\roundepsilon$.
+Assume that $x>0$ and $y>0$ and consider the effect of multiplying their approximations
+$\approxx$ and $\approxy$.  To simply the analysis, let us impose the constraint that $s\,t \leq 1/\roundepsilon$.
 The product $\approxx \cdot \approxy$  satisfies
 $\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
 giving
@@ -500,15 +510,28 @@ $\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
 $\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
 
-Thus, forvalues of $s$, $t$, and $\roundepsilon$ satisfying our additional constraint,
-a multiplication operation, at most, propagates the errors of its arguments as their sum and adds two units of rounding error.
+When $x=0$ (respectively $y=0$), we will have $\approxx=0$ (resp., $\approxy = 0$) and therefore $\approxx \cdot \approxy = 0$.
+We can therefore state that  for any nonnegative values of $x$ and $y$, the conditions: $\aerror[\approxx, x] \leq s\,\roundepsilon$ and
+$\aerror[\approxy, y] \leq t\,\roundepsilon$ and
+$s\,t \leq 1/\roundepsilon$, imply that
+$\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
+
+Thus, for values of $s$, $t$, and $\roundepsilon$ satisfying our
+additional constraint, a multiplication operation, at most, propagates
+the errors of its arguments as their sum and adds two units of
+rounding error.
 
 \subsection{Addition}
 
-When $\approxx$ and $\approxy$ are added, their sum will satisfy
+When positive values $x$ and $y$ are added, their approximations  $\approxx$ and $\approxy$ will satisfy
 $(x + y) (1 - r\,\roundepsilon) \leq \approxx + \approxy \leq (x + y) (1 + r\,\roundepsilon)$, where $r = \frac{sx + ty}{x+y}$.  That is, the resulting error $r$ will bounded by a weighted average
 of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the maximum of $s$ and $t$.
 Rounding the sum can add at most one unit of rounding error, and so we have
+$\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
+
+If $x = 0$ (respectively, $y = 0$), we will have $\round(\approxx + \approxy) = \approxy$ (resp. $= \approxx$).
+We can therefore state that for any nonnegative values of $x$ and $y$, the conditions $\aerror[\approxx, x] \leq s\,\roundepsilon$ and
+$\aerror[\approxy, y] \leq t\,\roundepsilon$ imply that 
 $\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
 
 Thus, an addition operation, at most, propagates the maximum error of its arguments and adds a unit of rounding error.
@@ -540,7 +563,7 @@ The proof of this lemma proceeds by induction on the structure of $\phi$:
 \begin{enumerate}
 \item For literal $\lit$ with weight $W(\lit)$, its approximation $\approxW(\lit)$ satisfies
 $\aerror[\approxW(\lit), W(\lit)] \leq \roundepsilon$, which is within the error bound of $(4n-2)\,\roundepsilon$ for $n=1$.
-\item For formula $\phi$ of the form $\phi_1 \land \phi_2$, there must be some $k$, with $1 \leq k < n$, such that $|\dependencyset(\phi_1)| = k$
+\item For conjunction $\phi$ of the form $\phi_1 \land \phi_2$, there must be some $k$, with $1 \leq k < n$, such that $|\dependencyset(\phi_1)| = k$
   and $|\dependencyset(\phi_2)| = n-k$.
 \begin{enumerate}
 \item Let us first test whether the requirement that $n \leq 1/(2\sqrt{\roundepsilon})$ 
@@ -559,7 +582,7 @@ We can therefore assume by induction that
   will satisfy 
 $\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) + (4 (n-k) -2) + 2]\,\roundepsilon = (4n-2) \,\roundepsilon$.
 \end{enumerate}
-\item For a sum of the form
+\item For disjunction $\phi$ of the form
   $\phi = (x \land \phi_1) \lor (\obar{x} \land \phi_2)$, let us use the notation $\lit_1 = x$ and $\lit_2 = \obar{x}$
   and consider the two subformulas $\lit_i \land \phi_i$ for $i \in \{1,2\}$.
   Since all products are decomposable, we must have $x \not \in \dependencyset(\phi_i)$,
