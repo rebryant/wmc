@@ -37,19 +37,14 @@ double digit_precision_q25(q25_ptr x_est, q25_ptr x) {
 	return 0.0;
     if (q25_compare(x_est, x) == 0)
 	return MAX_DIGIT_PRECISION;
+    if (q25_is_zero(x))
+	return 0;
     int pos = q25_enter();
     q25_ptr num, denom;
-    if (q25_is_zero(x)) {
-	denom = q25_mark(q25_from_32(1));
-	num = q25_mark(q25_abs(x_est));
-	if (q25_compare(num, denom) >= 0)
-	    num = denom;
-    } else {
-	denom = q25_mark(q25_abs(x));
-	q25_ptr x_neg = q25_mark(q25_negate(x));
-	num = q25_mark(q25_add(x_est, x_neg));
-	q25_inplace_abs(num);
-    }
+    denom = q25_mark(q25_abs(x));
+    q25_ptr x_neg = q25_mark(q25_negate(x));
+    num = q25_mark(q25_add(x_est, x_neg));
+    q25_inplace_abs(num);
     /* See whether over limit */
     q25_ptr dscale = q25_scale(denom, -MAX_DIGIT_PRECISION, -MAX_DIGIT_PRECISION);
     if (q25_compare(num, dscale) < 0) {

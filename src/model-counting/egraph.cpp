@@ -147,9 +147,17 @@ double digit_precision_mpfr(mpfr_srcptr x_est, mpq_srcptr x) {
 }
 
 double digit_precision_mpfi(mpfi_srcptr v) {
+    mpfr_t left;
+    mpfr_init(left);
+    mpfr_t right;
+    mpfr_init(right);
+    mpfi_get_left(left, v);
+    mpfi_get_right(right, v);
+    if (mpfr_sgn(left) != mpfr_sgn(right))
+	return 0.0;
     mpfr_t diam;
     mpfr_init(diam);
-    mpfi_diam(diam, v);
+    mpfi_diam_rel(diam, v);
     if (mpfr_sgn(diam) == 0) {
 	mpfr_clear(diam);
 	return MAX_DIGIT_PRECISION;
