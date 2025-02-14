@@ -251,12 +251,12 @@ it resorts to rational arithmetic using the MPQ\@.  The overall effect
 is to achieve the twin goals of efficiency and guaranteed precision.
 
 This work is motivated by both application need and technical
-opportunity.  On the need side, we can see that the 
-precision by current weighted model counters can be low.  In the 2020
+opportunity.  On the need side, there is evidence that the 
+standard of precision for current weighted model counters is low.  In the 2020
 weighted model counting competition, a count was considered correct if it was within $10\%$
 of a precomputed result~\cite{fichte:jea:2020}.  That standard has
 been raised to $0.1\%$ in more recent years~\cite{hecher:mc:2024}.
-Even so, that is a very low standard for numerical computation.  By
+Even so, that is a very low standard for accuracy.  By
 contrast, our work demonstrates the opportunity to compute
 floating-point values that are guaranteed to have over 30 digits of
 precision, i.e., to be within $10^{-28}\%$ of the true value,
@@ -685,7 +685,7 @@ a formula to $n$.  Without this requirement, the depth can become
 exponential.  For example, consider a d-DNNF formula encoding a
 tautology over $n$ variables, constructed as follows.  For each of the
 $2^n$ possible assignment $\assign$, we use conjunction operations to
-encode $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
+encode subformula $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
 use a linear sequence of $2^n-1$ disjunctions to combine these subformulas to
 form $\phi$.  The accumulated error from the resulting summation operations could grow
 exponentially with $n$.  Of course, such a formula is completely
