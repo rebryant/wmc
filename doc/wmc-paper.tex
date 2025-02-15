@@ -840,11 +840,9 @@ As an example, consider the following smooth, decision-DNNF formula over $n+1$ v
 \end{eqnarray}
 with a weight assignment having only a single literal assigned a negative weight:
 \begin{displaymath}
-\begin{array}{llll}
-  w(z) & = & +1 \\
-  w(\obar{z}) & = & -1 \\
-  w(x_i) & = & 10^{+9} & 1 \leq i \leq n \\
-  w(\obar{x}_i) & = & 10^{-9} & 1 \leq i \leq n \\
+\begin{array}{lllll}
+\makebox[1cm]{} &  w(z) \; = \; +1 & \makebox[2cm]{} &  w(x_i) \; = \; 10^{+9} & 1 \leq i \leq n \\
+\makebox[1cm]{} &  w(\obar{z}) \; = \; -1 & &  w(\obar{x}_i) \; = \; 10^{-9} & 1 \leq i \leq n \\
 \end{array}
 \end{displaymath}
 Computing $w(\phi_n)$  evaluates the sum $(s + T) - T$, where
@@ -1034,8 +1032,8 @@ to handle a large portion of instances having negative weights.
 \subsection{A Hybrid Approach}
 \label{sect:hybrid}
 
-We are now ready to combine our three approaches: floating-point
-arithmetic, interval computation, and rational arithmetic into a
+We are now ready to combine our three approaches---floating-point
+arithmetic, interval computation, and rational arithmetic---into a
 single, hybrid approach.  We devised the following scheme, and we can
 measure its success based on 2500 instances---100 formulas, each with five collections of five instances.
 \begin{enumerate}
@@ -1105,36 +1103,29 @@ compensate for the time required to perform all 1500 evaluations using
 MPFI with $p=256$.  Appendix~\ref{app:performance} provides more
 details on the performance of the hybrid strategy.
 
-Of course, finding an optimal strategy depends heavily on the formulas
-to be evaluated and the weight assignments.  Overall, however, our
-approach of using MPF for assignments with all weights nonnegative and
-some combination of MPFI and MPQ for assignments with negative weights
-should yield the best combination of completion percentage and
-performance, while guaranteeing a desired precision level.
+%% Of course, finding an optimal strategy depends heavily on the formulas
+%% to be evaluated and the weight assignments.  Our overall strategy of using progressively more
+%% precise but costly evaluation methods should work across a large range of problems.
+
 
 \section{Conclusions}
 \label{sect:conclusion}
 
-For most applications, using floating-point arithmetic can introduce
-significant errors due to rounding.  The result may equal the correct
-value, be slightly off due to minor rounding errors, or be completely
-incorrect due catastrophic cancellations.  More troubling, there is no
-reliable way to discern what level of error has been introduced.
-
+For many applications, floating-point arithmetic can introduce
+significant errors due to rounding and does not provide any way to quantify the error.
 This
 paper shows that such uncertainty can be avoided for weighted model
 counting.  When all weights are nonnegative, results can be computed
-using floating point with guaranteed precision bounds, where the
-conditions for these bounds to hold are not difficult to meet.  When some weights
+using floating point with guaranteed precision.  When some weights
 are negative, the program can attempt one or more levels of interval
 computation, and these should handle a large fraction of the instances.  Ultimately,
 the program may need to use full rational arithmetic, but the number
 of such cases should be small.
 
-Several extensions of this work bear investigation.  Going beyond
-d-DNNF formulas, it would be useful to apply these computation methods when computing weighted model counting based on 
-Sentential Decision Diagrams (SDDs), a representation that generalized ordered BDDs~\cite{darwiche:ijcai:2011}.
-We believe that an SDD could be converted into a d-DNNF formula and then evaluated using the estimation method presented in Section~\ref{sect:ddnnf}.
+Several extensions of this work bear investigation.  Considering other representations,
+it would be useful to apply these methods when computing weighted model counts based on 
+Sentential Decision Diagrams (SDDs), a representation that generalizes ordered BDDs~\cite{darwiche:ijcai:2011}.
+An SDD could be converted into a d-DNNF formula and then evaluated with guidance by the error estimation method presented in Section~\ref{sect:ddnnf}.
 %% These
 %% generalize BDDs such that each node can have $k$ pairs of subformulas
 %% (each subformula being a node in the SDD) of the form $p_i, s_i$,
@@ -1153,13 +1144,22 @@ We believe that an SDD could be converted into a d-DNNF formula and then evaluat
 %% assignments with negative weights, we could proceed with the same
 %% layered approach as for decision-DNNF formulas.
 
-Kimmig, Van~den~Broeck and De~Raedt presented a generalization of
-weighted model counting they call \emph{algebraic model
-counting}~\cite{kimmig:jal:2017}, that can solve a variety of
-problems by replacing the ring operations on rational numbers with
-operations on different semirings.  Of these, the \emph{gradient}
-semiring~\cite{eisner:acl:2002} is intriguing from our perspective, in that the evaluation requires adding and multiplying both positive and negative numbers.
-We speculate that interval floating-point arithmetic would perform well for these evaluations.
+There are several variants of weighted model counting that require
+either negative weights or arithmetic on negative numbers.  These
+include the \emph{relaxed Tseitin}
+transformation~\cite{meert:starai:2016}, which can be seen as a
+variant of a Plaisted-Greenbaum transformation~\cite{plaisted:jsc:1986} that preserves
+the
+weighted count.  It introduces two auxilliary variables $r$ and $z$ having
+$w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
+As a second example, the \emph{gradient
+semiring}~\cite{eisner:acl:2002, kimmig:jal:2017} extends standard
+model counting such that each weight is pair $\langle p, d \rangle$,
+where $p$ is a probability and $d$ is a partial derivative of the
+probability with respect to some variable $x$.  The weights
+associated with variable $x$ are $w(x) = \langle p(x), 1\rangle$ and
+$w(\obar{x}) = \langle 1-p(x), -1\rangle$, where $p(x)$ equals the probability that variable $x$ is assigned $1$.
+We speculate that interval floating-point arithmetic would perform well for both of these variants.
 %% This semiring allows the computation
 %% of partial derivatives of the weighted count of Equation~\ref{eqn:wmc}
 %% with respect to the weights assigned to one or more variable.
