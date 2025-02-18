@@ -155,10 +155,9 @@ programs have been developed that work well in practice.  They
 generally fall into two categories~\cite{shaw:kr:2024}. \emph{Top-down} programs
 recursively branch on the variables of a formula, performing unit
 propagation and conflict analysis similar to a CDCL SAT solver.  Most
-of these programs are, in fact, \emph{knowledge compilers} that
-generate a Boolean formula in a restricted form that enables efficient
-weighted
-evaluation~\cite{darwiche:aaai:2002,darwiche:ecai:2004,lagniez:ijcai:2017,muise:cai:2012,oztok:cp:2014}.
+of these programs operate as \emph{knowledge compilers}, converting
+the input Boolean formula into a restricted form that enables efficient
+weighted and unweighted counting~\cite{darwiche:aaai:2002,darwiche:ecai:2004,lagniez:ijcai:2017,muise:cai:2012,oztok:cp:2014,sharma:ijcai:2019}.
 Others are based on \emph{bottom-up} approaches, especially using
 multi-terminal BDDs~\cite{dudek:aaai:2020,dudek:sat:2021}.  In both
 cases, the strategy is to convert the formula into a form for which
@@ -254,6 +253,7 @@ levels of interval computation with MPFI, using increasing levels of
 precision.  If these evaluations fail to provide the target precision,
 it resorts to rational arithmetic using the MPQ\@.  The overall effect
 is to achieve the twin goals of efficiency and guaranteed precision.
+Although our experiments only use D4, similar results should hold for other top-down and bottom-up weighted model counters.
 
 This work is motivated by both application need and technical
 opportunity.  On the need side, there is evidence that the 
