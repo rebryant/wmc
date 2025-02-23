@@ -189,12 +189,10 @@ addition operations, yielding an exact weighted count.  Unfortunately,
 both the time and space required for storing and manipulating these numbers can be very
 large.  In this paper, for example, we report experiments requiring over one gigabyte
 to store the arguments and result of a single addition operation.
-
-Rational arithmetic provides more precision than is required
-for most applications.  It would be preferable to have a floating-point
-representation of the weighted count, with a guarantee that this
-representation meets some standard of precision with respect to the
-actual count.
+For most applications, rational arithmetic provides more precision than is required.
+It would be preferable to have a floating-point
+representation, but with a guaranteed level of
+precision with respect to the actual weighted count.
 
 In this paper, we apply two strategies to compute 
 guaranteed-precision weighted model counts.  First, we consider the
@@ -238,10 +236,7 @@ interval that is guaranteed to include the true result value, as long
 as the argument intervals include their true values.  We show
 experimentally that the intervals maintained during the computations
 of weighted model counting are generally tight enough to provide
-useful precision guarantees.  Other tools, such as
-FloVer~\cite{becker:fmcad:2016}, can certify the
-accuracy of floating-point computations via interval arithmetic, but
-we are unaware of their use of for weighted model counting.
+useful precision guarantees.
 
 Putting these together, we present experimental results from a program
 that performs weighted model counting of a decision-DNNF formula
@@ -266,6 +261,16 @@ contrast, our work demonstrates the opportunity to compute
 floating-point values that are guaranteed to have over 30 digits of
 precision, i.e., to be within $10^{-28}\%$ of the true value,
 while generally avoiding the high cost of rational arithmetic.
+
+Regarding previous work, we are unaware of any 
+systematic study of the numeric computations
+performed in weighted model counting.  The special properties of
+decision-DNNF formulas enable stronger precision guarantees than is
+normally the case for floating-point arithmetic.  Some tools provide a
+general capability to certify the accuracy of floating-point computations
+via interval arithmetic~\cite{becker:fmcad:2016}, but we have not seen
+experimental results regarding the use of either interval or rational arithmetic for
+weighted model counting.
 
 The paper is organized as follows.  In
 Sections~\ref{sect:background:boolean} and
@@ -300,7 +305,7 @@ therefore define the \emph{size} of a formula to be the number of
 unique subformulas.
 
 A (total) assignment is a mapping $\assign \colon \varset \rightarrow
-\{0, 1\}$.  An assignment $\assign$ is said to be a \emph{model} of
+\{0, 1\}$.  Assignment $\assign$ is said to be a \emph{model} of
 formula $\phi$ if the formula evaluates to $1$ under that assignment.
 The set of models of a formula $\phi$ is written $\modelset(\phi)$.
 We can also consider an assignment to be a set of literals, where $x \in \assign$
