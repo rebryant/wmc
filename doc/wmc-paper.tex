@@ -551,7 +551,7 @@ rounding error.
 \subsection{Addition}
 
 When positive values $x$ and $y$ are added, their approximations  $\approxx$ and $\approxy$ satisfy
-$(x + y) (1 - r\,\roundepsilon) \leq \approxx + \approxy \leq (x + y) (1 + r\,\roundepsilon)$, where $r = \frac{sx + ty}{x+y}$.  That is, the resulting error $r$ is bounded by a weighted average
+$(x + y) (1 - r\,\roundepsilon) \leq \approxx + \approxy \leq (x + y) (1 + r\,\roundepsilon)$, where $r = \frac{s\,x + t\,y}{x+y}$.  That is, the resulting error $r$ is bounded by a weighted average
 of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the maximum of $s$ and $t$.
 Rounding the sum can add at most one unit of rounding error, and so we have
 $\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
@@ -1163,7 +1163,7 @@ include the \emph{relaxed Tseitin}
 transformation~\cite{meert:starai:2016}, which can be seen as a
 variant of a Plaisted-Greenbaum transformation~\cite{plaisted:jsc:1986} that preserves
 the
-weighted count.  It introduces two auxilliary variables $r$ and $z$ having
+weighted count.  It introduces two auxiliary variables $r$ and $z$ having
 $w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
 As a second example, the \emph{gradient
 semiring}~\cite{eisner:acl:2002, kimmig:jal:2017} extends standard
