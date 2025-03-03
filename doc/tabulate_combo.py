@@ -23,10 +23,13 @@ import csv
 import sys
 
 
-
+def usage(name):
+    sys.stderr.write("Usage: %s [-v] [-w] [CSVPATH]\n" % name)
+    sys.stderr.write("  -v      Verbose\n")
+    sys.stderr.write("  -w      Print wide format\n")
+    sys.stderr.write("  CSVPATH Directory with CSV files\n")
 
 directory = "."
-
 method_count = 5
 
 method_mpf, method_mpfi, method_mpfi2, method_mpq, method_mpfi2_direct = range(method_count)
@@ -46,7 +49,7 @@ fail_time_dict = {"mc2024_track2-random_023" : 1592.0, "mc2024_track2-random_178
 def fail_time(instance):
     formula = instance[:-4]
     if formula not in fail_time_dict:
-        print("Couldn't find entry for instance %s (formula %s)" % (instance, formula))
+        sys.stderr.write("Couldn't find entry for instance %s (formula %s)\n" % (instance, formula))
         return 0.0
     return fail_time_dict[formula]
 
@@ -120,7 +123,7 @@ def load(verbose):
     for dict in creader:
         instance = Instance(dict)
         if verbose:
-            print("Created instance %s" % str(instance))
+            sys.stderr.write("Created instance %s\n" % str(instance))
         instances.append(instance)
 
 # Here, method refers to final strategy:
@@ -258,21 +261,28 @@ def tabulate(target_method, label):
                     total_fail_count += 1
     fields_top = [label, "Runs"]
     fields_bottom = ["", "Hours"]
+    fields_both = [label]
     for comp_method in range(method_count):
         if comp_method == method_mpfi2_direct:
             continue
         mtime = time[comp_method]/3600.0
-        fields_top += ["" if mtime == 0.0 else str(ok_count[comp_method]) + "+" + str(fail_count[comp_method])]
-        fields_bottom +=  ["" if mtime == 0.0 else "%.2f" % mtime]
+        rstring = "" if mtime == 0.0 else str(ok_count[comp_method]) + "+" + str(fail_count[comp_method])
+        tstring = "" if mtime == 0.0 else "%.2f" % mtime
+        fields_top += [rstring]
+        fields_bottom +=  [tstring]
+        fields_both += [rstring, tstring]
     total_count = total_ok_count + total_fail_count
     avg = total_time/total_count
     average_time[target_method] = avg
     ttime = total_time/3600.0
-    fields_top += [str(total_ok_count) + "+" + str(total_fail_count)]
-    fields_bottom += ["%.2f" % ttime]
+    rstring = str(total_ok_count) + "+" + str(total_fail_count)
+    fields_top += [rstring]
+    tstring = "%.2f" % ttime
+    fields_bottom += [tstring]
+    fields_both += [rstring, tstring]
 #    fields_top += ["%.1f" % avg]
 #    fields_bottom += [""]
-    return (fields_top, fields_bottom)
+    return (fields_top, fields_bottom, fields_both)
 
 def table_entry(fields):
     print(" & ".join(fields) + ' \\\\')
@@ -286,31 +296,64 @@ def command(name, value):
 
 def run(name, args):
     global directory
-    if len(args) > 0:
-        if args[0] == '-h':
-            print("Usage: %s [CSV_DIRECTORY]" % name)
-            sys.exit(0)
-        directory = args[0]
-    load(False)
-    ft, fb = tabulate(method_mpq, "MPQ only")
-    table_entry(ft)
-    table_entry(fb)
-    table_line()
-    ft, fb = tabulate(method_mpf, "MPF|MPQ")
-    table_entry(ft)
-    table_entry(fb)
-    table_line()
-    ft, fb = tabulate(method_mpfi, "MPF|MPFI-128+MPQ")
-    table_entry(ft)
-    table_entry(fb)
-    table_line()
-    ft, fb = tabulate(method_mpfi2, "\\textcolor{red}{MPF|MPFI$\\times$2+MPQ}")
-    table_entry(ft)
-    table_entry(fb)
-    table_line()
-    ft, fb = tabulate(method_mpfi2_direct, "MPF|MPFI-256+MPQ")
-    table_entry(ft)
-    table_entry(fb)
+    wide_format = False
+    verbose = False
+    i = argi = 0
+    for i in range(len(args)):
+        if args[argi][0] == '-':
+            if len(args[argi]) != 2:
+                sys.stderr.write("Invalid flag '%s'\n" % args[argi])
+                usage(name)
+                return
+            if args[argi][1] == 'h':
+                usage(name)
+                return
+            elif args[argi][1] == 'w':
+                wide_format = True
+            elif args[argi][1] == 'w':
+                verbose = True
+            else:
+                sys.stderr.write("Invalid flag '%s'\n" % args[argi])
+                usage(name)
+                return
+        else:
+            directory = args[argi]
+        argi += 1
+    load(verbose)
+    ft, fb, f = tabulate(method_mpq, "MPQ only")
+    if wide_format:
+        table_entry(f)
+    else:
+        table_entry(ft)
+        table_entry(fb)
+        table_line()
+    ft, fb, f = tabulate(method_mpf, "MPF|MPQ")
+    if wide_format:
+        table_entry(f)
+    else:
+        table_entry(ft)
+        table_entry(fb)
+        table_line()
+    ft, fb, f = tabulate(method_mpfi, "MPF|MPFI-128+MPQ")
+    if wide_format:
+        table_entry(f)
+    else:
+        table_entry(ft)
+        table_entry(fb)
+        table_line()
+    ft, fb, f = tabulate(method_mpfi2, "\\textcolor{red}{MPF|MPFI$\\times$2+MPQ}")
+    if wide_format:
+        table_entry(f)
+    else:
+        table_entry(ft)
+        table_entry(fb)
+        table_line()
+    ft, fb, f = tabulate(method_mpfi2_direct, "MPF|MPFI-256+MPQ")
+    if wide_format:
+        table_entry(f)
+    else:
+        table_entry(ft)
+        table_entry(fb)
 
 #    compare_mpq_hybrid = average_time[method_mpq]/average_time[method_mpfi]
 #    compare_mpq_mpf = average_time[method_mpq]/average_time[method_mpf]

@@ -26,6 +26,7 @@ rdata:
 	cp -p $(LDATA)/combo-mpq+mpq.csv $(RDATA)
 	cp -p $(LDATA)/tabulate-all.csv $(RDATA)
 	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
+	$(INTERP) $(TABULATE) -w $(RDATA) > method_table_wide.tex
 
 
 
