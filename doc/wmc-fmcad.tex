@@ -161,10 +161,12 @@ Weighted model counting has applications in a variety of domains,
 including probabilistic inference~\cite{chavira:ai:2008}, Bayesian
 inference~\cite{sang:aaai:2005}, and probabilistic
 planning~\cite{domshlak:jair:2007}.  In addition, many of the
-applications of binary decision diagrams (BDDs) for
-combinatorics~\cite{knuth:bdd:2011} and for quantitative risk
-assessment~\cite{xing:wiley:2015,xing:amm:2025} are, in fact,
-applications of weighted model counting based on a BDD representation.
+applications of decision diagrams (DDs) for
+combinatorics~\cite{knuth:bdd:2011}, quantitative risk
+assessment~\cite{andrews:ieeetr:2000,groen:ress:2006,xing:wiley:2015,xing:amm:2025},
+optimization~\cite{bergman:book:2016}, and
+product line modeling~\cite{andersen:jair:2010} are, in fact, applications of
+weighted model counting for discrete functions based on a decision diagram representations.
 
 Despite the intractability, a variety of weighted model counting
 programs have been developed that work well in practice.  They
@@ -237,7 +239,7 @@ formulas where no bounded-precision numeric representation will
 suffice.  Rational arithmetic provides the only option in such cases.
 On the other hand, we show experimentally that floating-point
 arithmetic suffices for standard ways to generate weight assignments,
-but there is no way to be certain of the precision.  We also
+but there is no way to be certain of the precision.  We 
 demonstrate a strategy for generating random weight assignments that
 often causes floating-point arithmetic to yield erroneous results.
 
@@ -678,59 +680,6 @@ weighted model counting.  This number is chosen because 1) it should be
 sufficient for most applications, and 2) it
 is achievable, at least for nonnegative weights, with a standard software floating-point package.
 
-\subsection{Allowing Non-Decision Disjunctions}
-\label{sect:ddnnf}
-
-Our previous requirement that each disjunction have a decision
-variable had the effect of limiting the depth of the sum operations in
-a formula to $n$.
-%% Without this requirement, the depth can become exponential.
-%% For example, consider a d-DNNF formula encoding a
-%% tautology over $n$ variables, constructed as follows.  For each of the
-%% $2^n$ possible assignment $\assign$, we use conjunction operations to
-%% encode subformula $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
-%% use a linear sequence of $2^n-1$ disjunctions to combine these subformulas to
-%% form $\phi$.  The accumulated error from the resulting addition operations could grow
-%% exponentially with $n$.  Of course, such a formula is completely
-%% impractical for even modest values of $n$, but this construct
-%% demonstrates that, without further restrictions on the structure of a
-%% d-DNNF formula, we cannot guarantee a reasonable bound on the error incurred by an algebraic evaluation.
-%% The only
-%% cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
-%% instances of a decision variable or its negation are removed by projection~\cite{derkinderen:ictai:2024}.
-%% In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
-%% but we must include all variables, included those projected away, in the
-%% variable count $n$.
-For a d-DNNF formula $\phi$ with non-decision disjunctions, we
-can compute an estimate $e(\phi)$ of the maximum
-rounding error that can be encountered in its algebraic evaluation.  This estimate is defined recursively.
-For literal, $\lit$, let $e(\lit) = 1$.
-For subformula of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$.
-For subformula of the form $\phi'= \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
-Letting $e = e(\phi)$, we can then first perform the test $\log_2 e \leq p/2$.  With that condition satisfied,
-we can ensure that an algebraic evaluation of $\phi$ will yield an approximation $\approxW$, such that
-$\digitprecision(\approxW, W) \geq \log_{10}(2)\cdot p - \log_{10}(e)$.
-
-This estimate can be computed for number of decision diagram
-representations, including those with multi-way branching structures,
-including multi-valued decision diagrams
-(MDDs)~\cite{srinivasan:iccad:1990} and sentential decision diagrams
-(SDDs)~\cite{darwiche:ijcai:2011}.  That is, the error estimate $e$ is
-computed over the nodes of the DD, where a node $v$ with $k$ children
-$v_1, v_2, \ldots, v_k$ has an error estimate of $e(v) = 2 +
-\log_2(k-1) + \max_{1\leq i \leq k} e(v_i)$.  This estimate accounts
-for 1) multiplying the value of each child $W(v_i)$ with an associated
-weight $w_{v_i}^{v}$ for that branch, 2) summing the values with a
-balanced binary tree, and 3) accounting for the maximum error of the
-$k$ children.
-%% For example, with our tautology construction, we would have $e = 2\,n
-%% + 2^{n-1} -3$. That would indicate that floating-point
-%% evaluation is not feasible.  On the other hand, if we were to
-%% restructure the disjunctions into a balanced binary tree, we would get
-%% $e = 2\,n + n = 3\,n$, indicating that a floating-point evaluation, however impractical, would
-%% return a precise result.
-
-
 \subsection{Experimental Validation}
 
 \begin{figure}
@@ -837,6 +786,58 @@ The optimized products, on the other hand, demonstrate that particular
 combinations of formula and weight assignment can come within 2 decimal digits of the
 precision bound and to track its general trend.
 
+\subsection{Generalizing to d-DNNF Formulas and Decision Diagrams}
+\label{sect:ddnnf}
+
+Our requirement that each disjunction have an associated decision
+variable has the effect of limiting the depth of the sum operations in
+a formula to $n$.  This cannot be guaranteed for arbitrary d-DNNF formulas.
+%% Without this requirement, the depth can become exponential.
+%% For example, consider a d-DNNF formula encoding a
+%% tautology over $n$ variables, constructed as follows.  For each of the
+%% $2^n$ possible assignment $\assign$, we use conjunction operations to
+%% encode subformula $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
+%% use a linear sequence of $2^n-1$ disjunctions to combine these subformulas to
+%% form $\phi$.  The accumulated error from the resulting addition operations could grow
+%% exponentially with $n$.  Of course, such a formula is completely
+%% impractical for even modest values of $n$, but this construct
+%% demonstrates that, without further restrictions on the structure of a
+%% d-DNNF formula, we cannot guarantee a reasonable bound on the error incurred by an algebraic evaluation.
+%% The only
+%% cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
+%% instances of a decision variable or its negation are removed by projection~\cite{derkinderen:ictai:2024}.
+%% In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
+%% but we must include all variables, included those projected away, in the
+%% variable count $n$.
+Instead, for d-DNNF formula $\phi$, we
+can compute an estimate $e(\phi)$ of the maximum
+rounding error that can be encountered in its algebraic evaluation.  This estimate is defined recursively.
+For literal, $\lit$, let $e(\lit) = 1$.
+For subformula of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$.
+For subformula of the form $\phi'= \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
+Letting $e = e(\phi)$, we can then first perform the test $\log_2 e \leq p/2$.  With that condition satisfied,
+we can ensure that an algebraic evaluation of $\phi$ will yield an approximation $\approxW$, such that
+$\digitprecision(\approxW, W) \geq \log_{10}(2)\cdot p - \log_{10}(e)$.
+
+This estimate can be computed for many decision diagram
+representations, including ones with nonbinary branching structures,
+such as multi-valued decision diagrams
+(MDDs)~\cite{srinivasan:iccad:1990} and sentential decision diagrams
+(SDDs)~\cite{darwiche:ijcai:2011}.  Consider a node $v$ with children
+$v_1, v_2, \ldots, v_k$, and with weight $w_i^{v}$ associated with the branch from $v$ to each child $v_i$.
+Algebraic evaluation computes a value $W(v)$ for node $v$ as
+$W(v) = \sum_{1\leq i\leq k} W(v_i)\cdot w_i^{v}$.
+The error estimate $e$ can be computed for the node as
+$e(v) = 3 + \log_2(k-1) + \max_{1\leq i \leq k} e(v_i)$.
+Here we assume that the summation is performed with a balanced binary tree.
+%% For example, with our tautology construction, we would have $e = 2\,n
+%% + 2^{n-1} -3$. That would indicate that floating-point
+%% evaluation is not feasible.  On the other hand, if we were to
+%% restructure the disjunctions into a balanced binary tree, we would get
+%% $e = 2\,n + n = 3\,n$, indicating that a floating-point evaluation, however impractical, would
+%% return a precise result.
+
+
 \section{Error Analysis: Negative Weights}
 \label{sect:neg}
 
@@ -940,8 +941,8 @@ To create a weight assignment that has more chance of cancellation, we devised t
 \end{itemize}
 The idea here is to give large dynamic ranges plus a high degree of
 homogeneity.  The plots for this assignment in
-Figure~\ref{fig:posneg:mpf} demonstrate that this strategy achieves
-the desired effect, with many results falling below the target precision of $30.0$.
+Figure~\ref{fig:posneg:mpf} demonstrate that the success of this strategy,
+with many results falling below the target precision of $30.0$.
 
 Figure~\ref{fig:posneg:mpf} presents a pessimistic
 perspective for these instances, since it only shows the minimum
@@ -1051,9 +1052,11 @@ guaranteed precision for the result.  It will only be beneficial,
 however, if the interval bounds remain tight enough that the digit
 precision bound of Equation~\ref{eqn:interval:digitprecision} meets
 our target digit precision.  Our target bound of 30 seems fairly
-aggressive in this respect: the width of the interval $\xmax-\xmin$
-must be over 30 orders of magnitude smaller than the magnitudes of
-$\xmin$ and $\xmax$.  Even the instances with only nonnegative weights
+aggressive in this respect.
+%the width of the interval $\xmax-\xmin$
+%must be over 30 orders of magnitude smaller than the magnitudes of
+%$\xmin$ and $\xmax$.
+Even the instances with  nonnegative weights
 had digit precisions as low as 34.5, and so there is not much
 room for further degradation.
 
@@ -1096,18 +1099,20 @@ to handle a large portion of instances having negative weights.
 \subsection{A Hybrid Approach}
 \label{sect:hybrid}
 
+Our hybrid approach combines three approaches: floating-point
+arithmetic, interval computation, and rational arithmetic.
+We 
+measure its success based on 2500 instances---100 formulas, each with five collections of five instances,
+as is described by the fourth row of Table~\ref{tab:compare}.
+In this table, 
+run entries of the form $S$+$F$ indicate that $S$ runs succeeded, while $F$ failed due an excessive memory requirement or insufficient precision.
 
-We are now ready to combine our three approaches---floating-point
-arithmetic, interval computation, and rational arithmetic---into a
-single, hybrid approach.  We devised the following scheme, and we can
-measure its success based on 2500 instances---100 formulas, each with five collections of five instances.
-
-For instances where all weights are nonnegative, use MPF,
-  relying on the bound of Equation~\ref{eqn:precision:wmc} to
-  guarantee sufficient precision.  This evaluation succeeded for all 1000 such
+Use MPF with $p=128$ when all weights are nonnegative.
+  The bound of Equation~\ref{eqn:precision:wmc}
+  guarantees sufficient precision.  This evaluation succeeds for all 1000 such
   instances, including 20 for which the evaluation with rational arithmetic failed.
 
-For instances with negative weights, we perform a sequence of evaluations having successively greater cost:
+  When there are negative weights, perform a sequence of evaluations with increasing cost:
 \begin{enumerate}
 \item 
   Use MPFI with $p=128$.  If the estimated precision
@@ -1122,20 +1127,13 @@ For instances with negative weights, we perform a sequence of evaluations having
 Overall this strategy succeeded for all 2500 instances.
 
 
-
-
-Table~\ref{tab:compare} summarizes the total time taken by the
-different levels of evaluation and presents a comparison of five
-different evaluation strategies.
-Run entries of the form $S$+$F$ indicate that $S$ runs
-were successful and $F$ runs either ran out of memory or failed to meet the target precision.
-We can see that if all 2500
-instances were evaluated with MPQ, we would complete 2450 of them in a
+Table~\ref{tab:compare} summarizes the performance of five different strategies.
+Evaluating all 2500
+instances with MPQ completes 2450 of them in a
 total of $93.1$ hours, including over $22$ hours for the 50 failed
-runs.  Using MPF
-for the instances with nonnegative weights enables completing an
+runs.  Combining MPF for the instances with nonnegative weights with MPQ for the rest
+completes an
 additional 20 instances and drops the total time to $55.97$ hours.
-%Using MPF when possible has a clear benefit.
 Using one pass with MPFI (for $p=128$)
 for the instances with negative weights and then using MPQ for those
 that do not meet the target precision completes all but 4 instances
@@ -1147,11 +1145,11 @@ Our proposed hybrid approach completes all 2500 instances in a total of
 $17.74$ hours.
 %% The performance gain with the second run of MPFI is not dramatic, but
 %% being able to complete all instances is a significant achievement.
-The fifth entry shows the performance when skipping the
-evaluation using MPFI with $p=128$, using only $p=256$.  It shows
-that avoiding 278 failed evaluations using MPFI with $p=128$ does not
+Finally, skipping the MPFI evaluation with $p=128$ and instead going directly to $p=256$ avoids
+wasted effort, but that
+does not
 compensate for the time required to perform all 1500 evaluations using
-MPFI with $p=256$.  The appendix provides more
+$p=256$.  The appendix provides more
 details on the performance of the hybrid strategy.
 
 %% Of course, finding an optimal strategy depends heavily on the formulas
