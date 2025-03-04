@@ -295,20 +295,19 @@ via interval arithmetic~\cite{becker:fmcad:2016}, but we have not seen an experi
 evaluation of interval or rational arithmetic for
 weighted model counting.
 
-The paper is organized as follows.  In
 Sections~\ref{sect:background:boolean} and
-\ref{sect:background:numbers}, we cover background material in Boolean
+\ref{sect:background:numbers} of this paper cover background material in Boolean
 formulas, weighted model counting, numeric error, and number
-representations.  In Section~\ref{sect:nonneg} we present our
-theoretical and experimental results for when all weights are nonnegative.  In
-Section~\ref{sect:neg} we describe the challenges that negative
+representations.  Section~\ref{sect:nonneg} presents our
+theoretical result concerning the case of nonnegative weights and
+provides an experimental validation.  
+Section~\ref{sect:neg} describes the challenges that negative
 weights can present, but also experimental results showing that
 floating-point arithmetic suffices in many cases.
-Section~\ref{sect:reliable} then describes the use of interval
+Section~\ref{sect:reliable} describes the use of interval
 arithmetic and our hybrid approach.  
 Finally, Section~\ref{sect:conclusion}
-presents some concluding remarks and  areas for
-further research.
+presents some concluding remarks.
 
 
 \section{Weighted Model Counting}
@@ -1191,21 +1190,21 @@ of such cases should be small.
 %% assignments with negative weights, we could proceed with the same
 %% layered approach as for decision-DNNF formulas.
 
-%% Several variants of weighted model counting require
-%% arithmetic operations on negative numbers.  These
-%% include the \emph{relaxed Tseitin}
-%% transformation~\cite{meert:starai:2016},  a form
-%% of Plaisted-Green\-baum encoding~\cite{plaisted:jsc:1986} that preserves
-%% weighted counts.  It introduces two auxiliary variables $r$ and $z$ having
-%% $w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
-%% As a second example, the \emph{gradient
-%% semiring}~\cite{eisner:acl:2002, kimmig:jal:2017,maene:aaai:2025} extends standard
-%% model counting such that each weight is pair $\langle p, d \rangle$,
-%% where $p$ is a probability and $d$ is a partial derivative of the
-%% probability with respect to some variable $x$.  The weights
-%% associated with variable $x$ are $w(x) = \langle p(x), 1\rangle$ and
-%% $w(\obar{x}) = \langle 1-p(x), -1\rangle$, where $p(x)$ equals the probability that variable $x$ is assigned $1$.
-%% We speculate that interval floating-point arithmetic would perform well for both of these variants.
+Several variants of weighted model counting require
+arithmetic operations on negative numbers.  First,
+the \emph{relaxed Tseitin}
+transformation~\cite{meert:starai:2016} provides  a form
+of Plaisted-Green\-baum encoding~\cite{plaisted:jsc:1986} that preserves
+weighted counts.  It introduces two auxiliary variables $r$ and $z$ having
+$w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
+Second, the \emph{gradient
+semiring}~\cite{eisner:acl:2002, kimmig:jal:2017,maene:aaai:2025} extends standard
+model counting such that each weight is pair $\langle p, d \rangle$,
+where $p$ is a probability and $d$ is a partial derivative of the
+probability with respect to some variable $x$.  The weights
+associated with variable $x$ are $w(x) = \langle p(x), 1\rangle$ and
+$w(\obar{x}) = \langle 1-p(x), -1\rangle$, where $p(x)$ equals the probability that variable $x$ is assigned $1$.
+We speculate that interval floating-point arithmetic would perform well for both of these variants.
 %% This semiring allows the computation
 %% of partial derivatives of the weighted count of Equation~\ref{eqn:wmc}
 %% with respect to the weights assigned to one or more variable.
