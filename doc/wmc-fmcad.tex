@@ -1061,15 +1061,13 @@ Figure~\ref{fig:mpfi} shows the result of evaluating 100 formulas for
 the three weight assignment collections containing negative weights,
 with five instances per collection for each formula.  
 The evaluation used
-MPFI (with $p=128$) to get an estimated digit precision and
+MPFI (with $p=128$) to get an estimated digit precision (Y-axis) and
 a nominal weight (the midpoint of the interval), along with MPQ to get
-the exact weight.  The actual precision was then computed based on the
+the exact weight.  The actual precision (X-axis) was then computed based on the
 nominal and actual weights.  The evaluations using MPQ ran out of
 memory for two of the formulas, and hence the plot shows 1470
-data points.  The X-axis shows estimated precision, while the Y-axis
-shows the actual precision, with the diagonal line indicating when the
-two precisions are equal.  As is expected, every point lies above this
-line---the interval computation never overestimated the digit
+data points.
+As is expected, every point lies above the diagonal line where the two precisions are equal---the interval computation never overestimated the digit
 precision.
 
 Overall, we can see that the interval estimates were quite reliable,
