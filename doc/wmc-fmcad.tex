@@ -1,4 +1,4 @@
-\documentclass[year=24,pdfa]{fmcad}
+\documentclass[year=25,pdfa]{fmcad}
 
 \usepackage{amsmath}
 \usepackage{tikz}
@@ -183,7 +183,7 @@ weighted model counting becomes tractable.
 
 Weighted model counting can be computationally intensive.  In
 experimental results described in this paper, some evaluations 
-require over one billion multiplication and addition operations.
+require over one billion arithmetic operations.
 Furthermore, the computed values are often either too small or too
 large in magnitude to encode with standard floating-point
 representations.  We also want the computed results to have a
@@ -412,7 +412,7 @@ define the \emph{approximation error} $\aerror[\approxx, x]$ as:
   1 & x = 0 \; \textrm{and} \; \approxx \not = 0
   \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $x \not = 0$, and we do not allow any approximation for $x = 0$.
+That is, we consider relative error when $x \not = 0$, and we require an exact value for $x = 0$.
 This value will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
 
 We then define the \emph{digit precision} of the approximation as
