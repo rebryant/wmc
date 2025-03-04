@@ -166,7 +166,7 @@ combinatorics~\cite{knuth:bdd:2011}, quantitative risk
 assessment~\cite{andrews:ieeetr:2000,groen:ress:2006,xing:wiley:2015,xing:amm:2025},
 optimization~\cite{bergman:book:2016}, and
 product line modeling~\cite{andersen:jair:2010} are, in fact, applications of
-weighted model counting for discrete functions based on a decision diagram representations.
+weighted model counting for discrete functions based on decision diagram representations.
 
 Despite the intractability, a variety of weighted model counting
 programs have been developed that work well in practice.  They
@@ -232,7 +232,7 @@ Furthermore most top-down and bottom-up weighted model counters either
 explicitly or implicitly operate on decision-DNNF
 representations~\cite{beame:uai:2013}.  We also describe how to
 generalize these results to less restricted classes of Boolean formulas,
-as well as to other decision diagrams~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
+as well as to decision diagrams~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
 
 For formulas with negative weights, we demonstrate a family of
 formulas where no bounded-precision numeric representation will
@@ -304,7 +304,7 @@ theoretical and experimental results for when all weights are nonnegative.  In
 Section~\ref{sect:neg} we describe the challenges that negative
 weights can present, but also experimental results showing that
 floating-point arithmetic suffices in many cases.
-Section~\ref{sect:hybrid} then describes the use of interval
+Section~\ref{sect:reliable} then describes the use of interval
 arithmetic and our hybrid approach.  
 Finally, Section~\ref{sect:conclusion}
 presents some concluding remarks and  areas for
@@ -958,6 +958,7 @@ encountered values of $s$ and $T$ differed by a factor of around
  $10^{36}$.
 
 \section{Reliable and Efficient Weight Computation}
+\label{sect:reliable}
 
 \begin{figure}
 \centering{%
