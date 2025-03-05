@@ -124,7 +124,7 @@
   floating-point arithmetic and rational arithmetic can achieve the
   twin goals of efficiency and guaranteed precision.
 
-  These results extend to many representations of discrete functions by decision diagrams.
+  These results extend to the numeric evaluation of discrete functions represented by a variety of decision diagrams.
 
 \end{abstract}
 
@@ -153,7 +153,7 @@ planning~\cite{domshlak:jair:2007}.  In addition, many of the
 applications of decision diagrams (DDs) for
 combinatorics~\cite{knuth:bdd:2011}, quantitative risk
 assessment~\cite{andrews:ieeetr:2000,groen:ress:2006,xing:wiley:2015,xing:amm:2025},
-Bayesian analysis~\cite{minato:ijcai:2007},
+Bayesian inference~\cite{minato:ijcai:2007},
 optimization~\cite{bergman:book:2016}, and
 product line modeling~\cite{andersen:jair:2010} are, in fact, applications of
 weighted model counting for discrete functions based on decision-diagram representations.
@@ -220,14 +220,14 @@ This result has broad applicability.
 For many applications
 of weighted model counting, the weights are probabilities between
 $0.0$ and $1.0$, or they are unit weights.  For these applications,  negative weights are never encountered.
-Furthermore most top-down and bottom-up weighted model
+Furthermore, most top-down and bottom-up weighted model
 counters either explicitly or implicitly operate on decision-DNNF
 representations~\cite{beame:uai:2013}.  
-Decision diagrams with binary branching structure also
-have direct translations into d-DNNF formulas~\cite{oztok:cp:2014}.
+Decision diagrams with binary branching structure
+also have direct translations into d-DNNF formulas~\cite{oztok:cp:2014}.
 We describe how to
-generalize these results to less restricted classes of Boolean formulas,
-as well as to decision diagrams with nonbinary branching structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
+compute precision bounds for less restricted classes of Boolean formulas,
+as well as for decision diagrams with nonbinary branching structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
 
 For formulas with negative weights, we demonstrate a family of
 formulas where no bounded-precision numeric representation will
@@ -263,7 +263,8 @@ levels of interval computation with MPFI, using increasing levels of
 precision.  If these evaluations fail to provide the target precision,
 it resorts to rational arithmetic using the MPQ\@.  The overall effect
 is to achieve the twin goals of efficiency and guaranteed precision.
-Although we only present experimental results for D4, similar results will hold for other top-down and bottom-up weighted model counters, as well as ones based on decision diagrams.
+Although we only present experimental results for D4, similar results will hold for other top-down and bottom-up weighted model counters, as well as
+for numeric computations on decision diagrams.
 
 This work is motivated by both application need and technical
 opportunity.  On the need side, there is evidence that the standard of
@@ -1058,10 +1059,29 @@ to handle a large portion of instances having negative weights.
 \subsection{A Hybrid Approach}
 \label{sect:hybrid}
 
+\begin{table}
+  \caption{Performance Comparison of Different Implementation Strategies.  Run entries of the form $S$+$F$ indicate that $S$ runs
+  were successful and $F$ runs either ran out of memory or failed to meet the target precision.  Our hybrid strategy is shown in red.}
+  \label{tab:compare}
+  \centering{
+%  \begin{tabular}{llrrrrrr}
+  \begin{tabular}{llrrrrr}
+    \toprule
+    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined}
+    % & \multicolumn{1}{c}{Avg (s)}
+    \\
+    \midrule
+    \input{method_table}
+    \\[-1em]
+   \bottomrule
+  \end{tabular}
+  } % Centering
+\end{table}
+
 We are now ready to combine our three approaches---floating-point
 arithmetic, interval computation, and rational arithmetic---into a
 single, hybrid approach.  We devised the following scheme, and we can
-measure its success based on 2500 instances---100 formulas, each with five collections of five instances.
+measure its success based on 2500 instances---100 formulas, each with five collections of five instances, as shown in the fourth entry in Table~\ref{tab:compare}
 \begin{enumerate}
 \item For instances where all weights are nonnegative, use MPF,
   relying on the bound of Equation~\ref{eqn:precision:wmc} to
@@ -1082,27 +1102,7 @@ measure its success based on 2500 instances---100 formulas, each with five colle
 \end{enumerate}
 Overall this strategy succeeded for all 2500 instances.
 
-
-\begin{table}
-  \caption{Performance Comparison of Different Implementation Strategies.  Run entries of the form $S$+$F$ indicate that $S$ runs
-  were successful and $F$ runs either ran out of memory or failed to meet the target precision.  Our hybrid strnategy is shown in red.}
-  \label{tab:compare}
-  \centering{
-%  \begin{tabular}{llrrrrrr}
-  \begin{tabular}{llrrrrr}
-    \toprule
-    \multicolumn{1}{c}{Strategy} & & \multicolumn{1}{c}{MPF} & \multicolumn{1}{c}{MPFI-128} & \multicolumn{1}{c}{MPFI-256} & \multicolumn{1}{c}{MPQ} & \multicolumn{1}{c}{Combined}
-    % & \multicolumn{1}{c}{Avg (s)}
-    \\
-    \midrule
-    \input{method_table}
-    \\[-1em]
-   \bottomrule
-  \end{tabular}
-  } % Centering
-\end{table}
-
-Table~\ref{tab:compare} summarizes the performance of five different strategies.
+Table~\ref{tab:compare} summarizes the performance of five different strategies, with our hybrid strategy as the fourth.
 Evaluating all 2500
 instances with MPQ completes 2450 of them in a
 total of $93.1$ hours, including over $22$ hours for the 50 failed
@@ -1173,8 +1173,10 @@ arithmetic operations on negative numbers.  First,
 the \emph{relaxed Tseitin}
 transformation~\cite{meert:starai:2016} provides  a form
 of Plaisted-Green\-baum encoding~\cite{plaisted:jsc:1986} that preserves
-weighted counts.  It introduces two auxiliary variables $r$ and $z$ having
+weighted counts.  When encoding a Boolean formula $\phi_1 \circ \phi_2$ into clauses,
+it introduces two auxiliary variables $r$ and $z$ having
 $w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
+
 Second, the \emph{gradient
 semiring}~\cite{eisner:acl:2002, kimmig:jal:2017,maene:aaai:2025} extends standard
 model counting such that each weight is pair $\langle p, d \rangle$,
@@ -1182,7 +1184,11 @@ where $p$ is a probability and $d$ is a partial derivative of the
 probability with respect to some variable $x$.  The weights
 associated with variable $x$ are $w(x) = \langle p(x), 1\rangle$ and
 $w(\obar{x}) = \langle 1-p(x), -1\rangle$, where $p(x)$ equals the probability that variable $x$ is assigned $1$.
-We speculate that interval floating-point arithmetic would perform well for both of these variants.
+Addition is defined as $\langle p_1, d_1\rangle + \langle p_2, d_2\rangle = \langle p_1 + p_2, d_1 + d_2\rangle$,
+and multiplication is defined as 
+$\langle p_1, d_1\rangle \cdot \langle p_2, d_2\rangle = \langle p_1 \cdot p_2, p_1 \cdot d_2 + p_2 \cdot d_1\rangle$.
+
+Even with the operations on negative values, we speculate that interval floating-point arithmetic would perform well for both variants.
 
 
 \newpage
