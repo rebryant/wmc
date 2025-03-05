@@ -130,7 +130,8 @@ def load(verbose):
 # MPQ: Use MPQ
 # MPF: Use MPF + MPQ
 # MPFI: Use MPFI + MPQ
-# MPFI: Use MPF + MPFI + MPFI2 + MPQ
+# MPFI2: Use MPF + MPFI + MPFI2 + MPQ
+# MPFI2_DIRECT: Use MPF + MPFI2 + MPQ
 
 def tabulate(target_method, label):
     global average_time
@@ -182,7 +183,7 @@ def tabulate(target_method, label):
                 total_time += instance.mpfi_seconds
                 time[method_mpq] += instance.mpq_seconds
                 total_time += instance.mpq_seconds
-                if instance.mpq_seconds is not None:
+                if instance.mpq_ok:
                     ok_count[method_mpq] += 1
                     total_ok_count += 1
                 else:
@@ -194,7 +195,7 @@ def tabulate(target_method, label):
                 total_time += instance.mpfi_seconds
                 time[method_mpq] += instance.mpq_seconds
                 total_time += instance.mpq_seconds
-                if instance.mpq_seconds is not None:
+                if instance.mpq_ok:
                     ok_count[method_mpq] += 1
                     total_ok_count += 1
                 else:
@@ -228,7 +229,7 @@ def tabulate(target_method, label):
                 total_time += instance.mpfi2_seconds
                 time[method_mpq] += instance.mpq_seconds
                 total_time += instance.mpq_seconds
-                if instance.mpq_seconds is not None:
+                if instance.mpq_ok:
                     ok_count[method_mpq] += 1
                     total_ok_count += 1
                 else:
@@ -253,7 +254,7 @@ def tabulate(target_method, label):
                 total_time += instance.mpfi2_seconds
                 time[method_mpq] += instance.mpq_seconds
                 total_time += instance.mpq_seconds
-                if instance.mpq_seconds is not None:
+                if instance.mpq_ok:
                     ok_count[method_mpq] += 1
                     total_ok_count += 1
                 else:
@@ -310,7 +311,7 @@ def run(name, args):
                 return
             elif args[argi][1] == 'w':
                 wide_format = True
-            elif args[argi][1] == 'w':
+            elif args[argi][1] == 'v':
                 verbose = True
             else:
                 sys.stderr.write("Invalid flag '%s'\n" % args[argi])
