@@ -206,7 +206,7 @@ In this paper, we apply two strategies to compute
 guaranteed-precision weighted model counts.  First, we consider the
 case where the weights $w(x)$ and $w(\obar{x})$ for all variables $x$ are nonnegative, and
 where the values are computed over a decision-DNNF Boolean
-formula~\cite{beame:uai:2013,huang:jair:2007,oztok:cp:2014}.
+formula~\cite{beame:uai:2013,huang:jair:2007}.
 We prove under these restrictions
 that the degradation of
 precision caused by rounding errors will be bounded by the logarithm
@@ -224,7 +224,7 @@ Furthermore, most top-down and bottom-up weighted model
 counters either explicitly or implicitly operate on decision-DNNF
 representations~\cite{beame:uai:2013}.  
 Decision diagrams with binary branching structure
-also have direct translations into d-DNNF formulas~\cite{oztok:cp:2014}.
+also have direct translations into decision-DNNF formulas~\cite{huang:jair:2007,oztok:cp:2014}.
 We describe how to
 compute precision bounds for less restricted classes of Boolean formulas,
 as well as for decision diagrams with nonbinary branching structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
@@ -350,7 +350,7 @@ feasible when the formula is in \emph{deterministic decomposable} negation-norma
   $\modelset(\phi_1) \cap \modelset(\phi_2) = \emptyset$.
 \end{enumerate}
 As an important subclass of d-DNNF, a formula is said to be in 
-\emph{decision decomposable} negation-normal form (decision-DNNF) when every occurrence of a disjunction has the form 
+\emph{decision decomposable} negation-normal form (decision-DNNF)~\cite{huang:jair:2007} when every occurrence of a disjunction has the form 
 $(x \land \phi_1) \lor (\obar{x} \land \phi_2)$ for some variable $x$, referred to as the \emph{decision variable}.
 
 There are several ways to compute the weighted count of d-DNNF formula $\phi$, all
