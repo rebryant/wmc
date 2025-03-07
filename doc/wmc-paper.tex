@@ -1107,9 +1107,11 @@ Overall this strategy succeeded for all 2500 instances.
 
 Table~\ref{tab:compare} summarizes the performance of five different strategies, with our hybrid strategy as the fourth.
 Evaluating all 2500
-instances with MPQ completes 2450 of them in a
-total of $93.1$ hours, including over $22$ hours for the 50 failed
-runs.  Combining MPF for the instances with nonnegative weights with MPQ for the rest
+instances with MPQ completes
+2450 of them, requiring a
+total of $93.1$ hours, of which over 
+$22$ hours is spent on the 50 failed runs.
+Combining MPF for the instances with nonnegative weights with MPQ for the rest
 completes an
 additional 20 instances and drops the total time to $55.97$ hours.
 Using one pass with MPFI (for $p=128$)
@@ -1172,7 +1174,7 @@ of such cases should be small.
 %% layered approach as for decision-DNNF formulas.
 
 Several variants of weighted model counting require
-arithmetic operations on negative numbers.  Extending our hybrid approach bears investigation.
+arithmetic operations on negative numbers.  Applying our hybrid approach bears further investigation.
 
 First,
 the \emph{relaxed Tseitin}
