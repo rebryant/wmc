@@ -229,14 +229,17 @@ We describe how to
 compute precision bounds for less restricted classes of Boolean formulas,
 as well as for decision diagrams with nonbinary branching structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
 
-For formulas with negative weights, we demonstrate a family of
+For formulas with negative weights, 
+we show experimentally that floating-point
+arithmetic suffices for the common ways weight assignments are generated in benchmark evaluations.
+On the other hand, we
+describe a strategy for generating random weight assignments that
+often causes floating-point arithmetic to yield erroneous results.
+We also
+demonstrate a family of
 formulas where no bounded-precision numeric representation will
 suffice.  Rational arithmetic provides the only option in such cases.
-On the other hand, we show experimentally that floating-point
-arithmetic suffices for standard ways to generate weight assignments,
-but there is no way to be certain of the precision.  We
-demonstrate a strategy for generating random weight assignments that
-often causes floating-point arithmetic to yield erroneous results.
+
 
 We address the lack of certainty in a standard floating-point
 evaluation by introducing \emph{interval} floating-point
@@ -278,7 +281,7 @@ compute floating-point values that are guaranteed to have over 30 decimal
 digits of precision, while generally avoiding the high cost of
 rational arithmetic.  To give a sense for this level of precision,
 30 digits suffices to represent the distance from
-Earth to Alpha Centauri (4.37 light years) to the nearest picometer,
+Earth to Alpha Centauri (around 4.37 light years) to the nearest \emph{picometer},
 around one one-hundredths the diameter of a hydrogen atom.
 
 Regarding previous work, we are unaware of any 
@@ -1169,16 +1172,19 @@ of such cases should be small.
 %% layered approach as for decision-DNNF formulas.
 
 Several variants of weighted model counting require
-arithmetic operations on negative numbers.  First,
+arithmetic operations on negative numbers.  Extending our hybrid approach bears investigation.
+
+First,
 the \emph{relaxed Tseitin}
 transformation~\cite{meert:starai:2016} provides  a form
 of Plaisted-Green\-baum encoding~\cite{plaisted:jsc:1986} that preserves
 weighted counts.  When encoding a Boolean formula $\phi_1 \circ \phi_2$ into clauses,
-it introduces two auxiliary variables $r$ and $z$ having
+for Boolean operation $\circ$,
+it introduces auxiliary variables $r$ and $z$ having
 $w(z) = w(\obar{z}) = w(r) = 1$ and $w(\obar{r}) = -1$.
 
 Second, the \emph{gradient
-semiring}~\cite{eisner:acl:2002, kimmig:jal:2017,maene:aaai:2025} extends standard
+semiring}~\cite{eisner:acl:2002, kimmig:jal:2017,maene:aaai:2025} extends conventional weighted
 model counting such that each weight is pair $\langle p, d \rangle$,
 where $p$ is a probability and $d$ is a partial derivative of the
 probability with respect to some variable $x$.  The weights
