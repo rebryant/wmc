@@ -22,6 +22,7 @@
 \newcommand{\approxP}{\approximate{P}}
 \newcommand{\approxx}{\approximate{x}}
 \newcommand{\approxy}{\approximate{y}}
+\newcommand{\approxv}{\approximate{v}}
 \newcommand{\approxw}{\approximate{w}}
 \newcommand{\approxW}{\approximate{W}}
 \newcommand{\approxs}{\approximate{s}}
@@ -33,6 +34,8 @@
 \newcommand{\roundepsilon}{\varepsilon}
 \newcommand{\xmin}{x^{-}}
 \newcommand{\xmax}{x^{+}}
+\newcommand{\vmin}{v^{-}}
+\newcommand{\vmax}{v^{+}}
 \newcommand{\varset}{X}
 \newcommand{\dependencyset}{{\cal V}}
 \newcommand{\assign}{\alpha}
@@ -155,7 +158,7 @@ combinatorics~\cite{knuth:bdd:2011}, quantitative risk
 assessment~\cite{andrews:ieeetr:2000,groen:ress:2006,xing:wiley:2015,xing:amm:2025},
 Bayesian inference~\cite{minato:ijcai:2007},
 optimization~\cite{bergman:book:2016}, and
-product line modeling~\cite{andersen:jair:2010} are, in fact, applications of
+product line modeling~\cite{andersen:jair:2010} are, at their core, applications of
 weighted model counting for discrete functions based on decision-diagram representations.
 
 Despite the intractability, a variety of weighted model counting
@@ -166,7 +169,7 @@ propagation and conflict analysis similar to CDCL SAT solvers.  Most
 of these programs operate as \emph{knowledge compilers}, converting
 the input Boolean formula into a restricted form that enables efficient
 weighted and unweighted counting~\cite{darwiche:aaai:2002,darwiche:ecai:2004,lagniez:ijcai:2017,muise:cai:2012,oztok:cp:2014,sharma:ijcai:2019}.
-Others are based on \emph{bottom-up} approaches, especially using
+Others are based on \emph{bottom-up} approaches, including ones using
 multi-terminal BDDs~\cite{dudek:aaai:2020,dudek:sat:2021}.  In both
 cases, the strategy is to convert the formula into a form for which
 weighted model counting becomes tractable.
@@ -184,8 +187,8 @@ floating-point evaluation cannot quantify the level of precision achieved.
 One way to guarantee high precision is to perform all of the
 computations using a rational-arithmetic software package~\cite{knuth:rational:1981}, such as the
 MPQ library within the GNU Multiprecision Arithmetic
-Library (GMP)~\cite{granlund:gmp:2015}.  It represents each number $x$ as a
-pair of multiprecision integers $p$ and $q$ with $x = p/q$.
+Library (GMP)~\cite{granlund:gmp:2015}.  It represents each number $v$ as a
+pair of multiprecision integers $p$ and $q$ with $v = p/q$.
 %% It dynamically allocates
 %% the memory for these two integers such that the only limitation on
 %% their sizes is the available memory.  Assuming all of the weights
@@ -199,7 +202,7 @@ In this paper, for example, we report experiments requiring over one gigabyte
 to store the arguments and result of a single addition operation.
 For most applications, rational arithmetic provides more precision than is required.
 It would be preferable to have a floating-point
-representation, but with a quantified level of precision.
+representation, but with a high and quantified level of precision.
 
 In this paper, we apply two strategies to compute 
 guaranteed-precision weighted model counts.  First, we consider the
@@ -244,12 +247,12 @@ We address the lack of certainty in a standard floating-point
 evaluation by introducing \emph{interval} floating-point
 arithmetic~\cite{hickey:jacm:2001} using the MPFI software
 library~\cite{revol:rc:2005}. With this library, values are
-approximated as intervals of the form $[\xmin, \xmax]$ such that the
-true value lies within the interval, and both $\xmin$ and $\xmax$ are
+approximated as intervals of the form $[\vmin, \vmax]$ such that the
+true value lies within the interval, and both $\vmin$ and $\vmax$ are
 represented in floating point.  The result of every operation is an
 interval that is guaranteed to include the true result value, as long
 as the argument intervals include their true values~\cite{hickey:jacm:2001,muller:hfpa:2018}.
-When an interval must be converted to a single value, the floating-point number nearest the midpoint $(\xmax+\xmin)/2$ is chosen.
+When an interval must be converted to a single value, the floating-point number nearest the midpoint $(\vmin+\vmax)/2$ is chosen.
 We show
 experimentally that the intervals maintained during the computations
 of weighted model counting are generally tight enough to provide
@@ -400,28 +403,28 @@ These particular smoothing terms
 \section{Approximations and Number Representations}
 \label{sect:background:numbers}
 
-When approximating rational number $x$ with value $\approximate{x}$, we
-define the \emph{approximation error} $\aerror[\approxx, x]$ as:
+When approximating rational number $v$ with value $\approxv$, we
+define the \emph{approximation error} $\aerror[\approxv, v]$ as:
 \begin{eqnarray}
-\aerror[\approxx, x] & = & \left\{ \begin{array}{ll}
-  \frac{|\approxx - x|}{|x|}  & x \not = 0\\
-  0 & x  = \approxx = 0\\
-  1 & x = 0 \; \textrm{and} \; \approxx \not = 0
+\aerror[\approxv, v] & = & \left\{ \begin{array}{ll}
+  \frac{|\approxv - v|}{|v|}  & v \not = 0\\
+  0 & v  = \approxv = 0\\
+  1 & v = 0 \; \textrm{and} \; \approxv \not = 0
   \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $x \not = 0$, and we require an exact representation when $x = 0$.
-The approximation error will equal 0 when $\approxx=x$, and it will be greater for weaker approximations.
+That is, we consider relative error when $v \not = 0$, and we require an exact representation when $v = 0$.
+The approximation error will equal 0 when $\approxv=v$, and it will be greater for weaker approximations.
 
 We then define the \emph{digit precision} of the approximation as
 \begin{eqnarray}
-\digitprecision(\approxx, x) & = & \max(0, -\log_{10} \aerror[\approxx, x]) \label{eqn:digitprecision} 
+\digitprecision(\approxv, v) & = & \max(0, -\log_{10} \aerror[\approxv, v]) \label{eqn:digitprecision} 
 \end{eqnarray}
-This value will range from $0$ for a poor approximation, up to $+\infty$ when $\approxx=x$.
-Intuitively, it indicates the number of matching digits in the decimal representations of $\approxx$ and $x$.
+This value will range from $0$ for a poor approximation, up to $+\infty$ when $\approxv=v$.
+Intuitively, it indicates the number of matching digits in the decimal representations of $\approxv$ and $v$.
 
 We consider floating-point numbers of the form
 \begin{eqnarray}
-x & = & (-1)^s \; \times \; f \; \times 2^{e} \label{eqn:floating-point}
+v & = & (-1)^s \; \times \; f \; \times 2^{e} \label{eqn:floating-point}
 \end{eqnarray}
 where:
 \begin{itemize}
@@ -459,48 +462,48 @@ As examples, consider two different floating-point formats:
  well within the range of the MPF representation.
 \end{itemize}
 
-When converting a rational number $x$ into a floating-point encoding, its value must be rounded to a
-value $\round(x)$.  In doing so, it can introduce a \emph{rounding
+When converting a rational number $v$ into a floating-point encoding, its value must be rounded to a
+value $\round(v)$.  In doing so, it can introduce a \emph{rounding
 error}.  
 Letting $\roundepsilon = 2^{-p}$, and assuming that
-the exponent range suffices to represent $x$,
+the exponent range suffices to represent $v$,
 we can assume that
-$\aerror[\round(x), x] \leq \roundepsilon$~\cite{muller:hfpa:2018,knuth:fp:1981}.
+$\aerror[\round(v), v] \leq \roundepsilon$~\cite{muller:hfpa:2018,knuth:fp:1981}.
 As examples, the double-precision representation has $\roundepsilon = 2^{-53} \approx 1.11 \times 10^{-16}$, while the 128-bit MPF format
-has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bounds of $\digitprecision(\round(x), x)$ are around $15.95$ and $38.53$, respectively.
+has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bounds of $\digitprecision(\round(v), v)$ are around $15.95$ and $38.53$, respectively.
 
 Floating-point arithmetic is implemented in such a way that any
 operation effectively computes an exact result and then rounds it to
 encode the result as a floating-point value.  The maximum error from a sequence of operations
 therefore tends to accumulate in multiples of $\roundepsilon$.
-This yields error bounds of the form $\aerror[\approxx, x] \leq t\,\roundepsilon$,
+This yields error bounds of the form $\aerror[\approxv, v] \leq t\,\roundepsilon$,
 which we  refer to as having at most $t$ units of
 rounding error.
 
-For interval $[\xmin, \xmax]$, we define the interval approximation error $\aerror([\xmin, \xmax])$ as
+For interval $[\vmin, \vmax]$, we define the interval approximation error $\aerror([\vmin, \vmax])$ as
 \begin{eqnarray}
-\aerror([\xmin, \xmax]) & = & \left\{ \begin{array}{ll}
-  \frac{\xmax - \xmin}{\min(|\xmin|, |\xmax|)}  & 0 \not \in [\xmin, \xmax]\\[0.8em]
-  0 & \xmin = \xmax = 0 \\
-  1 & 0 \in [\xmin, \xmax] \;\; \textrm{and} \;\; |\xmax - \xmin|  > 0 
+\aerror([\vmin, \vmax]) & = & \left\{ \begin{array}{ll}
+  \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in [\vmin, \vmax]\\[0.8em]
+  0 & \vmin = \vmax = 0 \\
+  1 & 0 \in [\vmin, \vmax] \;\; \textrm{and} \;\; |\vmax - \vmin|  > 0 
   \end{array} \right. \label{eqn:interval:error}
 \end{eqnarray}
-For any values $\approxx, x \in [\xmin, \xmax]$, we can see that
-$\aerror[\approxx, x] \leq \aerror([\xmin, \xmax])$.
+For any values $\approxv, v \in [\vmin, \vmax]$, we can see that
+$\aerror[\approxv, v] \leq \aerror([\vmin, \vmax])$.
 We then define the digit precision of the interval as:
 \begin{eqnarray}
-\digitprecision([\xmin, \xmax]) & = & \max[0, -\log_{10} \aerror([\xmin, \xmax])] \label{eqn:interval:digitprecision} 
+\digitprecision([\vmin, \vmax]) & = & \max[0, -\log_{10} \aerror([\vmin, \vmax])] \label{eqn:interval:digitprecision} 
 \end{eqnarray}
-This value will range from $0.0$ for a very large interval, relative to the magnitudes of its endpoints, to $+\infty$ when the interval is tight with $\xmin = \xmax$.
+This value will range from $0.0$ for a very large interval, relative to the magnitudes of its endpoints, to $+\infty$ when the interval is tight with $\vmin = \vmax$.
 
 \section{Error Analysis: Nonnegative Weights}
 \label{sect:nonneg}
 
 Here we evaluate how rounding errors accumulate via a series of
 arithmetic operations when all arguments are nonnegative.
-That is, assume the exact arguments $x$ and $y$ for each operation satisfy $x \geq 0$ and $y \geq 0$.
+That is, assume the exact arguments $v$ and $w$ for each operation satisfy $v \geq 0$ and $w \geq 0$.
 Rounding never causes a nonnegative number to become negative, and therefore 
-the approximations $\approxx$ of  $x$ and $\approxy$ of $y$ satisfy $\approxx \geq 0$ and $\approxy \geq 0$.
+the approximations $\approxv$ of  $v$ and $\approxw$ of $w$ satisfy $\approxv \geq 0$ and $\approxw \geq 0$.
 None of the operations multiplication, addition, or division yield negative results when their arguments are nonnegative.
 We can therefore
 assume that all actual and approximate values under consideration are
@@ -514,35 +517,35 @@ by weakening the
 bound, and it applies only when
 all arguments are nonnegative.
 
-Suppose for nonnegative values of $x$ and $y$ and nonnegative values $s$ and $t$, we have
-$\aerror[\approxx, x] \leq s\, \roundepsilon$ and
-$\aerror[\approxy, y] \leq t\, \roundepsilon$, respectively.
+Suppose for nonnegative values of $v$ and $w$ and nonnegative values $s$ and $t$, we have
+$\aerror[\approxv, v] \leq s\, \roundepsilon$ and
+$\aerror[\approxw, w] \leq t\, \roundepsilon$, respectively.
 Therefore
-$(1-s\,\roundepsilon)\, x \leq \approxx \leq (1+s\,\roundepsilon)\, x$ and
-$(1-t\,\roundepsilon)\, y \leq \approxy \leq (1+t\,\roundepsilon)\, y$.
+$(1-s\,\roundepsilon)\, v \leq \approxv \leq (1+s\,\roundepsilon)\, v$ and
+$(1-t\,\roundepsilon)\, w \leq \approxw \leq (1+t\,\roundepsilon)\, w$.
 
 
 \subsection{Multiplication}
 
-Assume that $x > 0$ and $y > 0$ and consider the effect of multiplying their approximations
-$\approxx$ and $\approxy$.  To simply the analysis, let us impose as an additional constraint that $s\,t \leq 1/\roundepsilon$.
-The product $\approxx \cdot \approxy$  satisfies
-$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
+Assume that $v > 0$ and $w > 0$ and consider the effect of multiplying their approximations
+$\approxv$ and $\approxw$.  To simply the analysis, let us impose as an additional constraint that $s\,t \leq 1/\roundepsilon$.
+The product $\approxv \cdot \approxw$  satisfies
+$\approxv \cdot \approxw \leq (v\cdot w) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
 giving
-$\approxx \cdot \approxy \leq (x\cdot y) (1 + (s+t+1)\,\roundepsilon)$.
-In the other direction, $\approxx \cdot \approxy$ satisfies
-$(x\cdot y) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxx \cdot \approxy$.  We can drop the term
+$\approxv \cdot \approxw \leq (v\cdot w) (1 + (s+t+1)\,\roundepsilon)$.
+In the other direction, $\approxv \cdot \approxw$ satisfies
+$(v\cdot w) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxv \cdot \approxw$.  We can drop the term
 $s\,t\,\roundepsilon^2$ to give
-$(x\cdot y) (1 - (s+t)\,\roundepsilon) \leq \approxx \cdot \approxy$.  These two bounds guarantee that
-$\aerror[\approxx \cdot \approxy, x \cdot y] \leq (s+t+1)\,\roundepsilon$.
+$(v\cdot w) (1 - (s+t)\,\roundepsilon) \leq \approxv \cdot \approxw$.  These two bounds guarantee that
+$\aerror[\approxv \cdot \approxw, v \cdot w] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
-$\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
+$\aerror[\round(\approxv \cdot \approxw), v \cdot w] \leq (s+t+2)\,\roundepsilon$.
 
-When $x=0$ (respectively, $y=0$), we will have $\approxx=0$ (resp., $\approxy = 0$) and therefore $x \cdot y = \approxx \cdot \approxy = 0$.
-We can therefore state that  for any nonnegative values of $x$ and $y$, the three conditions $\aerror[\approxx, x] \leq s\,\roundepsilon$,
-$\aerror[\approxy, y] \leq t\,\roundepsilon$, and
+When $v=0$ (respectively, $w=0$), we will have $\approxv=0$ (resp., $\approxw = 0$) and therefore $v \cdot w = \approxv \cdot \approxw = 0$.
+We can therefore state that  for any nonnegative values of $v$ and $w$, the three conditions $\aerror[\approxv, v] \leq s\,\roundepsilon$,
+$\aerror[\approxw, w] \leq t\,\roundepsilon$, and
 $s\,t \leq 1/\roundepsilon$, imply that
-$\aerror[\round(\approxx \cdot \approxy), x \cdot y] \leq (s+t+2)\,\roundepsilon$.
+$\aerror[\round(\approxv \cdot \approxw), v \cdot w] \leq (s+t+2)\,\roundepsilon$.
 
 Thus, for values of $s$, $t$, and $\roundepsilon$ satisfying our
 additional constraint, a multiplication operation, at most, propagates
@@ -551,16 +554,16 @@ rounding error.
 
 \subsection{Addition}
 
-When positive values $x$ and $y$ are added, their approximations  $\approxx$ and $\approxy$ satisfy
-$(x + y) (1 - r\,\roundepsilon) \leq \approxx + \approxy \leq (x + y) (1 + r\,\roundepsilon)$, where $r = \frac{s\,x + t\,y}{x+y}$.  That is, the resulting error $r$ is bounded by a weighted average
-of those of its arguments.  For all values of $x$ and $y$, $r$ cannot exceed the maximum of $s$ and $t$.
+When positive values $v$ and $w$ are added, their approximations  $\approxv$ and $\approxw$ satisfy
+$(v + w) (1 - r\,\roundepsilon) \leq \approxv + \approxw \leq (v + w) (1 + r\,\roundepsilon)$, where $r = \frac{s\,v + t\,w}{v+w}$.  That is, the resulting error $r$ is bounded by a weighted average
+of those of its arguments.  For all values of $v$ and $w$, $r$ cannot exceed the maximum of $s$ and $t$.
 Rounding the sum can add at most one unit of rounding error, and so we have
-$\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
+$\aerror[\round(\approxv + \approxw), v + w] \leq (\max(s,t)+1)\,\roundepsilon$.
 
-If $x = 0$ (respectively, $y = 0$), we will have $\round(\approxx + \approxy) = \approxy$ (resp., $= \approxx$).
-We can therefore state that for any nonnegative values of $x$ and $y$, the two conditions $\aerror[\approxx, x] \leq s\,\roundepsilon$ and
-$\aerror[\approxy, y] \leq t\,\roundepsilon$ imply that 
-$\aerror[\round(\approxx + \approxy), x + y] \leq (\max(s,t)+1)\,\roundepsilon$.
+If $v = 0$ (respectively, $w = 0$), we will have $\round(\approxv + \approxw) = \approxw$ (resp., $= \approxv$).
+We can therefore state that for any nonnegative values of $v$ and $w$, the two conditions $\aerror[\approxv, v] \leq s\,\roundepsilon$ and
+$\aerror[\approxw, w] \leq t\,\roundepsilon$ imply that 
+$\aerror[\round(\approxv + \approxw), v + w] \leq (\max(s,t)+1)\,\roundepsilon$.
 
 Thus, an addition operation, at most, propagates the maximum error of its arguments, and it adds one unit of rounding error.
 
@@ -618,10 +621,10 @@ $\aerror[\approxW(\phi_1 \land \phi_2), W(\phi_1 \land \phi_2)] \leq [(4 k -2) +
   $n \leq 1/(2\sqrt{\roundepsilon})$ implies that   $n-1 \leq 1/(2\sqrt{\roundepsilon})$.
   By induction, we can therefore assume that
   $\aerror[\approxW(\phi_i), W(\phi_i)] \leq (4(n-1)-2) \,\roundepsilon = (4n-6)\,\roundepsilon$.  Rounding the literal weights will yield
-  $\aerror[\approxW(\lit_i), W(\lit_i)] \leq \roundepsilon$.  Let $y_i$ denote the product $W(\lit_i) \cdot W(\phi_i)$ for $i \in \{1,2\}$.
+  $\aerror[\approxW(\lit_i), W(\lit_i)] \leq \roundepsilon$.  Let $v_i$ denote the product $W(\lit_i) \cdot W(\phi_i)$ for $i \in \{1,2\}$.
   Its rounded value will satisfy
-  $\aerror[\approxy_i, y_i] \leq (4n-3) \,\roundepsilon$.  Summing $\approxy_1$ and $\approxy_2$ and rounding the result will therefore give
-  an approximation $\approxW(\phi)$ to $W(\phi) = y_1 + y_2$ with
+  $\aerror[\approxv_i, v_i] \leq (4n-3) \,\roundepsilon$.  Summing $\approxv_1$ and $\approxv_2$ and rounding the result will therefore give
+  an approximation $\approxW(\phi)$ to $W(\phi) = v_1 + v_2$ with
 $\aerror[\approxW(\phi), W(\phi)] \leq (4n-2)\,\roundepsilon$.  
 \end{enumerate}
 
@@ -733,13 +736,13 @@ For these, the bound of Equation~\ref{eqn:precision:wmc} holds when $\phi$ is a 
 For ones that can have nonbinary branching, including
 multi-valued decision diagrams
 (MDDs)~\cite{srinivasan:iccad:1990} and sentential decision diagrams
-(SDDs)~\cite{darwiche:ijcai:2011}, we can compute an estimate $e(v)$ of the maximum rounding error for each node $v$.
-Consider a node $v$ with children
-$v_1, v_2, \ldots, v_k$, and with weight $w_i^{v}$ associated with the branch from $v$ to each child $v_i$.
-Algebraic evaluation computes a value $W(v)$ for node $v$ as
-$W(v) = \sum_{1\leq i\leq k} W(v_i)\cdot w_i^{v}$.
+(SDDs)~\cite{darwiche:ijcai:2011}, we can compute an estimate $e(n)$ of the maximum rounding error for each node $n$.
+Consider a node $n$ with children
+$n_1, n_2, \ldots, n_k$, and with weight $w_i^{n}$ associated with the branch from $n$ to each child $n_i$.
+Algebraic evaluation computes a value $W(n)$ for node $n$ as
+$W(n) = \sum_{1\leq i\leq k} W(n_i)\cdot w_i^{n}$.
 The error estimate $e$ can be computed for the node as
-$e(v) = 3 + \log_2(k-1) + \max_{1\leq i \leq k} e(v_i)$.
+$e(n) = 3 + \log_2(k-1) + \max_{1\leq i \leq k} e(n_i)$.
 Here we assume that the summation is performed with a balanced binary tree.
 %% For example, with our tautology construction, we would have $e = 2\,n
 %% + 2^{n-1} -3$. That would indicate that floating-point
@@ -1017,9 +1020,9 @@ guaranteed precision for the result.  It will only be beneficial,
 however, if the interval bounds remain tight enough that the digit
 precision bound of Equation~\ref{eqn:interval:digitprecision} meets
 our target digit precision.  Our target bound of 30 seems fairly
-aggressive in this respect: the width of the interval $\xmax-\xmin$
+aggressive in this respect: the width of the interval $\vmax-\vmin$
 must be over 30 orders of magnitude smaller than the magnitudes of
-$\xmin$ and $\xmax$.  Even the instances with only nonnegative weights
+$\vmin$ and $\vmax$.  Even the instances with only nonnegative weights
 had digit precisions as low as 34.5, and so there is not much
 room for further degradation.
 
