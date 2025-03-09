@@ -162,7 +162,7 @@ Despite the intractability, a variety of weighted model counting
 programs have been developed that work well in practice.  They
 generally fall into two categories~\cite{shaw:kr:2024}. \emph{Top-down} programs
 recursively branch on the variables of a formula, performing unit
-propagation and conflict analysis similar to a CDCL SAT solver.  Most
+propagation and conflict analysis similar to CDCL SAT solvers.  Most
 of these programs operate as \emph{knowledge compilers}, converting
 the input Boolean formula into a restricted form that enables efficient
 weighted and unweighted counting~\cite{darwiche:aaai:2002,darwiche:ecai:2004,lagniez:ijcai:2017,muise:cai:2012,oztok:cp:2014,sharma:ijcai:2019}.
@@ -176,9 +176,8 @@ experimental results described in this paper, some evaluations
 require over one billion arithmetic operations.
 Furthermore, the computed values are often either too small or too
 large in magnitude to encode with standard floating-point
-representations.  We also want the computed results to have a
-high and guaranteed level of precision.  Unfortunately, the rounding errors
-introduced by standard floating-point computations can lead to results
+representations.  In addition, the rounding errors
+introduced by floating-point computations can lead to results
 that bear little relation to the actual values.  In general, even when the results are accurate,
 floating-point evaluation cannot quantify the level of precision achieved.
 
@@ -1174,7 +1173,7 @@ of such cases should be small.
 %% layered approach as for decision-DNNF formulas.
 
 Several variants of weighted model counting require
-arithmetic operations on negative numbers.  Applying our hybrid approach bears further investigation.
+arithmetic operations on negative numbers.  Applying our hybrid approach to these bears further investigation.
 
 First,
 the \emph{relaxed Tseitin}
