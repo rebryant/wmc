@@ -250,7 +250,7 @@ formulas where no bounded-precision numeric representation will
 suffice.  Rational arithmetic provides the only option in such cases.
 
 
-We address the lack of certainty in a standard floating-point
+We address the lack of certainty in floating-point
 evaluation by introducing \emph{interval} floating-point
 arithmetic~\cite{hickey:jacm:2001} using the MPFI software
 library~\cite{revol:rc:2005}. With this library, values are
@@ -469,13 +469,13 @@ As examples, consider two different floating-point formats:
  well within the range of the MPF representation.
 \end{itemize}
 
-When converting rational number $v$ into a floating-point encoding, its value must be rounded to a
+When encoding rational number $v$ in floating point, its value must be rounded to a
 value $\round(v)$.  Doing so can introduce \emph{rounding
 error}.  
-Letting $\roundepsilon = 2^{-p}$, and assuming that
+Letting $\roundepsilon = 2^{-p}$, and assuming 
 the exponent range suffices to represent $v$,
 we can assume that
-$\aerror[\round(v), v] \leq \roundepsilon$~\cite{muller:hfpa:2018,knuth:fp:1981}.
+$\aerror[\round(v), v] \leq \roundepsilon$ (see, for example, \cite{muller:hfpa:2018,knuth:fp:1981}.)
 As examples, the double-precision representation has $\roundepsilon = 2^{-53} \approx 1.11 \times 10^{-16}$, while the 128-bit MPF format
 has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bounds of $\digitprecision(\round(v), v)$ are around $15.95$ and $38.53$, respectively.
 
