@@ -731,11 +731,9 @@ $e(\lit) = 1$ for literal $\ell$.
 For subformula $\phi'$ of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$,
 and for one of the form $\phi' = \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
 
-For formula $\phi$, we can use the computed bound $e(\phi)$ to test whether a fraction of size $p$ guarantees a desired level of precision.
-First,
-we check the condition $\log_2 e(\phi) \leq p/2$.  With that satisfied,
-an algebraic evaluation of $\phi$ is guaranteed to yield an approximation $\approxW$, such that
-$\digitprecision(\approxW, W) \geq \log_{10}(2)\cdot p - \log_{10}e(\phi)$.
+For formula $\phi$, we can use the computed bound $e(\phi)$ to select a fraction size $p$ that guarantees a desired level of precision.
+That is, we require $p \geq 2\,\log_2 e(\phi)$, and to achieve digit precision $D$, we require
+$p \geq D\cdot\log_2 10 +\log_2 e(\phi)$.
 
 Decision diagrams with binary branching structures, including
 BDDs~\cite{knuth:bdd:2011} and ZDDs~\cite{minato:sttt:2001}, can be
