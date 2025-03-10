@@ -169,7 +169,7 @@ propagation and conflict analysis similar to CDCL SAT solvers.  Most
 of these programs operate as \emph{knowledge compilers}, converting
 the input Boolean formula into a restricted form that enables efficient
 weighted and unweighted counting~\cite{darwiche:aaai:2002,darwiche:ecai:2004,lagniez:ijcai:2017,muise:cai:2012,oztok:cp:2014,sharma:ijcai:2019}.
-Others are based on \emph{bottom-up} approaches, including ones using
+Others apply \emph{bottom-up} approaches, including ones using
 multi-terminal BDDs~\cite{dudek:aaai:2020,dudek:sat:2021}.  In both
 cases, the strategy is to convert the formula into a form for which
 weighted model counting becomes tractable.
@@ -184,10 +184,10 @@ introduced by floating-point computations can lead to results
 that bear little relation to the actual values.  In general, even when the results are accurate,
 floating-point evaluation cannot quantify the level of precision achieved.
 
-One way to guarantee high precision is to perform all of the
-computations using a rational-arithmetic software package~\cite{knuth:rational:1981}, such as the
+High precision can be guaranteed by performing the
+computations with a rational-arithmetic software package~\cite{knuth:rational:1981}, such as the
 MPQ library within the GNU Multiprecision Arithmetic
-Library (GMP)~\cite{granlund:gmp:2015}.  It represents each number $v$ as a
+Library (GMP)~\cite{granlund:gmp:2015}.  It represents a rational number $v$ as a
 pair of multiprecision integers $p$ and $q$ with $v = p/q$.
 %% It dynamically allocates
 %% the memory for these two integers such that the only limitation on
@@ -218,6 +218,8 @@ cases.  For example, by using the MPF software floating-point library
 within GMP with a 128-bit fraction, we can guarantee that the computed
 count for a formula with up to ten million variables will provide at least
 30 decimal digits of precision.
+Its 64-bit exponent suffices to represent the full range of values in weighted model counting.
+
 This result has broad applicability.
 For many applications
 of weighted model counting, the weights are probabilities between
@@ -227,9 +229,13 @@ counters either explicitly or implicitly operate on decision-DNNF
 representations~\cite{beame:uai:2013}.  
 Decision diagrams with binary branching structure
 also have direct translations into decision-DNNF formulas~\cite{huang:jair:2007,oztok:cp:2014}.
-We describe how to
-compute precision bounds for less restricted classes of Boolean formulas,
-as well as for decision diagrams with nonbinary branching structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}.
+
+To extend this capability to less restricted classes of Boolean
+formulas and to decision diagrams with nonbinary branching
+structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}, we
+present a method for computing an error bound prior to algebraic
+evaluation.  This bound can guide the selection of a fraction size to 
+achieve the desired precision.
 
 For formulas with negative weights, 
 we show experimentally that floating-point
@@ -462,8 +468,8 @@ As examples, consider two different floating-point formats:
  well within the range of the MPF representation.
 \end{itemize}
 
-When converting a rational number $v$ into a floating-point encoding, its value must be rounded to a
-value $\round(v)$.  In doing so, it can introduce a \emph{rounding
+When converting rational number $v$ into a floating-point encoding, its value must be rounded to a
+value $\round(v)$.  Doing so can introduce \emph{rounding
 error}.  
 Letting $\roundepsilon = 2^{-p}$, and assuming that
 the exponent range suffices to represent $v$,
@@ -723,7 +729,9 @@ rounding error that can be encountered in its algebraic evaluation.  This estima
 $e(\lit) = 1$ for literal $\ell$.
 For subformula $\phi'$ of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$,
 and for one of the form $\phi' = \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
-For formula $\phi$,
+
+For formula $\phi$, we can use the computed bound $e(\phi)$ to test whether a fraction of size $p$ guarantees a desired level of precision.
+First,
 we check the condition $\log_2 e(\phi) \leq p/2$.  With that satisfied,
 an algebraic evaluation of $\phi$ is guaranteed to yield an approximation $\approxW$, such that
 $\digitprecision(\approxW, W) \geq \log_{10}(2)\cdot p - \log_{10}e(\phi)$.
