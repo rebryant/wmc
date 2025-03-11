@@ -23,6 +23,7 @@
 \newcommand{\approxx}{\approximate{x}}
 \newcommand{\approxy}{\approximate{y}}
 \newcommand{\approxv}{\approximate{v}}
+\newcommand{\approxV}{\approximate{V}}
 \newcommand{\approxw}{\approximate{w}}
 \newcommand{\approxW}{\approximate{W}}
 \newcommand{\approxs}{\approximate{s}}
@@ -235,7 +236,7 @@ To extend this capability to less restricted classes of Boolean
 formulas and to decision diagrams with nonbinary branching
 structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}, we
 present a method for computing an error bound prior to algebraic
-evaluation.  This bound can guide the selection of a fraction size to 
+evaluation.  This bound can guide the selection of the floating-point precision to
 achieve the desired precision.
 
 For formulas with negative weights, 
@@ -306,9 +307,10 @@ weighted model counting.
 Sections~\ref{sect:background:boolean} and
 \ref{sect:background:numbers} of this paper cover background material in Boolean
 formulas, weighted model counting, numeric error, and number
-representations.  Section~\ref{sect:nonneg} presents our
-theoretical result concerning the case of nonnegative weights and
-provides an experimental validation.  
+representations.  Section~\ref{sect:nonneg} covers the case of nonnegative weights,
+with our main theoretical result,
+a means of computing error bounds for more general formulas and decision diagrams,
+and an experimental validation.
 Section~\ref{sect:neg} describes the challenges that negative
 weights can present, but also experimental results showing that
 floating-point arithmetic suffices in many cases.
@@ -503,7 +505,7 @@ We then define the digit precision of the interval as:
 \end{eqnarray}
 This value will range from $0.0$ for a very large interval, relative to the magnitudes of its endpoints, to $+\infty$ when the interval is tight with $\vmin = \vmax$.
 
-\section{Error Analysis: Nonnegative Weights}
+\section{Only Nonnegative Weights}
 \label{sect:nonneg}
 
 Here we evaluate how rounding errors accumulate via a series of
@@ -701,62 +703,54 @@ weighted model counting.  This number is chosen because 1) it should be
 sufficient for most applications, and 2) it
 is achievable, at least for nonnegative weights, with a standard software floating-point package.
 
-\subsection{Generalizing to d-DNNF Formulas and Decision Diagrams}
+\subsection{Generalizing to Other Representations}
 \label{sect:ddnnf}
 
-Our requirement that each disjunction have an associated decision
-variable has the effect of limiting the depth of the sum operations in
-a formula to $n$.  This cannot be guaranteed for arbitrary d-DNNF formulas.
-%% Without this requirement, the depth can become exponential.
-%% For example, consider a d-DNNF formula encoding a
-%% tautology over $n$ variables, constructed as follows.  For each of the
-%% $2^n$ possible assignment $\assign$, we use conjunction operations to
-%% encode subformula $\phi_{\assign} = \bigwedge_{\lit \in \assign} \lit$.  We then
-%% use a linear sequence of $2^n-1$ disjunctions to combine these subformulas to
-%% form $\phi$.  The accumulated error from the resulting addition operations could grow
-%% exponentially with $n$.  Of course, such a formula is completely
-%% impractical for even modest values of $n$, but this construct
-%% demonstrates that, without further restrictions on the structure of a
-%% d-DNNF formula, we cannot guarantee a reasonable bound on the error incurred by an algebraic evaluation.
-%% The only
-%% cases we know where non-decision conjunctions occur in d-DNNF formulas is with projected model counting, where
-%% instances of a decision variable or its negation are removed by projection~\cite{derkinderen:ictai:2024}.
-%% In such cases, the bound of Equation~\ref{eqn:precision:wmc} holds,
-%% but we must include all variables, included those projected away, in the
-%% variable count $n$.
-Instead, for d-DNNF formula $\phi$, we
-can compute an estimate $e(\phi)$ of the maximum
-rounding error that can be encountered in its algebraic evaluation.  This estimate is defined recursively, starting with
-$e(\lit) = 1$ for literal $\ell$.
-For subformula $\phi'$ of the form $\phi' = \phi_1 \land \phi_2$, let $e(\phi') = e(\phi_1) + e(\phi_2) + 2$,
-and for one of the form $\phi' = \phi_1 \lor \phi_2$, let $e(\phi') = \max[e(\phi_1),\, e(\phi_2)] + 1$.
+The bound of Equation~\ref{eqn:precision:wmc} applies specifically to decision-DNNF
+formulas.  Having a decision variable associated with each disjunction
+bounds the depth of the sum operations in a formula to $n$.  Some
+decision diagrams with a binary branching structure, including Free
+Binary Decision Diagrams (FBDDs)~\cite{wegener:siam:2000}
+(a generalization of Ordered BDDs~\cite{bryant:ieeetc:1986,knuth:bdd:2011}), and Zero-suppressed Decision
+Diagrams (ZDDs)~\cite{minato:sttt:2001,minato:ijcai:2007} can be
+translated into smooth decision-DNNF formulas with a size expansion of
+most $n$, and hence the bound of Equation~\ref{eqn:precision:wmc}
+holds for these.
 
-For formula $\phi$, we can use the computed bound $e(\phi)$ to select a fraction size $p$ that guarantees a desired level of precision.
-That is, we require $p \geq 2\,\log_2 e(\phi)$, and to achieve digit precision $D$, we require
-$p \geq D\cdot\log_2 10 +\log_2 e(\phi)$.
+For more general d-DNNF formulas, and for decision diagrams with
+nonbinary branching structures, including multi-valued decision
+diagrams (MDDs)~\cite{srinivasan:iccad:1990} and sentential decision
+diagrams (SDDs)~\cite{darwiche:ijcai:2011}, it is difficult to find a
+useful error bound that applies to entire classes of formulas.
+Instead, given a formula to evaluate,
+we propose computing an error bound based on the
+structure of the formula, and using this bound to guide the selection of
+the precision $p$ used in a floating-point evaluation.
 
-Decision diagrams with binary branching structures, including
-BDDs~\cite{knuth:bdd:2011} and ZDDs~\cite{minato:sttt:2001}, can be
-translated directly into decision-DNNF formulas~\cite{oztok:cp:2014}.
-For these, the bound of Equation~\ref{eqn:precision:wmc} holds when $\phi$ is a decision diagram over $n$ variables.
+We can see with all of these representations that the core requirement
+is to compute a rational value $V$ by evaluating an arithmetic
+expression $\psi$ consisting of rational constants, products, and
+sums, where some of the product and sum operations may have more than
+two arguments.  Computing this value with floating-point operations
+having precision $p$ will yield an approximation $\approxV$ to the
+true value $V$.  We can recursively compute a bound $e(\psi)$, such that
+$\aerror[\approxV, V] \leq e(V) \,\roundepsilon$.  We assume we
+can convert each constant $v$ into its floating-point representation
+$\approxv$ with at most one rounding, and therefore $e(v) = 1$.  For a
+product of the form $\psi' = \prod_{1 \leq i \leq k} \psi_i$, we can
+recursively compute $e(\psi') = 2(k-1) + \sum_{1 \leq i \leq k}
+e(\psi_i)$.  Here, the multiplications can be performed via any
+association.
+For a sum of the form
+$\psi' = \sum_{1 \leq i \leq k} \psi_i$, we can compute
+$e(\psi') = \log_2(k-1) + \max\limits_{1\leq i \leq k} e(\psi_i)$.  Here, the sums should be performed as a balanced tree of binary additions.
 
-For ones that can have nonbinary branching, including
-multi-valued decision diagrams
-(MDDs)~\cite{srinivasan:iccad:1990} and sentential decision diagrams
-(SDDs)~\cite{darwiche:ijcai:2011}, we can compute an estimate $e(n)$ of the maximum rounding error for each node $n$.
-Consider a node $n$ with children
-$n_1, n_2, \ldots, n_k$, and with weight $w_i^{n}$ associated with the branch from $n$ to each child $n_i$.
-Algebraic evaluation computes a value $W(n)$ for node $n$ as
-$W(n) = \sum_{1\leq i\leq k} W(n_i)\cdot w_i^{n}$.
-The error estimate $e$ can be computed for the node as
-$e(n) = 3 + \log_2(k-1) + \max_{1\leq i \leq k} e(n_i)$.
-Here we assume that the summation is performed with a balanced binary tree.
-%% For example, with our tautology construction, we would have $e = 2\,n
-%% + 2^{n-1} -3$. That would indicate that floating-point
-%% evaluation is not feasible.  On the other hand, if we were to
-%% restructure the disjunctions into a balanced binary tree, we would get
-%% $e = 2\,n + n = 3\,n$, indicating that a floating-point evaluation, however impractical, would
-%% return a precise result.
+For expression $\psi$, we can use the computed bound $e(\psi)$ to
+select a fraction size $p$ that guarantees a desired level of
+precision.  That is, we require $p \geq 2\,\log_2 e(\psi)$, and to
+achieve digit precision $D$, we require $p \geq D\cdot\log_2 10 +\log_2 e(\psi)$.
+%% Importantly, this bound depends only on the structure of the arithmetic expression, and not on the values of the
+%% constants.
 
 \subsection{Experimental Validation}
 
@@ -859,12 +853,12 @@ The optimized products, on the other hand, demonstrate that particular
 combinations of formula and weight assignment can come within 2 decimal digits of the
 precision bound and to track its general trend.
 
-\section{Error Analysis: Negative Weights}
+\section{Negative, Zero, and Positive Weights}
 \label{sect:neg}
 
 The analysis of Section~\ref{sect:nonneg} no longer holds when
-some literals have negative weights.  With a floating-point
-representation, summing combinations of negative and nonnegative
+some literals have negative weights, while others have positive weights.  With a floating-point
+representation, summing combinations of negative and positive
 values can cause \emph{cancellation}, where arbitrary levels of
 precision are lost~\cite{knuth:fp:1981}.  Consider, for example, the computation
 $s + T - T$, where $s$ and $T$ are nonnegative floating-point values, with $s \ll T$.  Using
