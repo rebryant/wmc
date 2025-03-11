@@ -473,11 +473,11 @@ As examples, consider two different floating-point formats:
 
 When encoding rational number $v$ in floating point, its value must be rounded to a
 value $\round(v)$.  Doing so can introduce rounding
-error.  
+error~\cite{knuth:fp:1981,muller:hfpa:2018}.  
 Letting $\roundepsilon = 2^{-p}$, and assuming 
 the exponent range suffices to represent $v$,
 we can assume that
-$\aerror[\round(v), v] \leq \roundepsilon$ (see, for example, \cite{muller:hfpa:2018,knuth:fp:1981}.)
+$\aerror[\round(v), v] \leq \roundepsilon$.
 As examples, the double-precision representation has $\roundepsilon = 2^{-53} \approx 1.11 \times 10^{-16}$, while the 128-bit MPF format
 has $\roundepsilon = 2^{-128} \approx 2.94 \times 10^{-39}$.  As a consequence, the lower bounds of $\digitprecision(\round(v), v)$ are around $15.95$ and $38.53$, respectively.
 
@@ -539,13 +539,13 @@ $(1-t\,\roundepsilon)\, w \leq \approxw \leq (1+t\,\roundepsilon)\, w$.
 Assume that $v > 0$ and $w > 0$ and consider the effect of multiplying their approximations
 $\approxv$ and $\approxw$.  To simply the analysis, let us impose as an additional constraint that $s\,t \leq 1/\roundepsilon$.
 The product $\approxv \cdot \approxw$  satisfies
-$\approxv \cdot \approxw \leq (v\cdot w) (1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2)$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
+$\approxv \cdot \approxw \leq (v\cdot w) [1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2]$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
 giving
-$\approxv \cdot \approxw \leq (v\cdot w) (1 + (s+t+1)\,\roundepsilon)$.
+$\approxv \cdot \approxw \leq (v\cdot w) [1 + (s+t+1)\,\roundepsilon]$.
 In the other direction, $\approxv \cdot \approxw$ satisfies
-$(v\cdot w) (1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2) \leq \approxv \cdot \approxw$.  We can drop the term
+$(v\cdot w) [1 - (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2] \leq \approxv \cdot \approxw$.  We can drop the term
 $s\,t\,\roundepsilon^2$ to give
-$(v\cdot w) (1 - (s+t)\,\roundepsilon) \leq \approxv \cdot \approxw$.  These two bounds guarantee that
+$(v\cdot w) [1 - (s+t)\,\roundepsilon] \leq \approxv \cdot \approxw$.  These two bounds guarantee that
 $\aerror[\approxv \cdot \approxw, v \cdot w] \leq (s+t+1)\,\roundepsilon$.
 Rounding this result can introduce an additional error of at most $\roundepsilon$, and therefore
 $\aerror[\round(\approxv \cdot \approxw), v \cdot w] \leq (s+t+2)\,\roundepsilon$.
@@ -672,7 +672,7 @@ Computing the weighted model count of
 a decision-DNNF formula $\phi$, where all literal weights are nonnegative, with $|\dependencyset(\phi)| = n$, and using floating-point arithmetic with a $p$-bit fraction, such that $\log_2 n \leq p/2-1$
 will yield an approximation $\approxw(\phi)$ to the true weighted count $w(\phi)$, such that
 \begin{eqnarray}
-\digitprecision(\approxw(\phi), w(\phi)) & \geq & \log_{10}(2)\cdot p - \log_{10}(n) - c\label{eqn:precision:wmc}
+\digitprecision(\approxw(\phi), w(\phi)) & \geq & p \cdot \log_{10}2 - \log_{10}n - c\label{eqn:precision:wmc}
 \end{eqnarray}
 where $c = \log_{10} 7$ when rescaling is required and $c = \log_{10} 4$ when no rescaling is required.
 \end{theorem}
@@ -748,7 +748,7 @@ $e(\psi') = \log_2(k-1) + \max\limits_{1\leq i \leq k} e(\psi_i)$.  Here, the su
 For expression $\psi$, we can use the computed bound $e(\psi)$ to
 select a fraction size $p$ that guarantees a desired level of
 precision.  That is, we require $p \geq 2\,\log_2 e(\psi)$, and to
-achieve digit precision $D$, we require $p \geq D\cdot\log_2 10 +\log_2 e(\psi)$.
+achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi)$.
 %% Importantly, this bound depends only on the structure of the arithmetic expression, and not on the values of the
 %% constants.
 
