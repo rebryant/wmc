@@ -37,6 +37,7 @@
 \newcommand{\xmax}{x^{+}}
 \newcommand{\vmin}{v^{-}}
 \newcommand{\vmax}{v^{+}}
+\newcommand{\interval}[1]{[\![#1]\!]}
 \newcommand{\varset}{X}
 \newcommand{\dependencyset}{{\cal V}}
 \newcommand{\assign}{\alpha}
@@ -198,7 +199,7 @@ pair of multiprecision integers $p$ and $q$ with $v = p/q$.
 MPQ
 can compute the exact rational values of all multiplication and
 addition operations, yielding an exact weighted count.  Unfortunately,
-both the time and space required for storing and manipulating these numbers can be very
+both the space and time required for storing and manipulating these numbers can be very
 large.
 In this paper, for example, we report experiments requiring over one gigabyte
 to store the arguments and result of a single addition operation.
@@ -236,7 +237,7 @@ To extend this capability to less restricted classes of Boolean
 formulas and to decision diagrams with nonbinary branching
 structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}, we
 present a method for computing an error bound prior to algebraic
-evaluation.  This bound can guide the selection of the floating-point precision to
+evaluation.  This bound can guide the selection of the floating-point fraction size to
 achieve the desired precision.
 
 For formulas with negative weights, 
@@ -255,8 +256,8 @@ We address the lack of certainty in floating-point
 evaluation by introducing \emph{interval} floating-point
 arithmetic~\cite{hickey:jacm:2001} using the MPFI software
 library~\cite{revol:rc:2005}. With this library, values are
-approximated as intervals of the form $[\vmin, \vmax]$ such that the
-true value lies within the interval, and both $\vmin$ and $\vmax$ are
+approximated as closed intervals, written $\interval{\vmin, \vmax}$, such that the
+true value $v$ satisfies $\vmin \leq v \leq \vmax$, and both $\vmin$ and $\vmax$ are
 represented in floating point.  The result of every operation is an
 interval that is guaranteed to include the true result value, as long
 as the argument intervals include their true values~\cite{hickey:jacm:2001,muller:hfpa:2018}.
@@ -489,19 +490,19 @@ This yields error bounds of the form $\aerror[\approxv, v] \leq t\,\roundepsilon
 which we  refer to as having at most $t$ units of
 rounding error.
 
-For interval $[\vmin, \vmax]$, we define the interval approximation error $\aerror([\vmin, \vmax])$ as
+For interval $\interval{\vmin, \vmax}$, we define the interval approximation error $\aerror(\interval{\vmin, \vmax})$ as
 \begin{eqnarray}
-\aerror([\vmin, \vmax]) & = & \left\{ \begin{array}{ll}
-  \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in [\vmin, \vmax]\\[0.8em]
+\aerror(\interval{\vmin, \vmax}) & = & \left\{ \begin{array}{ll}
+  \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in \interval{\vmin, \vmax}\\[0.8em]
   0 & \vmin = \vmax = 0 \\
-  1 & 0 \in [\vmin, \vmax] \;\; \textrm{and} \;\; |\vmax - \vmin|  > 0 
+  1 & 0 \in \interval{\vmin, \vmax} \;\; \textrm{and} \;\; \vmin < \vmax
   \end{array} \right. \label{eqn:interval:error}
 \end{eqnarray}
-For any values $\approxv, v \in [\vmin, \vmax]$, we can see that
-$\aerror[\approxv, v] \leq \aerror([\vmin, \vmax])$.
+For any values $\approxv, v \in \interval{\vmin, \vmax}$, we can see that
+$\aerror[\approxv, v] \leq \aerror(\interval{\vmin, \vmax})$.
 We then define the digit precision of the interval as:
 \begin{eqnarray}
-\digitprecision([\vmin, \vmax]) & = & \max[0, -\log_{10} \aerror([\vmin, \vmax])] \label{eqn:interval:digitprecision} 
+\digitprecision(\interval{\vmin, \vmax}) & = & \max[0, -\log_{10} \aerror(\interval{\vmin, \vmax})] \label{eqn:interval:digitprecision} 
 \end{eqnarray}
 This value will range from $0.0$ for a very large interval, relative to the magnitudes of its endpoints, to $+\infty$ when the interval is tight with $\vmin = \vmax$.
 
@@ -803,11 +804,11 @@ plus a weight assignment for all of its literals.
 For each formula, we generated two different collections of instances, each with five weight assignments:
 \begin{itemize}
 \item \textsf{Uniform$+$}: For each variable $x$, weight $w(x)$ is represented by a 9-digit decimal number selected uniformly in the range
-  $[10^{-9},\,1-10^{-9}]$. The weight for $\obar{x}$ is then set to
+  $\interval{10^{-9},\,1-10^{-9}}$. The weight for $\obar{x}$ is then set to
   $w(\obar{x}) = 1-w(x)$.  Such a weight assignment is typical of those used in recent weighted model counting competitions~\cite{fichte:jea:2020}.
 \item \textsf{Exponential$+$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$
   are drawn independently from an exponential distribution in the range
-  $[10^{-9},\,10^{+9}]$.  Each weight is represented by a decimal number with 9 digits to the right of the decimal point.
+  $\interval{10^{-9},\,10^{+9}}$.  Each weight is represented by a decimal number with 9 digits to the right of the decimal point.
 \end{itemize}
 
 %% By comparison, Dilkas~\cite{dilkas:cpaior:2023} devised a number
@@ -929,9 +930,9 @@ In Figure~\ref{fig:posneg:mpf}, we see a similar plot to that of Figure~\ref{fig
 three collections of weight assignments with negative weights.  The first two are generalizations of those used earlier:
 \begin{itemize}
 \item \textsf{Uniform$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes drawn independently
-from a uniform distribution in the range  $[10^{-9},\,1-10^{-9}]$ and are represented as 9-digit decimal numbers.  Each is negated with probability $0.5$.
+from a uniform distribution in the range  $\interval{10^{-9},\,1-10^{-9}}$ and are represented as 9-digit decimal numbers.  Each is negated with probability $0.5$.
 \item \textsf{Exponential$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes
-  drawn independently from an exponential distribution in the range $[10^{-9},\,10^{+9}]$ and are represented with 9-digits to the right of the decimal point.  Each is negated with probability $0.5$.
+  drawn independently from an exponential distribution in the range $\interval{10^{-9},\,10^{+9}}$ and are represented with 9-digits to the right of the decimal point.  Each is negated with probability $0.5$.
 \end{itemize}
 As can be see with these plots, the results mostly stay above the precision bound of Equation~\ref{eqn:digitprecision},
 even though this bound need not hold.  All stay above the target precision of $30.0$.
