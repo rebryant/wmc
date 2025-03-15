@@ -129,7 +129,7 @@
   floating-point arithmetic and rational arithmetic can achieve the
   twin goals of efficiency and guaranteed precision.
 
-  These results extend to the numeric evaluation of discrete functions represented by a variety of decision diagrams.
+  These results extend to the numerical evaluation of discrete functions represented by a variety of decision diagrams.
 
 \end{abstract}
 
@@ -248,7 +248,7 @@ describe a strategy for generating random weight assignments that
 often causes floating-point arithmetic to yield erroneous results.
 We also
 demonstrate a family of
-formulas where no bounded-precision numeric representation will
+formulas where no bounded-precision numerical representation will
 suffice.  Rational arithmetic provides the only option in such cases.
 
 
@@ -256,7 +256,7 @@ We address the lack of certainty in floating-point
 evaluation by introducing \emph{interval} floating-point
 arithmetic~\cite{hickey:jacm:2001} using the MPFI software
 library~\cite{revol:rc:2005}. With this library, values are
-approximated as closed intervals, written $\interval{\vmin, \vmax}$, such that the
+represented by closed intervals, written $\interval{\vmin, \vmax}$, such that the
 true value $v$ satisfies $\vmin \leq v \leq \vmax$, and both $\vmin$ and $\vmax$ are
 represented in floating point.  The result of every operation is an
 interval that is guaranteed to include the true result value, as long
@@ -278,7 +278,7 @@ precision.  If these evaluations fail to provide the target precision,
 it resorts to rational arithmetic using MPQ\@.  The overall effect
 is to achieve the twin goals of efficiency and guaranteed precision.
 Although we only present experimental results for D4, similar results will hold for other top-down and bottom-up weighted model counters, as well as
-for numeric computations on decision diagrams.
+for numerical computations on decision diagrams.
 
 This work is motivated by both application need and technical
 opportunity.  On the need side, there is evidence that the standard of
@@ -296,7 +296,7 @@ Earth to Alpha Centauri (around 4.37 light years) to the nearest \emph{picometer
 around one one-hundredths the diameter of a hydrogen atom.
 
 Regarding previous work, we are unaware of any 
-systematic study of the numeric computations
+systematic study of the numerical computations
 performed in weighted model counting.  Special properties of
 decision-DNNF formulas enable stronger precision guarantees than is
 normally the case for floating-point arithmetic.  Some tools provide a
@@ -307,7 +307,7 @@ weighted model counting.
 
 Sections~\ref{sect:background:boolean} and
 \ref{sect:background:numbers} of this paper cover background material in Boolean
-formulas, weighted model counting, numeric error, and number
+formulas, weighted model counting, numerical error, and number
 representations.  Section~\ref{sect:nonneg} covers the case of nonnegative weights,
 with our main theoretical result,
 a means of computing error bounds for more general formulas and decision diagrams,
