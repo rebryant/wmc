@@ -414,7 +414,8 @@ These particular smoothing terms
 \label{sect:background:numbers}
 
 When approximating rational number $v$ with value $\approxv$, we
-define the \emph{approximation error} $\aerror[\approxv, v]$ as:
+define the \emph{approximation error} $\aerror[\approxv, v]$
+as the relative error when $v \not = 0$ and as requiring an exact representation when $v = 0$:
 \begin{eqnarray}
 \aerror[\approxv, v] & = & \left\{ \begin{array}{ll}
   \frac{|\approxv - v|}{|v|}  & v \not = 0\\
@@ -422,8 +423,8 @@ define the \emph{approximation error} $\aerror[\approxv, v]$ as:
   1 & v = 0 \; \textrm{and} \; \approxv \not = 0
   \end{array} \right. \label{eqn:approx:error}
 \end{eqnarray}
-That is, we consider relative error when $v \not = 0$, and we require an exact representation when $v = 0$.
-The approximation error will equal 0 when $\approxv=v$, and it will be greater for weaker approximations.
+This value will equal 0 when $\approxv=v$, and it will be greater for weaker approximations.
+Observe that approximating $v \not = 0$ with $0$ yields a high error:  $\aerror[0, v] = 1$.
 
 We then define the \emph{digit precision} of the approximation as
 \begin{eqnarray}
@@ -453,11 +454,10 @@ As examples, consider two different floating-point formats:
   this representation for weighted model counting.  For example, as
   part of the evaluation of weighted model counting when all weights
   are nonnegative, described in Section~\ref{sect:nonneg}, we computed
-  the counts for 980 combinations of formula and weight assignment
-  using double-precision arithmetic and compared them to the exact
-  values computed using rational arithmetic.  Fully 622 ($63.5\%$) of
-  the double-precision weights had digit precision equal to $0.0$,
-  with 413 overflowing to infinity and 209 underflowing to zero.
+  the counts for 1000 combinations of formula and weight assignment
+  using double-precision arithmetic.
+  Fully 627 of the evaluations failed due to values exceeding the exponent range,
+  with 418 overflowing to infinity and 209 underflowing to zero.
 \item The MPF software floating-point library allows the value of $p$
   to be set arbitrarily.  Our default configuration has $p=128$. On
   most 64-bit architectures, it represents the exponent as a 64-bit
@@ -758,11 +758,11 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
 \begin{figure}
 \centering{%
 \begin{tikzpicture}
-  \begin{axis}[mark options={scale=1.0},height=8cm,width=12cm,grid=both, grid style={black!10}, 
-      legend style={at={(0.30,0.25)}},
+  \begin{axis}[mark options={scale=1.0},height=8cm,width=14cm,grid=both, grid style={black!10}, 
+      legend style={at={(0.95,0.30)}},
       legend cell align={left},
                               %x post scale=2.0, y post scale=2.0,
-                              xmode=log,xmin=1,xmax=1e6,
+                              xmode=log,xmin=10,xmax=1e6,
                               xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
                               ymode=normal,ymin=0, ymax=50,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
@@ -779,9 +779,9 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
       \scriptsize \textsf{Optimized Product}
     }
     \addplot[mark=none] coordinates{(1,36.69) (1e7,30.69)};
-    \node[right] at (axis cs: 2, 34.0) {\rotatebox{-4}{Precision Bound}};
+    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound}};
     \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
-    \node[right] at (axis cs: 2, 28.5) {Target Precision};
+    \node[right] at (axis cs: 15, 28.0) {Target Precision};
  \end{axis}
 \end{tikzpicture}
 } % centering
@@ -889,11 +889,11 @@ $s+T$ and $-T$, and the result $s$.  In general, however, rational arithmetic ca
 \begin{figure}
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
-  \begin{axis}[mark options={scale=1.0},height=8cm,width=12cm,grid=both, grid style={black!10},
-      legend style={at={(0.32,0.25)}},
+  \begin{axis}[mark options={scale=1.0},height=8cm,width=14cm,grid=both, grid style={black!10},
+      legend style={at={(0.95,0.30)}},
       legend cell align={left},
                               %x post scale=2.0, y post scale=2.0,
-                              xmode=log,xmin=1,xmax=1e6,
+                              xmode=log,xmin=10,xmax=1e6,
                               xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
                               ymode=normal,ymin=0, ymax=50,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
@@ -910,9 +910,9 @@ $s+T$ and $-T$, and the result $s$.  In general, however, rational arithmetic ca
       \scriptsize \textsf{MC2024, Limits$\pm$}
     }
     \addplot[mark=none, dashed] coordinates{(1,36.69) (1e7,30.69)};
-    \node[right] at (axis cs: 2, 34.0) {\rotatebox{-4}{Precision Bound}};
+    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound}};
     \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
-    \node[right] at (axis cs: 2, 28.5) {Target Precision};
+    \node[right] at (axis cs: 15, 28.0) {Target Precision};
  \end{axis}
 \end{tikzpicture}
 } % centering
@@ -1217,15 +1217,15 @@ Even with the operations on negative values, we speculate that interval floating
 \begin{figure}[t]
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
-  \begin{axis}[mark options={scale=1.0},height=10cm,width=10cm,grid=both, grid style={black!10},
+  \begin{axis}[mark options={scale=1.0},height=14cm,width=14cm,grid=both, grid style={black!10},
       legend style={at={(0.45,0.98)}},
       legend cell align={left},
                               xmode=log,xmin=0.001, xmax=10000.0,
                               xtick={1e-3, 1e-2, 1e-1, 1, 10, 1e2, 1e3, 1e4},
-                              xticklabels={$0.001$, $0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$, $10{,}000$},
+                              xticklabels={$0.001$, $0.01$, $0.1$, $1.0$, $10.0$, $100$, $1{,}000$, $10{,}000$},
                               ymode=log, ymin=0.001, ymax=10000.0,
                               ytick={1e-3, 1e-2, 1e-1, 1, 10, 1e2, 1e3, 1e4},
-                              yticklabels={$0.001$, $0.01$, $0.1$, $1.0$, $10.0$, $100.0$, $1{,}000.0$, $10{,}000$},
+                              yticklabels={$0.001$, $0.01$, $0.1$, $1.0$, $10.0$, $100$, $1{,}000$, $10{,}000$},
                               xlabel={MPQ Runtime (secs.)}, ylabel={Hybrid Runtime (secs.)}
             ]
 
