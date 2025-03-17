@@ -843,16 +843,19 @@ and on the Y~axis according to the computed digit precision.
 The plot also shows the precision bound of Equation~\ref{eqn:precision:wmc} for $c=\log_{10} 7$.
 Results are shown for 98 of the 100 formulas, since the evaluation consistently ran out of memory when using rational arithmetic for two of the formulas.
 
-As can
-be expected, all data points stay above the precision bound.  Indeed,
-most exceed the bound by several decimal digits.  Our bound assumes
-that rounding either consistently decreases or consistently
-increases each computed result.  In practice, rounding goes in both directions, and
-therefore the computed results stay closer to the true values.
-
-The optimized products, on the other hand, demonstrate that particular
-combinations of formula and weight assignment can come within 2 decimal digits of the
-precision bound and to track its general trend.
+As can be expected, all data points stay above the precision bound.
+Indeed, most exceed the bound by several decimal digits.  Our bound
+assumes that rounding either consistently decreases or consistently
+increases each computed result.  In practice, rounding goes in both
+directions, and therefore the computed results stay closer to the true
+values.  The optimized products demonstrate that particular
+combinations of formula and weight assignment can come within one
+decimal digit of the precision bound and also to track its general
+trend.  Indeed, we should use $c = \log_{10} 3$ for these formulas,
+since the weighted model count is of the form $w^n$.
+For $n=10^6$ we get a bound of $32.055$.
+Using $w=1.000000453$, we get
+a computed digit precision of $32.273$, a difference from the bound of just $0.218$.
 
 \section{Arbitrary Weights}
 \label{sect:neg}
@@ -932,7 +935,7 @@ three collections of weight assignments with negative weights.  The first two ar
 \item \textsf{Uniform$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes drawn independently
 from a uniform distribution in the range  $\interval{10^{-9},\,1-10^{-9}}$ and are represented as 9-digit decimal numbers.  Each is negated with probability $0.5$.
 \item \textsf{Exponential$\pm$}: For each variable $x$, weights $w(x)$ and $w(\obar{x})$ have magnitudes
-  drawn independently from an exponential distribution in the range $\interval{10^{-9},\,10^{+9}}$ and are represented with 9-digits to the right of the decimal point.  Each is negated with probability $0.5$.
+  drawn independently from an exponential distribution in the range $\interval{10^{-9},\,10^{+9}}$ and are represented with 9 digits to the right of the decimal point.  Each is negated with probability $0.5$.
 \end{itemize}
 As can be see with these plots, the results mostly stay above the precision bound of Equation~\ref{eqn:digitprecision},
 even though this bound need not hold.  All stay above the target precision of $30.0$.
@@ -1095,7 +1098,7 @@ measure its success based on 2500 instances---100 formulas, each with five colle
   relying on the bound of Equation~\ref{eqn:precision:wmc} to
   guarantee sufficient precision.  This evaluation succeeded for all 1000 such
   instances, including 20 for which the evaluation with rational arithmetic failed.
-\item For instances with negative weights, perform a sequence of evaluations having successively greater cost:
+\item For instances with negative weights, attempt evaluations with increasing precision and cost:
 \begin{enumerate}
 \item 
   Use MPFI with $p=128$.  If the estimated precision
@@ -1103,8 +1106,8 @@ measure its success based on 2500 instances---100 formulas, each with five colle
   1222 of the 1500 instances evaluated, including 26 for which the evaluation with rational arithmetic failed.
 \item For instances where the estimated precision does not meet the target, perform a second run with MPFI, but with $p=256$.  This succeeded
   for 168 of the 278 instances evaluated, including 4 for which the evaluation with rational arithmetic failed.
-\item When the second attempt at interval computation fails, perform
-  an evaluation using MPQ to perform rational arithmetic.  This
+\item When the second attempt at interval computation fails, evaluate with rational arithmetic using MPQ\@.
+This
   succeeded for the remaining 110 instances.
 \end{enumerate}
 \end{enumerate}
@@ -1133,8 +1136,8 @@ $17.74$ hours.
 Finally, skipping the MPFI evaluation with $p=128$ and instead going directly to $p=256$ avoids
 wasted effort, but that
 does not
-compensate for the time required to perform all 1500 evaluations using
-$p=256$.  The appendix provides more
+compensate for the time required to perform all 1500 evaluations 
+with $p=256$.  The appendix provides more
 details on the performance of the hybrid strategy.
 
 %% Of course, finding an optimal strategy depends heavily on the formulas
@@ -1218,7 +1221,7 @@ Even with the operations on negative values, we speculate that interval floating
 \begin{figure}[t]
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
-  \begin{axis}[mark options={scale=1.0},height=14.5cm,width=15.2cm,grid=both, grid style={black!10},
+  \begin{axis}[mark options={scale=1.0},height=12.5cm,width=13.0cm,grid=both, grid style={black!10},
       legend style={at={(0.45,0.98)}},
       legend cell align={left},
                               xmode=log,xmin=0.001, xmax=18000.0,
