@@ -109,7 +109,7 @@
   weights associated with the positive and negated variables
   comprising the assignment.  Weighted model counting finds
   applications in a wide variety of domains including machine learning
-  and quantitative risk assignment.
+  and quantitative risk assessment.
 
   Most weighted model counting programs operate by (explicitly or
   implicitly) converting the input formula into a form that enables
@@ -221,7 +221,7 @@ cases.  For example, by using the MPF software floating-point library
 within GMP with a 128-bit fraction, we can guarantee that the computed
 count for a formula with up to ten million variables will provide at least
 30 decimal digits of precision.
-Its 64-bit exponent suffices to represent the full range of values in weighted model counting.
+The 64-bit exponent provided by MPF suffices to represent the full range of values in weighted model counting.
 
 This result has broad applicability.
 For many applications
@@ -274,7 +274,7 @@ When all weights are nonnegative, it uses MPF to
 perform floating-point computations, relying on our precision
 guarantee.  When some weights are negative, it performs up to two
 levels of interval computation with MPFI, using increasing levels of
-precision.  If these evaluations fail to provide the target precision,
+precision.  If these evaluations fail to guarantee the target precision,
 it resorts to rational arithmetic using MPQ\@.  The overall effect
 is to achieve the twin goals of efficiency and guaranteed precision.
 Although we only present experimental results for D4, similar results will hold for other top-down and bottom-up weighted model counters, as well as
@@ -317,7 +317,7 @@ weights can present, but also experimental results showing that
 floating-point arithmetic suffices in many cases.
 Section~\ref{sect:reliable} describes the use of interval
 arithmetic and our hybrid approach.  
-Finally, Section~\ref{sect:conclusion}
+Section~\ref{sect:conclusion}
 presents some concluding remarks.
 
 
@@ -538,7 +538,7 @@ $(1-t\,\roundepsilon)\, w \leq \approxw \leq (1+t\,\roundepsilon)\, w$.
 \subsection{Multiplication}
 
 Assume that $v > 0$ and $w > 0$ and consider the effect of multiplying their approximations
-$\approxv$ and $\approxw$.  To simply the analysis, let us impose as an additional constraint that $s\,t \leq 1/\roundepsilon$.
+$\approxv$ and $\approxw$.  To simplify the analysis, let us impose as an additional constraint that $s\,t \leq 1/\roundepsilon$.
 The product $\approxv \cdot \approxw$  satisfies
 $\approxv \cdot \approxw \leq (v\cdot w) [1 + (s+t)\,\roundepsilon + s\,t\,\roundepsilon^2]$, and we can use the additional constraint to replace $s\,t\,\roundepsilon^2$ by $\roundepsilon$,
 giving
