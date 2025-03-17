@@ -862,12 +862,12 @@ some literals have negative weights, while others have positive weights.  With a
 representation, summing combinations of negative and positive
 values can cause \emph{cancellation}, where arbitrary levels of
 precision are lost~\cite{knuth:fp:1981}.  Consider, for example, the computation
-$s + T - T$, where $s$ and $T$ are nonnegative floating-point values, with $s \ll T$.  Using
+$s + T - T$, where $s$ and $T$ are positive floating-point values, with $s \ll T$.  Using
 bounded-precision arithmetic, evaluating the sum as $s + (T - T)$ will yield $s$.
 Evaluating it as $(s + T) - T$, however, can yield $0$ or some other value that bears little relation to $s$.
 Cancellation can also occur when evaluating a sum $s + T - T'$, where $T \approx T'$.
 
-Cancellation can arise when evaluating decision-DNNF formulas to such a degree that no precision $p$ that grows sublinearly with $n$ will suffice.
+Cancellation can arise when evaluating decision-DNNF formulas to such a degree that no floating-point precision $p$ that grows sublinearly with $n$ will suffice.
 As an example, consider the following smooth, decision-DNNF formula $\tau_n$ over $n+1$ variables:
 \begin{eqnarray}
 \tau_n  & = & z \land \left[\bigwedge_{i = 1}^{n} \obar{x}_i \; \lor \; \bigwedge_{i = 1}^{n} x_i\right] \quad \lor \quad \obar{z} \land \left [\bigwedge_{i = 1}^{n} x_i\right] \label{eqn:max:precision}
