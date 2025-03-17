@@ -40,6 +40,7 @@ data:
 	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256-LIMITED)/mc2024_track2-random_*_*.count > combo-mpfi2-postmpfi-secs.csv
 	$(INTERP) $(GRAB) "COMBO used MPFI" $(PREC256-ALL)/mc2024_track2-random_*_*.count > combo-mpfi2-secs.csv
 	$(INTERP) $(GRAB) "MPFI gave only" $(PREC256-LIMITED)/mc2024_track2-random_*_*.count > combo-mpfi2-fail-secs.csv
+	$(INTERP) $(GRAB) "COMBO used MPFI_ONLY" $(PREC256-LIMITED)/mc2024_track2-random_{023,178}_*.count > combo-mpfi2-only-secs.csv
 	# Times
 	$(INTERP) $(GRAB) "MPF required " mc2024_track2-random_*_*.count > normal-mpf-secs.csv
 	$(INTERP) $(GRAB) "MPFI required " mc2024_track2-random_*_*.count > normal-mpfi-secs.csv
@@ -71,6 +72,9 @@ data:
 	$(INTERP) $(MERGE) -f combo-mpfi-secs.csv all-mpq-secs.csv >  combo-mpfi+mpq.csv
 	$(INTERP) $(MERGE) -s 1:2 -f combo-mpfi-fail-secs.csv combo-mpfi2-secs.csv all-mpq-secs.csv > combo-mpfi2+mpq.csv
 	$(INTERP) $(MERGE) -s 1:2:3 -f combo-mpfi-fail-secs.csv combo-mpfi2-fail-secs.csv all-mpq-secs.csv > combo-mpq+mpq.csv
+	$(INTERP) $(MERGE) combo-mpf-only-secs.csv 13000 > combo-mpf+nompq.csv
+	$(INTERP) $(MERGE) combo-mpfi-only-secs.csv 13000 > combo-mpfi+nompq.csv
+	$(INTERP) $(MERGE) -f -s 1:2 combo-mpfi2-only-secs.csv combo-mpfi-fail-secs.csv 13000 > combo-mpfi2+nompq.csv
 	# Modalities
 	cat combo-mpf-secs.csv combo-mpf-only-secs.csv | sort > used-mpf-secs.csv
 	cat combo-mpfi-secs.csv combo-mpfi-only-secs.csv | sort > used-mpfi-secs.csv

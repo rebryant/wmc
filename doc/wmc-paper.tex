@@ -1218,10 +1218,10 @@ Even with the operations on negative values, we speculate that interval floating
 \begin{figure}[t]
 \centering{%
 \begin{tikzpicture}%[scale = 0.70]
-  \begin{axis}[mark options={scale=1.0},height=14cm,width=14cm,grid=both, grid style={black!10},
+  \begin{axis}[mark options={scale=1.0},height=14.5cm,width=15.2cm,grid=both, grid style={black!10},
       legend style={at={(0.45,0.98)}},
       legend cell align={left},
-                              xmode=log,xmin=0.001, xmax=10000.0,
+                              xmode=log,xmin=0.001, xmax=18000.0,
                               xtick={1e-3, 1e-2, 1e-1, 1, 10, 1e2, 1e3, 1e4},
                               xticklabels={$0.001$, $0.01$, $0.1$, $1.0$, $10.0$, $100$, $1{,}000$, $10{,}000$},
                               ymode=log, ymin=0.001, ymax=10000.0,
@@ -1240,12 +1240,17 @@ Even with the operations on negative values, we speculate that interval floating
       \scriptsize \textsf{MC2024, Hybrid-MPFI-256},
       \scriptsize \textsf{MC2024, Hybrid-MPQ}
     }
+    \input{data-formatted/combo-mpf+nompq}
+    \input{data-formatted/combo-mpfi+nompq}
+    \input{data-formatted/combo-mpfi2+nompq}
     \addplot[mark=none] coordinates{(0.001,0.001) (10000.0,10000.0)};
     \node[left] at (axis cs: 11000, 2000) {$1.0\times$};
     \addplot[mark=none, color=lightblue] coordinates{(0.01, 0.001) (10000.0, 1000.0)};
     \node[left] at (axis cs: 11000, 200) {$0.1\times$};
     \addplot[mark=none, color=lightblue] coordinates{(0.1, 0.001)  (10000.0, 100.0)};
     \node[left] at (axis cs: 11000, 18) {$0.01\times$};
+    \addplot[mark=none] coordinates{(1e4,1e-3) (1e4,1e4)};
+    \addplot[mark=none,dashed] coordinates{(1.3e4,1e-3) (1.3e4,1e4)};
  \end{axis}
 \end{tikzpicture}
 } % centering
@@ -1256,15 +1261,16 @@ When the value can be computed with MPF or MPFI, the runtime is significantly be
 
 Figure~\ref{fig:runtime} compares the runtimes (Y~axis) for the hybrid
 strategy versus that for performing an evaluation using rational
-arithmetic (X~axis) for the 2450 instances that succeeded in the
-latter case.  These are categorized by the method by which the hybrid
+arithmetic (X~axis) for all 2500 instances.
+These are categorized by the method by which the hybrid
 method completed.  The diagonal lines show the relative time for the
 hybrid approach versus rational arithmetic.
+The points on the right indicate the 50 instances where the evaluation using MPQ failed, but the hybrid method completed.
 
-Of the 2450 instances, the 980 with nonnegative weights could be evaluated using MPF\@.  Many of these also had very small runtimes, even for MPQ\@.
+Of the 2450 instances where the MPQ evaluation completed, the 980 with nonnegative weights could be evaluated using MPF\@.  Many of these also had very small runtimes, even for MPQ\@.
 Considering just the 670 instances for which MPQ required more than $1.0$ seconds, we find that MPF ran between $4.8$ and $112.9$ times faster than MPQ, with an average of $23.3$ and a median of $18.6$.  This shows a clear performance benefit in using MPF when all weights are nonnegative.
 
-Of the 1470 instances containing negative weights, 1196 ($81.4\%$)
+Of the 1470 instances  containing negative weights where the MPQ evaluation completed, 1196 ($81.4\%$)
 were successfully evaluated using MPFI with $p=128$.  Considering the
 825 instances for which MPQ required more than $1.0$ seconds, we find
 that MPFI ran between $2.0$ and $41.1$ times faster, with an average of

@@ -24,6 +24,9 @@ rdata:
 	cp -p $(LDATA)/combo-mpfi+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpfi2+mpq.csv $(RDATA)
 	cp -p $(LDATA)/combo-mpq+mpq.csv $(RDATA)
+	cp -p $(LDATA)/combo-mpf+nompq.csv $(RDATA)
+	cp -p $(LDATA)/combo-mpfi+nompq.csv $(RDATA)
+	cp -p $(LDATA)/combo-mpfi2+nompq.csv $(RDATA)
 	cp -p $(LDATA)/tabulate-all.csv $(RDATA)
 	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
 	$(INTERP) $(TABULATE) -w $(RDATA) > method_table_wide.tex
@@ -63,4 +66,9 @@ pdata:
 		< $(RDATA)/combo-mpfi2+mpq.csv > $(FDATA)/combo-mpfi2+mpq.tex
 	$(INTERP) $(DGEN) -L 0.001 -X 4 -Y 5 -O "only marks, color=darkgreen, mark=pentagon*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/combo-mpq+mpq.csv > $(FDATA)/combo-mpq+mpq.tex
-
+	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=redorange, mark=*, mark options={scale=0.6, opacity=0.7}" \
+		< $(RDATA)/combo-mpf+nompq.csv > $(FDATA)/combo-mpf+nompq.tex
+	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
+		< $(RDATA)/combo-mpfi+nompq.csv > $(FDATA)/combo-mpfi+nompq.tex
+	$(INTERP) $(DGEN) -L 0.001 -X 4 -Y 5 -O "only marks, color=midblue, mark=diamond*, mark options={scale=0.9, opacity=0.7}" \
+		< $(RDATA)/combo-mpfi2+nompq.csv > $(FDATA)/combo-mpfi2+nompq.tex
