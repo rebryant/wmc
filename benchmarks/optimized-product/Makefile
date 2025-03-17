@@ -13,5 +13,4 @@ product: product.c
 	$(CC) $(CFLAGS) -o product product.c $(LIB)
 
 product-arm: product.c
-	$(CC) $(CFLAGS) -o product-arm product.c $(ALIB)
-
+	$(CC) -I $(ALOCAL)/include $(CFLAGS) -o product-arm product.c $(ALIB)
