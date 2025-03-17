@@ -772,7 +772,7 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
 
     \input{data-formatted/upos-mpf+vars}
     \input{data-formatted/epos-mpf+vars}
-    \input{data-formatted/prodp-mpf+vars}
+    \input{data-formatted/optimized-product}
     \legend{
       \scriptsize \textsf{MC2024, Uniform$+$},
       \scriptsize \textsf{MC2024, Exponential$+$},
@@ -827,7 +827,7 @@ Although not required for the instances used in this evaluation,
 it will insert smoothing terms when $w(x) + w(\obar{x}) = 0$ for variable $x$.
 
 In addition, we evaluated formulas of the form $\bigwedge_{1\leq i
-  \leq 10^d} x_i$ for values of $d$ ranging from $0$ to $6$ using a
+  \leq n} x_i$ for values of $n$ ranging up to one million using a
 single weight for every variable.  We swept a parameter space of
 weights of the form $1 + 10^{-9}\,k$ for $1 \leq k \leq 100$ and
 chose the value of $k$ that minimized the digit precision.  We refer
