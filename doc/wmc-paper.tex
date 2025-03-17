@@ -829,7 +829,7 @@ it will insert smoothing terms when $w(x) + w(\obar{x}) = 0$ for variable $x$.
 In addition, we evaluated formulas of the form $\bigwedge_{1\leq i
   \leq n} x_i$ for values of $n$ ranging up to one million using a
 single weight for every variable.  We swept a parameter space of
-weights of the form $1 + 10^{-9}\,k$ for $1 \leq k \leq 100$ and
+weights of the form $1 + 10^{-9}\,k$ for $1 \leq k \leq 1000$ and
 chose the value of $k$ that minimized the digit precision.  We refer
 to this as the \textsf{Optimized Product} collection.
 
@@ -945,20 +945,21 @@ $T'$ such that $T \approx T'$.  A uniform distribution has neither of
 these properties.  An exponential distribution has a large dynamic
 range, but the computed values tend to be very heterogenous.
 
-To create a weight assignment that has more chance of cancellation, we devised the following class of assignments:
+To increase the likelihood of precision loss due to cancellation, we devised the following strategy for generating weight assignments:
 \begin{itemize}
-\item\textsf{Limits$\pm$}:  Each weight $w(x)$ and $w(\obar{x})$ has a magnitude, chosen at random, of either $10^{-9}$ or $10^{+9}$, and they are each set negative with probability $0.5$.
+\item\textsf{Limits$\pm$}:  For variable $x$, each weight $w(x)$ and $w(\obar{x})$ has a magnitude, chosen at random, of either $10^{-9}$ or $10^{+9}$, and it is set negative with probability $0.5$.
   However, we exclude assignments with $w(x) + w(\obar{x}) = 0$.
 \end{itemize}
 The idea here is to give large dynamic ranges plus a high degree of
 homogeneity.  The plots for this assignment in
 Figure~\ref{fig:posneg:mpf} demonstrate the success of this strategy,
 with many results falling below the target precision of $30.0$.
-
-Figure~\ref{fig:posneg:mpf} presents a pessimistic
+This figure
+ presents a pessimistic
 perspective for these instances, since it only shows the minimum
-precision achieved out of five instances in a collection for each formula.  Considering all 490 instances
-for the 98 formulas evaluated, 221 (45\%) yielded results above the
+precision achieved out of five instances in a collection for each formula.  Considering all 490
+instances,
+221 (45\%) yielded results above the
 target precision of $30.0$.  We can also see how our choice of weights
 leads to two bands of low precision.  129 instances (26\%) had digit
 precisions in a band between $19.0$ and $23.3$.  These were ones where
@@ -1094,7 +1095,7 @@ measure its success based on 2500 instances---100 formulas, each with five colle
   relying on the bound of Equation~\ref{eqn:precision:wmc} to
   guarantee sufficient precision.  This evaluation succeeded for all 1000 such
   instances, including 20 for which the evaluation with rational arithmetic failed.
-\item For instances with negative weights, we perform a sequence of evaluations having successively greater cost:
+\item For instances with negative weights, perform a sequence of evaluations having successively greater cost:
 \begin{enumerate}
 \item 
   Use MPFI with $p=128$.  If the estimated precision
