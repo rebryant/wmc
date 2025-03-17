@@ -1258,12 +1258,13 @@ Even with the operations on negative values, we speculate that interval floating
 \end{tikzpicture}
 } % centering
 \caption{Runtime for hybrid method vs.~for MPQ, categorized by the solution method.  
-When the value can be computed with MPF or MPFI, the runtime is significantly better than using MPQ.  When it must resort to MPQ, it incurs some overhead.} 
+Successful evaluation with MPF or MPFI can significantly reduce the runtime,
+but failed evaluations cause some overhead.}
 \label{fig:runtime}
 \end{figure}
 
-Figure~\ref{fig:runtime} compares the runtimes (Y~axis) for the hybrid
-strategy versus that for performing an evaluation using rational
+Figure~\ref{fig:runtime} compares the runtimes  for the hybrid
+strategy (Y~axis) versus that for performing an evaluation using rational
 arithmetic (X~axis) for all 2500 instances.
 These are categorized by the method by which the hybrid
 method completed.  The diagonal lines show the relative time for the
