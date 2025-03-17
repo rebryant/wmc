@@ -50,7 +50,7 @@
 /*
   How many digits of precision can we guarantee when all weights are nonnegative?
   Compute floats with specified bit precision over formula with specified number of variables
-  constant = 3 for smoothed evaluation and 5 for unsmoothed
+  constant = 4 for smoothed evaluation and 7 for unsmoothed
 */
 double digit_precision_bound(int bit_precision, int nvar, double constant);
 
