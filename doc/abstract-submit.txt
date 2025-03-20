@@ -1,6 +1,6 @@
 Most propositional weighted model counting programs convert the input formula into a form that enables algebraic evaluation, using multiplication for conjunctions and addition for disjunctions. Performing this evaluation with floating-point arithmetic, however, can yield inaccurate results, and it cannot quantify the level of precision achieved. Computing with rational arithmetic gives exact results, but it is costly in both time and space. 
 
-When all weights are nonnegative, we prove that the precision loss during algebraic evaluation can be tightly bounded for a large class of model counting programs. We show experimentally that software-based floating-point can provide a high and guaranteed level of precision for this case. For problems with negative weights, we show that a combination of interval floating-point arithmetic and rational arithmetic can achieve the twin goals of efficiency and guaranteed precision. 
+This paper describes how to combine multiple evaluation methods to compute weighted model counts with high and guaranteed precision.  When all weights are nonnegative, we prove that the precision loss during algebraic evaluation can be tightly bounded, and therefore software-based floating-point suffices for this case. For problems with negative weights, we show that a combination of interval floating-point arithmetic and rational arithmetic can achieve the twin goals of efficiency and guaranteed precision. 
 
 These results also apply when numerically evaluating functions represented by decision diagrams. 
 
