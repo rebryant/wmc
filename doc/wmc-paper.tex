@@ -120,10 +120,11 @@
   rational arithmetic gives exact results, but it is costly in both
   time and space.
 
-  This paper describes how to combine multiple evaluation methods to compute weighted model counts with  high and guaranteed precision.
+  This paper describes how to combine multiple numeric representations
+  to efficiently compute weighted model counts with  high and guaranteed precision.
   When all weights are nonnegative, we prove that the precision loss of
   algebraic evaluation using floating-point arithmetic can be tightly bounded.
-  Software-based floating point suffices
+  Software-based floating-point arithmetic suffices
   for this case.  For problems
   with negative weights, we show that a combination of interval
   floating-point arithmetic and rational arithmetic can achieve the
