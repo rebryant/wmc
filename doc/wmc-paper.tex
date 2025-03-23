@@ -308,7 +308,7 @@ weighted model counting.
 
 Sections~\ref{sect:background:boolean} and
 \ref{sect:background:numbers} of this paper cover background material in Boolean
-formulas, weighted model counting, numerical error, and number
+formulas, weighted model counting, numerical error, and numeric
 representations.  Section~\ref{sect:nonneg} covers the case of nonnegative weights,
 with our main theoretical result,
 a means of computing error bounds for more general formulas and decision diagrams,
@@ -411,7 +411,7 @@ These particular smoothing terms
   effectively cause the subformula to evaluate to
   $0$.
 
-\section{Approximations and Number Representations}
+\section{Approximations and Numeric Representations}
 \label{sect:background:numbers}
 
 When approximating rational number $v$ with value $\approxv$, we
@@ -522,11 +522,10 @@ nonnegative.
 
 Our analysis builds on historic work for bounding the error produced
 by a series of floating-point
-multiplications~\cite{muller:hfpa:2018,wilkinson:nm:1960,wilkinson:rounding:1963} or
-additions~\cite{higham:siam:1993}.  Our formulation simplifies the analysis
-by weakening the
-bound, and it applies only when
-all arguments are nonnegative.
+multiplications~\cite{muller:hfpa:2018,rump:bit:2015,wilkinson:nm:1960,wilkinson:rounding:1963} or
+additions~\cite{higham:siam:1993}.  Our formulation considers combinations of multiplication and addition, and it weakens the error bound to simplify the analysis.
+It
+applies only when all arguments are nonnegative.
 
 Suppose for nonnegative values of $v$ and $w$ and nonnegative values $s$ and $t$, we have
 $\aerror[\approxv, v] \leq s\, \roundepsilon$ and
