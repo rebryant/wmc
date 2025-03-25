@@ -427,12 +427,11 @@ as the relative error when $v \not = 0$ and as requiring an exact representation
 This value will equal 0 when $\approxv=v$, and it will be greater for weaker approximations.
 Observe that approximating a nonzero value with zero yields a high error:  $\aerror[0, v] = 1$ when $v\not=0$.
 
-We then define the \emph{digit precision} of the approximation as
+The \emph{digit precision} expresses the quality of an approximation by the number of significant digits in its decimal representation:
 \begin{eqnarray}
 \digitprecision(\approxv, v) & = & \max(0, -\log_{10} \aerror[\approxv, v]) \label{eqn:digitprecision} 
 \end{eqnarray}
 This value will range from $0$ for a poor approximation, up to $+\infty$ when $\approxv=v$.
-Intuitively, it indicates the number of matching digits in the decimal representations of $\approxv$ and $v$.
 
 We consider floating-point numbers of the form
 \begin{eqnarray}
