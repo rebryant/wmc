@@ -108,12 +108,12 @@
   where the weight of an assignment is given by the product of the
   weights assigned to the positive and negated variables
   comprising the assignment.  Weighted model counting finds
-  applications across a variety of domains including machine learning
+  applications across a variety of domains including probabilistic reasoning
   and quantitative risk assessment.
 
   Most weighted model counting programs operate by (explicitly or
   implicitly) converting the input formula into a form that enables
-  \emph{arithmetic} evaluation, using multiplication for conjunctions
+  \emph{arithmetic evaluation}, using multiplication for conjunctions
   and addition for disjunctions.  Performing this evaluation using
   floating-point arithmetic can yield inaccurate results, and it
   cannot quantify the level of precision achieved.  Computing with
@@ -123,8 +123,8 @@
   This paper describes how to combine multiple numeric representations
   to efficiently compute weighted model counts with  high and guaranteed precision.
   When all weights are nonnegative, we prove that the precision loss of
-  arithmetic evaluation using floating-point arithmetic can be tightly bounded.
-  Software-based floating-point arithmetic suffices
+  arithmetic evaluation using floating-point arithmetic can be tightly bounded;
+  software-based floating-point arithmetic suffices
   for this case.  For problems
   with negative weights, we show that a combination of interval
   floating-point arithmetic and rational arithmetic can achieve the
@@ -208,7 +208,7 @@ For most applications, rational arithmetic provides more precision than is requi
 It would be preferable to have a floating-point
 representation, but with a high and quantified level of precision.
 
-This paper describes how to combine two strategies to compute 
+This paper describes how to combine multiple strategies to compute 
 guaranteed-precision weighted model counts.  First, we consider the
 case where the weights $w(x)$ and $w(\obar{x})$ for all variables $x$ are nonnegative, and
 where the values are computed over a decision-DNNF Boolean
