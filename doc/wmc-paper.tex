@@ -294,7 +294,7 @@ digits of precision, while generally avoiding the high cost of
 rational arithmetic.  To give a sense for this level of precision,
 30 digits suffices to represent the distance from
 Earth to Alpha Centauri (around 4.37 light years) to the nearest \emph{picometer},
-around one one-hundredths the diameter of a hydrogen atom.
+around one one-hundredths the diameter of a hydrogen atom and smaller than the wavelength of an electron.
 
 Regarding previous work, we are unaware of any 
 systematic study of the numerical computations
@@ -523,7 +523,7 @@ nonnegative.
 
 Our analysis builds on historic work for bounding the error produced
 by a series of floating-point
-multiplications~\cite{muller:hfpa:2018,rump:bit:2015,wilkinson:nm:1960,wilkinson:rounding:1963} or
+multiplications~\cite{muller:hfpa:2018,rump:bit:2015,wilkinson:nm:1960,wilkinson:rounding:1964} or
 additions~\cite{higham:siam:1993}.  Our formulation considers combinations of multiplication and addition, and it weakens the error bound to simplify the analysis.
 It
 applies only when all arguments are nonnegative.
@@ -531,7 +531,7 @@ applies only when all arguments are nonnegative.
 Suppose for nonnegative values of $v$ and $w$ and nonnegative values $s$ and $t$, we have
 $\aerror[\approxv, v] \leq s\, \roundepsilon$ and
 $\aerror[\approxw, w] \leq t\, \roundepsilon$, respectively.
-Therefore
+These bounds can be expanded according to (\ref{eqn:approx:error}) as
 $(1-s\,\roundepsilon)\, v \leq \approxv \leq (1+s\,\roundepsilon)\, v$ and
 $(1-t\,\roundepsilon)\, w \leq \approxw \leq (1+t\,\roundepsilon)\, w$.
 
@@ -735,7 +735,7 @@ expression $\psi$ consisting of rational constants, products, and
 sums, where some of the product and sum operations may have more than
 two arguments.  Computing this value with floating-point operations
 having precision $p$ will yield an approximation $\approxV$ to the
-true value $V$.  We can recursively compute a bound $e(\psi)$, such that
+true value $V$.  We can recursively compute an integer bound $e(\psi)$, such that
 $\aerror[\approxV, V] \leq e(V) \,\roundepsilon$.  We assume we
 can convert each constant $v$ into its floating-point representation
 $\approxv$ with at most one rounding, and therefore $e(v) = 1$.  For a
