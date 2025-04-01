@@ -298,11 +298,14 @@ around one one-hundredths the diameter of a hydrogen atom and smaller than the w
 
 Regarding previous work, we are unaware of any 
 systematic study of the numerical computations
-performed in weighted model counting.  Special properties of
+performed in weighted model counting.
+Special properties of
 decision-DNNF formulas enable stronger precision guarantees than is
-normally the case for floating-point arithmetic.  Some tools provide a
-general capability to certify the accuracy of floating-point computations
-via interval arithmetic~\cite{becker:fmcad:2016}, but we have not seen an experimental
+normally the case for floating-point arithmetic.
+In addition, most of the recent working on bounding the error caused by floating-point
+rounding considers absolute error~\cite{becker:fmcad:2016,magron:toms:2017,solovyev:toplas:2018}.
+We find quantifying relative error more meaningful when considering the wide dynamic range seen in weighted model counting.
+  We also have not seen an experimental
 evaluation of interval or rational arithmetic for
 weighted model counting.
 
