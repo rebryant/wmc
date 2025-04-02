@@ -296,16 +296,17 @@ rational arithmetic.  To give a sense for this level of precision,
 Earth to Alpha Centauri (around 4.37 light years) to the nearest \emph{picometer},
 around one one-hundredths the diameter of a hydrogen atom and smaller than the wavelength of an electron.
 
-Regarding previous work, we are unaware of any 
-systematic study of the numerical computations
-performed in weighted model counting, nor that anyone has recognized
-the special properties of
-decision-DNNF formulas that enable stronger precision guarantees than is
-normally the case for floating-point arithmetic.
-In addition, most of the recent working on bounding the error caused by floating-point
-rounding considers absolute error~\cite{becker:fmcad:2016,magron:toms:2017,solovyev:toplas:2018}.
-We find quantifying relative error more meaningful when considering the wide dynamic range seen in weighted model counting.
-(Our benchmark evaluations had weighted counts with magnitudes ranging from $10^{-141658}$ to $10^{+466283}$.)
+Regarding previous work,
+most recent work on bounding the error caused by
+floating-point rounding considers absolute
+error~\cite{becker:fmcad:2016,magron:toms:2017,solovyev:toplas:2018}.
+With weighted model counting, the computed values can have a very large dynamic
+range---the benchmark evaluations reported in this paper yielded weighted counts with magnitudes ranging from
+$10^{-141{,}658}$ to $10^{+466{,}283}$.  
+Quantifying relative error is far more meaningful in this context, and so we reach back to
+more historic work~\cite{wilkinson:nm:1960,wilkinson:rounding:1964}.
+We have not seen any investigation of the numerical properties of weighted model counting, and especially
+the tight bounds on error that can be obtained for the arithmetic evaluation of decision-DNNF formulas.
 % We also have not seen an experimental evaluation of interval or rational arithmetic for
 % weighted model counting.
 
