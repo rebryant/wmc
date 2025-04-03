@@ -237,7 +237,7 @@ also have direct translations into decision-DNNF formulas~\cite{huang:jair:2007,
 To extend this capability to less restricted classes of Boolean
 formulas and to decision diagrams with nonbinary branching
 structures~\cite{darwiche:ijcai:2011,srinivasan:iccad:1990}, we
-present a method for computing an error bound prior to arithmetic
+present a method for computing an integer-valued error bound prior to arithmetic
 evaluation.  This bound can guide the selection of the floating-point fraction size to
 achieve the desired precision.
 
@@ -306,7 +306,7 @@ $10^{-141{,}658}$ to $10^{+466{,}283}$.
 Quantifying relative error is far more meaningful in this context, and so we reach back to
 more historic work~\cite{wilkinson:nm:1960,wilkinson:rounding:1964}.
 We have not seen any investigation of the numerical properties of weighted model counting, and especially
-the tight bounds on error that can be obtained for the arithmetic evaluation of decision-DNNF formulas.
+the tight error bounds that can be obtained for the arithmetic evaluation of decision-DNNF formulas.
 % We also have not seen an experimental evaluation of interval or rational arithmetic for
 % weighted model counting.
 
@@ -466,11 +466,12 @@ As examples, consider two different floating-point formats:
   Fully 627 of the evaluations failed due to values exceeding the exponent range,
   with 418 overflowing to infinity and 209 underflowing to zero.
 \item The MPF software floating-point library allows the value of $p$
-  to be set arbitrarily.  Our default configuration has $p=128$. On
+  to be set to any multiple of 64.  Our default configuration has $p=128$. On
   most 64-bit architectures, it represents the exponent as a 64-bit
   signed number.  This provides an ample exponent range, giving a
   magnitude range of over $10^{\pm 10^{18}}$.
-  For example, the weighted model count for a tautology with $n$ variables, where all literals are assigned weight $w$, equals
+  For example, the weighted model count for a tautology with $n$ variables,
+  where all literals are assigned weight $w$, equals
   $2^n\cdot w^n = (2w)^n$.  Consider literal weight $w=10^{1000}$,
  far larger than can even be represented in IEEE-754 double precision, and let $n$ equal one trillion, over five orders of magnitude
  larger than the largest formulas solved by current weighted model counters.  The weighted count is
@@ -534,8 +535,8 @@ It
 applies only when all arguments are nonnegative.
 
 Suppose for nonnegative values of $v$ and $w$ and nonnegative values $s$ and $t$, we have
-$\aerror[\approxv, v] \leq s\, \roundepsilon$ and
-$\aerror[\approxw, w] \leq t\, \roundepsilon$, respectively.
+$\aerror[\approxv, v] \leq s\, \roundepsilon < 1$ and
+$\aerror[\approxw, w] \leq t\, \roundepsilon < 1$, respectively.
 These bounds can be expanded according to (\ref{eqn:approx:error}) as
 $(1-s\,\roundepsilon)\, v \leq \approxv \leq (1+s\,\roundepsilon)\, v$ and
 $(1-t\,\roundepsilon)\, w \leq \approxw \leq (1+t\,\roundepsilon)\, w$.
@@ -571,14 +572,17 @@ rounding error.
 \subsection{Addition}
 
 When positive values $v$ and $w$ are added, their approximations  $\approxv$ and $\approxw$ satisfy
-$(v + w) (1 - r\,\roundepsilon) \leq \approxv + \approxw \leq (v + w) (1 + r\,\roundepsilon)$, where $r = \frac{s\,v + t\,w}{v+w}$.  That is, the resulting error $r$ is bounded by a weighted average
+$(v + w) (1 - r\,\roundepsilon) \leq \approxv + \approxw \leq (v + w) (1 + r\,\roundepsilon)$, where
+%%  $r = \frac{s\,v + t\,w}{v+w}$.
+$r = (s\,v + t\,w)/(v+w)$.
+That is, the resulting error bound $r$ is a weighted average
 of those of its arguments.  For all values of $v$ and $w$, $r$ cannot exceed the maximum of $s$ and $t$.
 Rounding the sum can add at most one unit of rounding error, and so we have
 $\aerror[\round(\approxv + \approxw), v + w] \leq (\max(s,t)+1)\,\roundepsilon$.
 
 If $v = 0$ (respectively, $w = 0$), we will have $\round(\approxv + \approxw) = \approxw$ (resp., $= \approxv$).
-We can therefore state that for any nonnegative values of $v$ and $w$, the two conditions $\aerror[\approxv, v] \leq s\,\roundepsilon$ and
-$\aerror[\approxw, w] \leq t\,\roundepsilon$ imply that 
+We can therefore state that for any nonnegative values of $v$ and $w$, the two conditions $\aerror[\approxv, v] \leq s\,\roundepsilon < 1$ and
+$\aerror[\approxw, w] \leq t\,\roundepsilon < 1$ imply that 
 $\aerror[\round(\approxv + \approxw), v + w] \leq (\max(s,t)+1)\,\roundepsilon$.
 
 Thus, an addition operation, at most, propagates the maximum error of its arguments, and it adds one unit of rounding error.
@@ -730,7 +734,7 @@ diagrams (MDDs)~\cite{srinivasan:iccad:1990} and sentential decision
 diagrams (SDDs)~\cite{darwiche:ijcai:2011}, it is difficult to find a
 useful error bound that applies to entire classes of formulas.
 Instead, given a formula to evaluate,
-we propose computing an error bound based on the
+we propose computing an integer-valued error bound based on the
 structure of the formula, and using this bound to guide the selection of
 the precision $p$ used in a floating-point evaluation.
 
@@ -750,7 +754,7 @@ e(\psi_i)$.  Here, the multiplications can be performed via any
 association.
 For a sum of the form
 $\psi' = \sum_{1 \leq i \leq k} \psi_i$, we can compute
-$e(\psi') = \log_2(k-1) + \max\limits_{1\leq i \leq k} e(\psi_i)$.  Here, the sums should be performed as a balanced tree of binary additions.
+$e(\psi') = \log_2(k-1) + \max_{1\leq i \leq k} e(\psi_i)$.  Here, the sums should be performed as a balanced tree of binary additions.
 
 For expression $\psi$, we can use the computed bound $e(\psi)$ to
 select a fraction size $p$ that guarantees a desired level of
