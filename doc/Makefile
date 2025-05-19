@@ -29,8 +29,8 @@ rdata:
 	cp -p $(LDATA)/combo-mpfi2+nompq.csv $(RDATA)
 	cp -p $(LDATA)/tabulate-all.csv $(RDATA)
 	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
-	$(INTERP) $(TABULATE) -w $(RDATA) > method_table_wide.tex
-
+	cp -p $(LDATA)/negpos-tabulate.csv $(RDATA)
+	cp -p $(LDATA)/nonneg-tabulate.csv $(RDATA)
 
 
 pdata:

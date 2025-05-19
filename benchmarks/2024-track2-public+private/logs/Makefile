@@ -84,4 +84,28 @@ data:
 	$(INTERP) $(MERGE) -t -1:5000:4 combo-mpfi2-fail-secs.csv > modality-mpq.csv
 	cat modality-mpf.csv modality-mpfi.csv modality-mpfi2.csv modality-mpq.csv | sort | $(INTERP) $(EXTRACT) 1:3 > modality-all.csv
 	$(INTERP) $(MERGE) -l bench,mode,mpf,mpfi,mpfi2,mpq modality-all.csv all-mpf-secs.csv all-mpfi-secs.csv all-mpfi2-secs.csv all-mpq-secs.csv > tabulate-all.csv
-
+	# Nonegative using MPF
+	$(INTERP) $(GRAB) "Data variables" mc2024_track2-random_*_{1,2}*.count > nonneg-variables.csv	
+	$(INTERP) $(GRAB) 2 "WEIGHTED DBL COUNT" mc2024_track2-random_*_{1,2}*.count > nonneg-double-precision.csv	
+	$(INTERP) $(GRAB) "DBL required" mc2024_track2-random_*_{1,2}*.count > nonneg-double-seconds.csv
+	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" prec64-all/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf64-seconds.csv
+	$(INTERP) $(GRAB) "COMBO used MPF" mc2024_track2-random_*_{1,2}*.count > nonneg-mpf128-seconds.csv
+	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" prec256-all/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf256-seconds.csv
+	$(INTERP) $(GRAB) "MPQ required " mc2024_track2-random_*_{1,2}*.count > nonneg-mpq-seconds.csv
+	$(INTERP) $(MERGE) -l bench,var,dbl-prec,dbl-sec,mpf64-sec,mpf128-sec,mpf256-sec,mpq-sec \
+		nonneg-variables.csv nonneg-double-precision.csv nonneg-double-seconds.csv nonneg-mpf64-seconds.csv  nonneg-mpf128-seconds.csv nonneg-mpf256-seconds.csv nonneg-mpq-seconds.csv > nonneg-tabulate.csv
+	# Negative/positive using MPFI
+	$(INTERP) $(GRAB) "Data variables" mc2024_track2-random_*_{3,4,5}*.count > negpos-variables.csv
+	$(INTERP) $(GRAB) 2 "COMBO COUNT" prec64-all/mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi064-precision.csv
+	$(INTERP) $(GRAB) "COMBO used" prec64-all/mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi064-seconds.csv
+	$(INTERP) $(GRAB) 2 "WEIGHTED MPFI COUNT" mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi128-precision-normal.csv
+	$(INTERP) $(GRAB) "MPFI required" mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi128-seconds-normal.csv
+	$(INTERP) $(GRAB) 2 "COMBO COUNT" mc2024_track2-random_{023,178}_{3,4,5}*.count > negpos-mpfi128-precision-hard.csv
+	$(INTERP) $(GRAB) "COMBO used" mc2024_track2-random_{023,178}_{3,4,5}*.count > negpos-mpfi128-seconds-hard.csv
+	cat negpos-mpfi128-precision-normal.csv negpos-mpfi128-precision-hard.csv | sort > negpos-mpfi128-precision.csv
+	cat negpos-mpfi128-seconds-normal.csv negpos-mpfi128-seconds-hard.csv | sort > negpos-mpfi128-seconds.csv
+	$(INTERP) $(GRAB) 2 "COMBO COUNT" prec256-all/mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi256-precision.csv
+	$(INTERP) $(GRAB) "COMBO used" prec256-all/mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi256-seconds.csv
+	$(INTERP) $(GRAB) "MPQ required " mc2024_track2-random_*_{3,4,5}*.count > negpos-mpq-seconds.csv
+	$(INTERP) $(MERGE) -l bench,var,mpfi64-prec,mpfi64-sec,mpfi128-prec,mpfi128-sec,mpfi256-prec,mpfi256-sec,mpq-sec \
+		negpos-variables.csv negpos-mpfi064-precision.csv negpos-mpfi064-seconds.csv negpos-mpfi128-precision.csv negpos-mpfi128-seconds.csv negpos-mpfi256-precision.csv negpos-mpfi256-seconds.csv negpos-mpq-seconds.csv > negpos-tabulate.csv
