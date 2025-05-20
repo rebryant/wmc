@@ -25,12 +25,14 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-d PATH]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-d PATH] [-m (c|t|e)] [-o OUT]\n" % name)
     sys.stderr.write("  -v      Verbose\n")
     sys.stderr.write("  -d PATH Directory with CSV files\n")
+    sys.stderr.write("  -m MODE Graphing mode: count (c) time (t) effort (e)\n")
+    sys.stderr.write("  -o OUT  Specify output file\n")
 
 directory = "."
-verbose = True
+verbose = False
 
 constantFactor = 7
 
@@ -52,6 +54,10 @@ def failTime(bench):
 precisionCount = 5
 tabulationCount = 8
 
+minPrecision = 1
+maxPrecision = 70
+
+
 class PrecisionType:
     dbl, m64, m128, m256, mpq = range(precisionCount)
     nonnegNames = ["dbl", "mpf64", "mpf128", "mpf256", "mpq"]
@@ -59,7 +65,9 @@ class PrecisionType:
     bits = [53, 63, 127, 255, 10000]
     
     nn_dbl, nn_m64, nn_m128, nn_m256, np_m64, np_m128, np_m256, all_mpq = range(tabulationCount)
-    tabulateNames = ["dbl", "mpf64", "mpf128", "mpf256", "mpfi64" "mpfi128", "mpfi256", "mpq"]
+    tabulateNames = ["double", "mpf-64", "mpf-128", "mpf-256", "mpfi-64" "mpfi-128", "mpfi-256", "mpq"]
+    tabulateColors = ["dbl", "mpflow", "mpfmed", "mpfhigh", "mpfilow", "mpfimed", "mpfihigh", "mpq"]
+
 
     nn_map = {}
     np_map = {}
@@ -85,7 +93,7 @@ class PrecisionType:
         mint = 0 if isNonnegative else 1
         for t in range(mint, precisionCount):
             tidx = self.nn_map[t] if isNonnegative else self.np_map[t]
-            histo[tidx] += timeList[t]
+            histo[tidx] += timeList[t] / 3600.0
 
     # Final method
     def accumulateCount(self, isNonnegative, ptype, histo):
@@ -95,7 +103,7 @@ class PrecisionType:
     # Total time by final method
     def accumulateTime(self, isNonnegative, ptype, total, histo):
         tidx = self.nn_map[ptype] if isNonnegative else self.np_map[ptype]
-        histo[tidx] += total
+        histo[tidx] += total / 3600.0
 
 
     def guaranteedPrecision(self, ptype, nvar):
@@ -233,10 +241,18 @@ class Instance:
 class SolutionSet:
     targetPrecision = 0
     solutionList = []
+    count, effort, time = range(3)
+    modeCharacters = ['c', 'e', 't']
 
     def __init__(self, targetPrecision):
         self.targetPrecision = 0
         self.solutionList = []
+
+    def getMode(self, c):
+        for i in range(len(self.modeCharacters)):
+            if c == self.modeCharacters[i]:
+                return i
+        return 0
 
     def addSolution(self, s):
         self.solutionList.append(s)
@@ -259,14 +275,20 @@ class SolutionSet:
             s.accumulateEffort(histo)
         return histo
     
-    
+    def tabulate(self, mode):
+        if mode == self.count:
+            return self.tabulateCount()
+        elif mode == self.effort:
+            return self.tabulateEffort()
+        else:
+            return self.tabulateTime()
+
 class InstanceSet:
     instanceList = []
 
     def __init__(self):
         self.instanceList = []
-        
-    
+
     def load(self, csvFile, isNonnegative):
         creader = csv.DictReader(csvFile)
         count = 0
@@ -287,7 +309,29 @@ class InstanceSet:
                 print("Got solution %s" % str(s))
         return solutions
 
-instances = None
+class SolutionRange:
+
+    instances = None
+    solutionSetList = []
+    solutionPoints = [1] + [5*i for i in range(1, 15)]
+
+    def __init__(self, instances):
+        self.instances = instances
+        self.solutionSetList = []
+        for d in self.solutionPoints:
+            sset = instances.solve(d)
+            self.solutionSetList.append(sset)
+        
+    def format(self, modeCharacter, outfile):
+        mode = self.solutionSetList[0].getMode(modeCharacter)
+        histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
+        for t in range(tabulationCount):
+            outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
+            for i in range(len(self.solutionSetList)):
+                d = self.solutionPoints[i]
+                v = histoList[i][t]
+                outfile.write("(%d,%.3f)" % (d, v))
+            outfile.write("};\n")
 
 def run(name, args):
     fname = ["nonneg-tabulate.csv", "negpos-tabulate.csv"]
@@ -295,9 +339,10 @@ def run(name, args):
     global verbose
     global directory
     global ptyper
-    global instances
     ptyper = PrecisionType()
-    optList, args = getopt.getopt(args, "hvd:")
+    modeCharacter = 'c'
+    outName = None
+    optList, args = getopt.getopt(args, "hvd:m:o:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -306,19 +351,33 @@ def run(name, args):
             verbose = True
         elif opt == '-d':
             directory = val
+        elif opt == '-m':
+            modeCharacter = val
+        elif opt == '-o':
+            outName = val
     instances = InstanceSet()
     for i in range(2):
         name = directory + "/" + fname[i]
         try:
-            infile = open(name)
+            infile = open(name, 'r')
         except:
             print("Can't open file '%s'" % name)
             continue
         count = instances.load(infile, nonnegative[i])
         infile.close()
         print("Loaded %d instances from %s" % (count, name))
-    
+    srange = SolutionRange(instances)
+    outfile = sys.stdout
+    if outName is not None:
+        try:
+            outfile = open(outName, 'w')
+        except:
+            print("Couldn't open output file '%s'" % outName)
+            return 1
+    srange.format(modeCharacter, outfile)
 
-
+if __name__ == "__main__":
+    run(sys.argv[0], sys.argv[1:])
+    sys.exit(0)
     
     
