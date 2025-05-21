@@ -25,14 +25,20 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-d PATH] [-m (c|t|e)] [-o OUT]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-l] [-d PATH] [-m (c|t|e)] [-o OUT]\n" % name)
     sys.stderr.write("  -v      Verbose\n")
+    sys.stderr.write("  -l      Use reduced set of digit precision values\n")    
     sys.stderr.write("  -d PATH Directory with CSV files\n")
     sys.stderr.write("  -m MODE Graphing mode: count (c) time (t) effort (e)\n")
     sys.stderr.write("  -o OUT  Specify output file\n")
 
 directory = "."
 verbose = False
+
+
+dataPoints = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
+
+limitedPoints = [1, 10, 15, 20, 30, 35, 40, 70]
 
 constantFactor = 7
 
@@ -313,12 +319,11 @@ class SolutionRange:
 
     instances = None
     solutionSetList = []
-    solutionPoints = [1] + [5*i for i in range(1, 15)]
 
     def __init__(self, instances):
         self.instances = instances
         self.solutionSetList = []
-        for d in self.solutionPoints:
+        for d in dataPoints:
             sset = instances.solve(d)
             self.solutionSetList.append(sset)
         
@@ -328,7 +333,7 @@ class SolutionRange:
         for t in range(tabulationCount):
             outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
             for i in range(len(self.solutionSetList)):
-                d = self.solutionPoints[i]
+                d = dataPoints[i]
                 v = histoList[i][t]
                 outfile.write("(%d,%.3f)" % (d, v))
             outfile.write("};\n")
@@ -339,14 +344,17 @@ def run(name, args):
     global verbose
     global directory
     global ptyper
+    global dataPoints
     ptyper = PrecisionType()
     modeCharacter = 'c'
     outName = None
-    optList, args = getopt.getopt(args, "hvd:m:o:")
+    optList, args = getopt.getopt(args, "hvld:m:o:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
+        elif opt == '-l':
+            dataPoints = limitedPoints
         elif opt == '-v':
             verbose = True
         elif opt == '-d':

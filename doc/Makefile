@@ -6,6 +6,7 @@ LPDATA = ../benchmarks/optimized-product
 RDATA = data-raw
 FDATA = data-formatted
 TABULATE = tabulate_combo.py
+OPTIMIZE = optimize_performance.py
 
 
 rdata:
@@ -31,6 +32,7 @@ rdata:
 	$(INTERP) $(TABULATE) $(RDATA) > method_table.tex
 	cp -p $(LDATA)/negpos-tabulate.csv $(RDATA)
 	cp -p $(LDATA)/nonneg-tabulate.csv $(RDATA)
+
 
 
 pdata:
@@ -72,3 +74,5 @@ pdata:
 		< $(RDATA)/combo-mpfi+nompq.csv > $(FDATA)/combo-mpfi+nompq.tex
 	$(INTERP) $(DGEN) -L 0.001 -X 4 -Y 5 -O "only marks, color=midblue, mark=diamond*, mark options={scale=0.9, opacity=0.7}" \
 		< $(RDATA)/combo-mpfi2+nompq.csv > $(FDATA)/combo-mpfi2+nompq.tex
+	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m c > $(FDATA)/tabulate-count-limited.tex
+	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m e > $(FDATA)/tabulate-effort-limited.tex

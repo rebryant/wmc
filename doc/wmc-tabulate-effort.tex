@@ -1,0 +1,49 @@
+\documentclass[11pt]{standalone}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat = 1.3}
+
+%% \definecolor{dbl}{rgb}{0.8, 0.8, 0.8}
+%% \definecolor{mpflow}{rgb}{0.8, 0.4, 0.8}
+%% \definecolor{mpfmed}{rgb}{0.5, 0.9, 0.9}
+%% \definecolor{mpfhigh}{rgb}{0.8, 0.4, 0.4}
+%% \definecolor{mpfilow}{rgb}{0.4, 0.7, 0.4}
+%% \definecolor{mpfimed}{rgb}{0.4, 0.4, 0.8}
+%% \definecolor{mpfihigh}{rgb}{0.9, 0.9, 0.3}
+%% \definecolor{mpq}{rgb}{0.4, 0.4, 0.4}
+
+\definecolor{dbl}{RGB}{49,97,160}
+\definecolor{mpflow}{RGB}{96,165,200}
+\definecolor{mpfmed}{RGB}{161,207,223}
+\definecolor{mpfhigh}{RGB}{224,243,248}
+\definecolor{mpfilow}{RGB}{215,48,39}
+\definecolor{mpfimed}{RGB}{253,174,97}
+\definecolor{mpfihigh}{RGB}{254,224,144}
+\definecolor{mpq}{RGB}{100,100,100}
+
+\begin{document}
+\begin{tikzpicture}[scale = 0.85]
+  \begin{axis}[
+      ybar stacked,
+      width = 8cm,
+      height=8cm,
+      bar width=15pt,
+%%      nodes near coords,
+%%      enlargelimits=0.15,
+%      legend style={at={(0.42,-0.20)},
+%        anchor=north, legend columns=-1},
+      ylabel shift = -5pt,
+      ylabel = {Total Time (hours)},
+      xlabel = {Target precision $D$},
+      ymax = 30,
+      ytick = {0, 5, 10, 15, 20, 25, 30},
+      yticklabels = {0, 5, 10, 15, 20, 25, 30},
+      symbolic x coords={1, 10, 15, 20, 30, 35, 40, 70},
+      xtick=data,
+      ]
+\input{data-formatted/tabulate-effort-limited}
+%\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256, \strut MPFI-64, \strut MPFI-128, \strut MPFI-256, \strut MPQ}
+  \end{axis}
+\end{tikzpicture}
+\end{document}
+
