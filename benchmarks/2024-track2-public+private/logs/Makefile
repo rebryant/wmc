@@ -7,6 +7,7 @@ LTDIR = ~/repos/wmc/tools
 MINIMIZE = $(LTDIR)/combine_data.py
 PREC256-LIMITED = prec256-postmpfi
 PREC256-ALL = prec256-all
+ORIGINAL = original
 
 clean:
 	rm -f *~
@@ -23,6 +24,7 @@ data:
 	$(INTERP) $(GRAB) 2 "MPF COUNT" mc2024_track2-random_*_3*.count > uposneg-mpf-prec-multi.csv
 	$(INTERP) $(GRAB) 2 "MPF COUNT" mc2024_track2-random_*_4*.count > eposneg-mpf-prec-multi.csv
 	$(INTERP) $(GRAB) 2 "MPF COUNT" mc2024_track2-random_*_5*.count > bposneg-mpf-prec-multi.csv
+	$(INTERP) $(GRAB) 2 "MPF COUNT" $(ORIGINAL)/mc2024_track2-random_*.count > original-mpf-prec.csv
 	# MPFI Est
 	$(INTERP) $(GRAB) 2 "MPFI COUNT" mc2024_track2-random_*_*.count > all-mpfi-eprec.csv
 	# MPFI Actual
@@ -63,6 +65,7 @@ data:
 	$(INTERP) $(MERGE) -f all-variables.csv uposneg-mpf-prec.csv > uposneg-mpf+vars.csv
 	$(INTERP) $(MERGE) -f all-variables.csv eposneg-mpf-prec.csv > eposneg-mpf+vars.csv
 	$(INTERP) $(MERGE) -f all-variables.csv bposneg-mpf-prec.csv > bposneg-mpf+vars.csv
+	$(INTERP) $(MERGE) -f -t 2:50:50 all-variables.csv original-mpf-prec.csv > original-mpf+vars.csv
 	# MPFI Predictive value
 	$(INTERP) $(MERGE) -f all-mpfi-eprec.csv uposneg-mpfi-prec.csv > uposneg-mpfi-est+act.csv
 	$(INTERP) $(MERGE) -f all-mpfi-eprec.csv eposneg-mpfi-prec.csv > eposneg-mpfi-est+act.csv
