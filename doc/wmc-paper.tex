@@ -780,10 +780,12 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
                               xlabel={Number of variables $n$}, ylabel={Digit Precision}
             ]
 
+    \input{data-formatted/original-mpf+vars}
     \input{data-formatted/upos-mpf+vars}
     \input{data-formatted/epos-mpf+vars}
     \input{data-formatted/optimized-product}
     \legend{
+      \scriptsize \textsf{MC2024, Original},
       \scriptsize \textsf{MC2024, Uniform$+$},
       \scriptsize \textsf{MC2024, Exponential$+$},
       \scriptsize \textsf{Optimized Product}

@@ -18,6 +18,7 @@ rdata:
 	cp -p $(LDATA)/uposneg-mpf+vars.csv $(RDATA)
 	cp -p $(LDATA)/eposneg-mpf+vars.csv $(RDATA)
 	cp -p $(LDATA)/bposneg-mpf+vars.csv $(RDATA)
+	cp -p $(LDATA)/original-mpf+vars.csv $(RDATA)
 	cp -p $(LDATA)/uposneg-mpfi-est+act.csv $(RDATA)
 	cp -p $(LDATA)/eposneg-mpfi-est+act.csv $(RDATA)
 	cp -p $(LDATA)/bposneg-mpfi-est+act.csv $(RDATA)
@@ -45,6 +46,8 @@ pdata:
 		< $(RDATA)/upos-mpf+vars.csv > $(FDATA)/upos-mpf+vars.tex
 	$(INTERP) $(DGEN) -X 2 -Y 3 -y 50 -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/epos-mpf+vars.csv > $(FDATA)/epos-mpf+vars.tex
+	$(INTERP) $(DGEN) -X 2 -Y 4 -y 50 -O "only marks, color=darkgreen, mark=square*, mark options={scale=0.7, opacity=0.7}" \
+		< $(RDATA)/original-mpf+vars.csv > $(FDATA)/original-mpf+vars.tex
 	#
 	$(INTERP) $(DGEN) -X 2 -Y 3 -y 50 -O "only marks, color=redorange, mark=*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/uposneg-mpf+vars.csv > $(FDATA)/uposneg-mpf+vars.tex
