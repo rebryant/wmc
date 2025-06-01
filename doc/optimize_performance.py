@@ -25,9 +25,10 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-l] [-d PATH] [-x XPREC] [-m (c|t|e)] [-o OUT]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-m (c|t|e)] [-o OUT]\n" % name)
     sys.stderr.write("  -v       Verbose\n")
     sys.stderr.write("  -l       Use reduced set of digit precision values\n")    
+    sys.stderr.write("  -c       Show output as CSV\n")
     sys.stderr.write("  -d PATH  Directory with CSV files\n")
     sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
     sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e)\n")
@@ -44,6 +45,8 @@ dataPoints = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
 limitedPoints = [1, 10, 15, 20, 30, 35, 40, 70]
 
 constantFactor = 7
+
+csvOutput = False
 
 def guaranteedPrecision(nvar, bitPrecision):
     return bitPrecision * math.log10(2) - math.log10(nvar) - math.log10(constantFactor)
@@ -74,7 +77,7 @@ class PrecisionType:
     bits = [53, 63, 127, 255, 10000]
     
     nn_dbl, nn_m64, nn_m128, nn_m256, np_m64, np_m128, np_m256, all_mpq = range(tabulationCount)
-    tabulateNames = ["double", "mpf-64", "mpf-128", "mpf-256", "mpfi-64" "mpfi-128", "mpfi-256", "mpq"]
+    tabulateNames = ["double", "mpf-64", "mpf-128", "mpf-256", "mpfi-64", "mpfi-128", "mpfi-256", "mpq"]
     tabulateColors = ["dbl", "mpflow", "mpfmed", "mpfhigh", "mpfilow", "mpfimed", "mpfihigh", "mpq"]
 
 
@@ -344,6 +347,21 @@ class SolutionRange:
                 outfile.write("(%d,%.3f)" % (d, v))
             outfile.write("};\n")
 
+    def csvFormat(self, modeCharacter, outfile):
+        mode = self.solutionSetList[0].getMode(modeCharacter)
+        slist = [] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
+        outfile.write(",".join(slist) + '\n')
+        histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
+        sums = [0 for i in range(len(self.solutionSetList))]
+        for t in range(tabulationCount):
+            slist = [ptyper.tabulateNames[t]] + [str(histoList[i][t]) for i in range(len(self.solutionSetList))]
+            sums = [sums[i] + histoList[i][t] for i in range(len(self.solutionSetList))]
+            outfile.write(",".join(slist) + '\n')
+        slist = ["Sum"] + [str(sums[i]) for i in range(len(self.solutionSetList))]
+        outfile.write(",".join(slist) + '\n')        
+
+
+
 def run(name, args):
     fname = ["nonneg-tabulate.csv", "negpos-tabulate.csv"]
     nonnegative = [True, False]
@@ -352,10 +370,11 @@ def run(name, args):
     global ptyper
     global dataPoints
     global extraDigits
+    global csvOutput
     ptyper = PrecisionType()
     modeCharacter = 'c'
     outName = None
-    optList, args = getopt.getopt(args, "hvld:m:o:x:")
+    optList, args = getopt.getopt(args, "hvlcd:m:o:x:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -364,6 +383,8 @@ def run(name, args):
             dataPoints = limitedPoints
         elif opt == '-v':
             verbose = True
+        elif opt == '-c':
+            csvOutput = True
         elif opt == '-d':
             directory = val
         elif opt == '-m':
@@ -391,7 +412,10 @@ def run(name, args):
         except:
             print("Couldn't open output file '%s'" % outName)
             return 1
-    srange.format(modeCharacter, outfile)
+    if csvOutput:
+        srange.csvFormat(modeCharacter, outfile)
+    else:
+        srange.format(modeCharacter, outfile)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
