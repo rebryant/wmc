@@ -801,10 +801,11 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
                               xmode=log,xmin=10,xmax=1e6,
                               xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
                               ymode=normal,ymin=0, ymax=50,
-                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50},
-                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0},
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 49},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, $+\infty$},
                               xlabel={Number of variables $n$}, ylabel={Digit Precision}
             ]
+
 
     \input{data-formatted/original-mpf+vars}
     \input{data-formatted/upos-mpf+vars}
@@ -816,6 +817,8 @@ achieve digit precision $D$, we require $p \geq D \cdot \log_2 10 +\log_2 e(\psi
       \scriptsize \textsf{MC2024, Exponential$+$},
       \scriptsize \textsf{Optimized Product}
     }
+    \addplot[mark=none, dashed] coordinates{(10,49) (1e6, 49)};) 
+    \input{data-formatted/original-mpf+vars}
     \addplot[mark=none] coordinates{(1,36.69) (1e7,30.69)};
     \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound}};
     \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
@@ -837,9 +840,12 @@ to convert these into decision-DNNF\@.
 We were able to compile 100 of them within a time
 limit of 3600 seconds on a machine with 64~GB of random-access memory.
 
-Define a problem \emph{instance} to be a combination of a formula
-plus a weight assignment for all of its literals.
-For each formula, we generated two different collections of instances, each with five weight assignments:
+Define a problem \emph{instance} to be a combination of a formula plus
+a weight assignment for all of its literals, and a \emph{collection}
+as a set of instances, containing multiple formulas, with one or more
+weight assignment per formula.  As one collection, we computed
+the weighted model count for each competition formula based using the weight assignments from the competition.
+We also generated two collections, consisting of the competition formulas  with five randomly generated weight assignments for each formula:
 \begin{itemize}
 \item \textsf{Uniform$+$}: For each variable $x$, weight $w(x)$ is represented by a 9-digit decimal number selected uniformly in the range
   $\interval{10^{-9},\,1-10^{-9}}$. The weight for $\obar{x}$ is then set to
@@ -871,10 +877,10 @@ weights of the form $1 + 10^{-9}\,k$ for $1 \leq k \leq 1000$ and
 chose the value of $k$ that minimized the digit precision.  We refer
 to this as the \textsf{Optimized Product} collection.
 
-Figure~\ref{fig:pos:mpf} shows the results of these evaluations for
-the three collections.  For the two collections of weight assignments for each 2024 competition formula,
-we show only the minimum precision for each of the five randomly
-generated  weight assignments.  Each data point
+Figure~\ref{fig:pos:mpf} shows the result of these evaluations for
+the four collections.  For the two collections with multiple weight assignments per formula,
+we show only the minimum precision achieved for each formula.
+Each data point
 represents one combination of formula and weight selection method and is placed
 along the X~axis according to the number of variables
 and on the Y~axis according to the computed digit precision.
@@ -894,6 +900,17 @@ since the weighted model count is the product of literal weights.
 For $n=10^6$ we get a bound of $32.055$.
 Using $w=1.000000453$, we get
 a computed digit precision of $32.273$, a difference from the bound of just $0.218$.
+
+We can see that the achieved digit precision for the original weight
+assignments is somewhat better than for the collections with five
+instances per formula.  This can be attributed, in part, to the fact that plotted values for
+the other collections show the minimum digit precision for five weight
+assignments.  There are even five instances with the original weight assignments  where the values computed
+with floating-point arithmetic are exact.  These are particular simple
+instances for weighted model counting, with only 2--3 variables having
+nonunit weights.  Importantly, the data for all collections shows the
+general trend of the digit precision decreasing linearly along the
+logarithmically-scaled X~axis.
 
 \section{Arbitrary Weights}
 \label{sect:neg}

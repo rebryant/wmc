@@ -79,3 +79,6 @@ pdata:
 		< $(RDATA)/combo-mpfi2+nompq.csv > $(FDATA)/combo-mpfi2+nompq.tex
 	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m c > $(FDATA)/tabulate-count-limited.tex
 	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m e > $(FDATA)/tabulate-effort-limited.tex
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m c > $(FDATA)/tabulate-count.tex
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m e > $(FDATA)/tabulate-effort.tex
+

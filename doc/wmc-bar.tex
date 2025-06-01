@@ -115,16 +115,16 @@
 \begin{document}
 
 
-\begin{figure}
-\centering{
-  \begin{tikzpicture}
-  \node at (0, 0.0) {\includegraphics{wmc-tabulate-count}};
-  \node at (3.7, -0.45) {\includegraphics{wmc-tabulate-effort}};
-  \end{tikzpicture}
-} %% centering
-\caption{Number of instances solved (left) and total execution time (right) for each evaluation method, for selected values of target precision $D$}
-\label{fig:solution:tabulation}
-\end{figure}
+%% \begin{figure}
+%% \centering{
+%%   \begin{tikzpicture}
+%%   \node at (0, 0.0) {\includegraphics{wmc-tabulate-count}};
+%%   \node at (3.7, -0.45) {\includegraphics{wmc-tabulate-effort}};
+%%   \end{tikzpicture}
+%% } %% centering
+%% \caption{Number of instances solved (left) and total execution time (right) for each evaluation method, for selected values of target precision $D$}
+%% \label{fig:solution:tabulation}
+%% \end{figure}
 
 
 Of the 1470 instances  containing negative weights where the MPQ evaluation completed, 1196 ($81.4\%$)
@@ -168,7 +168,7 @@ Fortunately, this performance penalty was more than offset by the gains achieved
       symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
       xtick=data,
       ]
-\input{tabulate-count}
+\input{data-formatted/tabulate-count}
 \legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256, \strut MPFI-64, \strut MPFI-128, \strut MPFI-256, \strut MPQ}
   \end{axis}
 \end{tikzpicture}
@@ -191,7 +191,7 @@ Fortunately, this performance penalty was more than offset by the gains achieved
       symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
       xtick=data,
       ]
-\input{tabulate-effort}
+\input{data-formatted/tabulate-effort}
 %\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256, \strut MPFI-64, \strut MPFI-128, \strut MPFI-256, \strut MPQ}
   \end{axis}
 \end{tikzpicture}
@@ -199,6 +199,8 @@ Fortunately, this performance penalty was more than offset by the gains achieved
 \caption{Number of instances solved (top) and total execution time (bottom) for each method, as a function of target precision $D$}
 \label{fig:solution:effort}
 \end{figure}
+
+
 
 
 \end{document}

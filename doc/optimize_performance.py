@@ -25,16 +25,19 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-l] [-d PATH] [-m (c|t|e)] [-o OUT]\n" % name)
-    sys.stderr.write("  -v      Verbose\n")
-    sys.stderr.write("  -l      Use reduced set of digit precision values\n")    
-    sys.stderr.write("  -d PATH Directory with CSV files\n")
-    sys.stderr.write("  -m MODE Graphing mode: count (c) time (t) effort (e)\n")
-    sys.stderr.write("  -o OUT  Specify output file\n")
+    sys.stderr.write("Usage: %s [-v] [-l] [-d PATH] [-x XPREC] [-m (c|t|e)] [-o OUT]\n" % name)
+    sys.stderr.write("  -v       Verbose\n")
+    sys.stderr.write("  -l       Use reduced set of digit precision values\n")    
+    sys.stderr.write("  -d PATH  Directory with CSV files\n")
+    sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
+    sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e)\n")
+    sys.stderr.write("  -o OUT   Specify output file\n")
 
 directory = "."
 verbose = False
 
+
+extraDigits = 0
 
 dataPoints = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
 
@@ -220,7 +223,10 @@ class Instance:
             
     # Would it be worthwhile to attempt this precision level
     def include(self, ptype, digitPrecision):
-        return ptyper.guaranteedPrecision(ptype, self.nvar) > digitPrecision
+        if digitPrecision >= 70:
+            return ptyper.guaranteedPrecision(ptype, self.nvar) > digitPrecision 
+        else:
+            return ptyper.guaranteedPrecision(ptype, self.nvar) > digitPrecision + extraDigits
 
     def solve(self, digitPrecision):
         s = Solution(self, digitPrecision)
@@ -345,10 +351,11 @@ def run(name, args):
     global directory
     global ptyper
     global dataPoints
+    global extraDigits
     ptyper = PrecisionType()
     modeCharacter = 'c'
     outName = None
-    optList, args = getopt.getopt(args, "hvld:m:o:")
+    optList, args = getopt.getopt(args, "hvld:m:o:x:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -363,6 +370,8 @@ def run(name, args):
             modeCharacter = val
         elif opt == '-o':
             outName = val
+        elif opt == '-x':
+            extraDigits = float(val)
     instances = InstanceSet()
     for i in range(2):
         name = directory + "/" + fname[i]
