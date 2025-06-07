@@ -156,15 +156,17 @@ url=https://www.cs.cmu.edu/~bryant,
   time and space.
 
   This paper describes how to combine multiple numeric representations
-  to efficiently compute weighted model counts that are guaranteed to achieve a user-specified precision.
-  When all weights are nonnegative, we prove that the precision loss of
-  arithmetic evaluation using floating-point arithmetic can be tightly bounded.
-  For problems
-  with negative weights, we show that a combination of interval
-  floating-point arithmetic and rational arithmetic can achieve the
-  twin goals of efficiency and guaranteed precision.
+  to efficiently compute weighted model counts that are guaranteed to
+  achieve a user-specified precision.  When all weights are
+  nonnegative, we prove that the precision loss of arithmetic
+  evaluation using floating-point arithmetic can be tightly bounded.
+  For problems with negative weights, we show that a combination of
+  interval floating-point arithmetic and rational arithmetic can
+  achieve the twin goals of efficiency and guaranteed precision.  For
+  our evaluations, we have devised especially challenging
+  formulas and weight assignments, in order to maximize the robustness
+  of our result.
 
-  These results extend to the numerical evaluation of discrete functions represented by a variety of decision diagrams.
 
 \end{abstract}
 
@@ -332,12 +334,12 @@ avoiding the high cost of rational arithmetic.
 We see this work as going beyond satisfying the needs of current
 applications of weighted model counting to create a robust approach
 that will handle possible future applications.  As a consequence, we
-explore formulas and weight assignments that present challenging cases
-for numerical accuracy.  We show these cases can be handled by an
+devise formulas and weight assignments that present challenging cases
+for numerical accuracy.  We show even these cases can be handled by an
 appropriate combination of strategies.
 
 Regarding previous work, most recent work on estimating the error
-caused by floating-point rounding focuses on getting precise bounds
+caused by floating-point rounding \emph{a priori} focuses on getting precise bounds
 and supporting a variety of
 operations, but with less concern about scalability~\cite{becker:fmcad:2016,magron:toms:2017,solovyev:toplas:2018}.
 By contrast, we only seek
@@ -347,8 +349,8 @@ Consequently, we reach back to
 more historic work~\cite{wilkinson:nm:1960,wilkinson:rounding:1964}.
 We have not seen any investigation of the numerical properties of weighted model counting, and especially
 the tight error bounds that can be obtained for the arithmetic evaluation of decision-DNNF formulas.
-% We also have not seen an experimental evaluation of interval or rational arithmetic for
-% weighted model counting.
+We also have not seen any systematic studies on the performance of interval or rational arithmetic for
+weighted model counting.
 
 
 Sections~\ref{sect:background:boolean} and
@@ -1422,16 +1424,17 @@ requiring a total of $17.74$ hours.
 \label{sect:conclusion}
 
 For many applications, floating-point arithmetic can introduce
-significant errors due to rounding, and it does not provide any way to quantify the error.
-This
-paper shows that such uncertainty can be avoided for weighted model
-counting.  When all weights are nonnegative, results can be computed
-using floating point with guaranteed precision.  When some weights
-are negative, the program can attempt one or more levels of interval
-computation, and these should handle a large fraction of the instances.  Ultimately,
-the program may need to use rational arithmetic, but the number
-of such cases should be small.
-
+significant errors due to rounding, and it does not provide any way to
+quantify the error.  This paper shows that such uncertainty can be
+avoided for weighted model counting.  When all weights are
+nonnegative, results can be computed using floating point with
+guaranteed precision.  When some weights are negative, the program can
+attempt one or more levels of interval computation, and these should
+handle a large fraction of the instances.  Ultimately, the program may
+need to use rational arithmetic, but the number of such cases should
+be small.  By devising formulas and weight assignments that are
+especially challenging from a numerical perspective, we can be confident
+of the robustness of our approach.
 
 
 %% Several extensions of this work bear investigation.  Considering other representations,
