@@ -1419,10 +1419,10 @@ summarizes the performance of the hybrid approach for target precisions
 $D$ ranging from 1 to 70, using combinations of eight different numeric representations: IEEE
 double, three precision levels for MPF, three precision levels for
 MPI, and rational arithmetic using MPQ\@.  For a given value of $D$, the starting fraction
-size $p$ is selected according to the the number
+size $p$ is selected based on the the number
 of variables in the formula, according to Equations~\ref{eqn:pmin:linear} and \ref{eqn:pmin:roundoff}.  For sufficiently low values of $p$, the
 program attempts an evaluation using IEEE double, but it checks for
-underflow and overflow, re-evaluating using MPF when either of these occur.
+underflow and overflow, re-evaluating with MPF when either of these occur.
 Each vertical bar in the upper part of Figure~\ref{fig:solution:effort} shows
 the count of the number of instances successfully evaluated by the
 indicated method.  Each vertical bar in the lower part of
