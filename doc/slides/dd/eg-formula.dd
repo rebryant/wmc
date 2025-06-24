@@ -11,7 +11,7 @@ n p2   75      0 l=$\land$
 # Literals
 n  x1 -125    120 r=13 e=textbg f=textbg l=$x_1$
 n nx2  -75    120 r=13 e=textbg f=textbg l=$\overline{x}_2$
-n nx1  115    120 r=13 e=textbg f=textbg l=$\overline{x}_1$
+n nx1  125    120 r=13 e=textbg f=textbg l=$\overline{x}_1$
 n  x3 -115    -80 r=13 e=textbg f=textbg l=$x_3$
 n  x4  -35    -80 r=13 e=textbg f=textbg l=$x_4$
 n nx3  115    -80 r=13 e=textbg f=textbg l=$\overline{x}_3$

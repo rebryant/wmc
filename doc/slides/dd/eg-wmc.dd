@@ -2,16 +2,16 @@
 c textbg 255:255:255
 # Operators
 n r     0    375 r=15  e=textbg f=textbg l=$\mathbf{r}$
-n s2    0    300 l=$\lor$
-n p3  -75    200 l=$\land$
-n p4   75    200 l=$\land$
-n s1    0    100 l=$\lor$
-n p1  -75      0 l=$\land$
-n p2   75      0 l=$\land$
+n s2    0    300 l=$+$
+n p3  -75    200 l=$\times$
+n p4   75    200 l=$\times$
+n s1    0    100 l=$+$
+n p1  -75      0 l=$\times$
+n p2   75      0 l=$\times$
 # Literals
 n  x1 -125    120 r=15 e=textbg f=textbg l=$0.1$
 n nx2  -75    120 r=15 e=textbg f=textbg l=$0.3$
-n nx1  115    120 r=15 e=textbg f=textbg l=$0.9$
+n nx1  125    120 r=15 e=textbg f=textbg l=$0.9$
 n  x3 -115    -80 r=15 e=textbg f=textbg l=$0.4$
 n  x4  -35    -80 r=15 e=textbg f=textbg l=$0.8$
 n nx3  115    -80 r=15 e=textbg f=textbg l=$0.2$
@@ -36,6 +36,6 @@ e  p2   nx4
 t p1 $0.32$ p=a
 t p2 $0.12$ p=a
 t s1 $0.44$ p=r
-t p3 $0.0132$ p=a
-t p4 $0.396$  p=a
+t p3 $0.0132\;\;$ p=a
+t p4 $\;0.396$  p=a
 t  r $0.4092$ p=r
