@@ -1,0 +1,34 @@
+# Disjunction with Skolem expressions
+c textbg 255:255:255
+# Operators
+n r     0    375 r=15  e=textbg f=textbg l=$\mathbf{r}$
+n s2    0    300 l=$\lor$
+n p3  -75    200 l=$\land$
+n p4   75    200 l=$\land$
+n s1    0    100 l=$\lor$
+n p1  -75      0 l=$\land$
+n p2   75      0 l=$\land$
+# Literals
+n  x1 -125    120 r=13 e=textbg f=textbg l=$x_1$
+n nx2  -75    120 r=13 e=textbg f=textbg l=$\overline{x}_2$
+n nx1  115    120 r=13 e=textbg f=textbg l=$\overline{x}_1$
+n  x3 -115    -80 r=13 e=textbg f=textbg l=$x_3$
+n  x4  -35    -80 r=13 e=textbg f=textbg l=$x_4$
+n nx3  115    -80 r=13 e=textbg f=textbg l=$\overline{x}_3$
+n nx4   35    -80 r=13 e=textbg f=textbg l=$\overline{x}_4$
+# Operator Edges
+e   r    s2
+e  s2    p3
+e  s2    p4
+e  p3    s1
+e  p4    s1
+e  s1    p1
+e  s1    p2
+# Literal edges
+e  p3    x1
+e  p3   nx2
+e  p4   nx1
+e  p1    x3
+e  p1    x4
+e  p2   nx3
+e  p2   nx4

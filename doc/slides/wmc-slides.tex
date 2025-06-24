@@ -132,7 +132,7 @@
 
 \begin{frame}
 
-  \frametitle{Weighted Model Counting}
+  \frametitle{Weighted Model Counting Definition}
 
   \begin{center}
 \begin{tikzpicture}[scale=0.035]
@@ -171,6 +171,10 @@
 
   \begin{itemize}
   \item CNF formula $\inputformula$ over variables $X$
+    \begin{itemize}
+      \bitem Set of satisyfing assignments (\emph{models}) $\modelset(\inputformula)$
+      \bitem Each model $\assign$ is set of literals 
+    \end{itemize}
   \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
   \end{itemize}
 
@@ -182,7 +186,7 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Numerical Considerations}
+  \frametitle{Weighted Model Counting Computation}
 
 \begin{center}
   \Large \emph{What numerical representation should be used?}
@@ -192,8 +196,8 @@
 \begin{minipage}[t]{0.48\textwidth}
 {\bf Rational Arithmetic}
 \begin{itemize}
-  \bitem Represent $v \in \mathbb{Q}$ as $v = p/q$
-  \bitem Represent $p$ and $q$ as multiprecision integers
+  \bitem Represent $v \in \mathbb{Q}$ as $v = a/b$
+  \bitem Represent $a$ and $b$ as multiprecision integers
   \bitem Compute exact result
   \bitem High time and space cost
 \end{itemize}
@@ -213,7 +217,7 @@
 
 \begin{itemize}
 \item  Floating-point preferred
-\item But only if can guarantee degree of approximation
+\item But only if degree of precision can be guaranteed
 \end{itemize}
 }
 
@@ -267,7 +271,7 @@
   {\bf Approximation}
 
   \begin{itemize}
-  \item Set target precision $D$
+  \item Set target precision 
   \item Compute approximation $\approxw(\inputformula)$
   \item Within specified precision
   \end{itemize}
@@ -281,14 +285,15 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{displaymath}
 \aerror[\approxv, v] \;\; \doteq \;\; \left\{ \begin{array}{lll}
-  \frac{|\approxv - v|}{|v|}  & v \not = 0 & \textsf{Relative \; error}\\[0.5em]
+  \frac{|\approxv - v|}{|v|}  & v \not = 0 & \textsf{Relative} \; \textsf{error}\\[0.5em]
   0 & v  = \approxv = 0 & 0 \approx 0\\[0.5em]
-  1 & v = 0 \; \textrm{and} \; \approxv \not = 0 & 0 \not \approx \epsilon,\;\epsilon \not = 0
+  1 & v = 0 \; \textsf{and} \; \approxv \not = 0 & 0 \not \approx \epsilon,\;\textsf{for} \;\epsilon \not = 0
   \end{array} \right.
 \end{displaymath}
 
-\bigskip
+\medskip
 
+\only<2>{
 \textbf{Digit Precision}
 
 \begin{displaymath}
@@ -299,8 +304,9 @@ For value $v$ and its approximation $\approxv$:
  \item Number of trustworthy digits in decimal representation
 \item  $= \infty$ when $v = \approxv$
 \item $= 0$ when $v \not = 0$ and $\approxv = 0$
+\item $= 0$ when $v = 0$ and $\approxv \not = 0$
 \end{itemize}
-
+} % only
 \end{frame}
 
 \begin{frame}
