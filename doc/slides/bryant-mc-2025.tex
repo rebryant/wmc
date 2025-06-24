@@ -17,7 +17,6 @@
 \usepackage{graphicx}
 \usepackage{adjustbox}
 \usepackage{scrextend}
-\usepackage{ifthen}
 
 
 \usepackage{hyperref}
@@ -34,6 +33,14 @@
 \newcommand{\oneg}[1]{\overline{#1}}
 \newcommand{\xnot}{\oneg{x}}
 \newcommand{\lit}{\ell}
+\newcommand{\approximate}[1]{\hat{#1}}
+\newcommand{\approxv}{\approximate{v}}
+\newcommand{\approxw}{\approximate{w}}
+\newcommand{\assign}{\alpha}
+\newcommand{\modelset}{{\cal M}}
+\newcommand{\aerror}{\delta}
+\newcommand{\digitprecision}{\Delta}
+
 
 \newcommand{\inputformula}{\phi}
 \newcommand{\compiledformula}{\psi}
@@ -128,38 +135,379 @@
   \frametitle{Weighted Model Counting}
 
   \begin{center}
-    
 \begin{tikzpicture}[scale=0.035]
   \node [left] at (0,25) {$\inputformula$};
   \node [right] at (220,25) {$w(\inputformula)$};
+  \node [left] at (0,-20){$w$};
 
+  \draw[fill=structure] (60,0) rectangle (160,50);
+
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+  \draw[line width=2pt] (0,25) [-latex] -- (60,25);
+  \draw[line width=2pt] (160,25) [-latex] -- (220,25);
+  \draw[line width=2pt] (0,-20) -- (110,-20) [-latex] -- (110,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+
+  \node [left] at (10,52) {Input};
+  \node [left] at (10,40) {Formula};
+
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
+
+  \node [right] at (210,52) {Weighted};
+  \node [right] at (210,40) {Count};
+
+
+  \node[white] at (110,37) {Weighted};
+  \node[white] at (110,25) {Model};
+  \node[white] at (110,13) {Counter};
+\end{tikzpicture}
+
+\end{center}
+
+\vskip -10pt
+  {\bf Given}
+
+  \begin{itemize}
+  \item CNF formula $\inputformula$ over variables $X$
+  \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
+  \end{itemize}
+
+  {\bf Compute}
+  \begin{displaymath}
+  w(\inputformula) \;\; \doteq \;\; \sum_{\assign \in \modelset(\inputformula)} \;\;\prod_{\lit \in \assign} w(\lit) 
+  \end{displaymath}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Numerical Considerations}
+
+\begin{center}
+  \Large \emph{What numerical representation should be used?}
+\end{center}
+
+\bigskip
+\begin{minipage}[t]{0.48\textwidth}
+{\bf Rational Arithmetic}
+\begin{itemize}
+  \bitem Represent $v \in \mathbb{Q}$ as $v = p/q$
+  \bitem Represent $p$ and $q$ as multiprecision integers
+  \bitem Compute exact result
+  \bitem High time and space cost
+\end{itemize}
+\end{minipage}
+\begin{minipage}[t]{0.48\textwidth}
+{\bf Floating-Point Arithmetic}
+\begin{itemize}
+  \bitem Approximate $v \in \mathbb{Q}$ as $\approxv = (-1)^s \times f \times 2^{e}$
+  \bitem Represent $f$ and $e$ with fixed number of bits
+  \bitem Low time and space cost
+\end{itemize}
+\end{minipage}
+
+\bigskip
+\only<2>{
+\textbf{Claim:}
+
+\begin{itemize}
+\item  Floating-point preferred
+\item But only if can guarantee degree of approximation
+\end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Weighted Model Counting: Floating-Point Approximation}
+
+
+\begin{tikzpicture}[scale=0.035]
+%  \node [left] at (0,75) {$D$};
+
+  \node [left] at (0,25) {$\inputformula$};
+  \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [left] at (0,-20){$w$};
+
+  \draw[fill=structure] (60,0) rectangle (160,50);
+
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+  \draw[line width=2pt] (0,75) -- (110,75) [-latex] -- (110,50);
+
+  \draw[line width=2pt] (0,25) [-latex] -- (60,25);
+  \draw[line width=2pt] (160,25) [-latex] -- (220,25);
+  \draw[line width=2pt] (0,-20) -- (110,-20) [-latex] -- (110,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+
+  \node [left] at (10,102) {Target};
+  \node [left] at (10,90) {Precision};
+
+
+  \node [left] at (10,52) {Input};
+  \node [left] at (10,40) {Formula};
+
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
+
+  \node [right] at (210,64) {Approximate};
+  \node [right] at (210,52) {Weighted};
+  \node [right] at (210,40) {Count};
+
+
+  \node[white] at (110,37) {Weighted};
+  \node[white] at (110,25) {Model};
+  \node[white] at (110,13) {Counter};
+\end{tikzpicture}
+
+\bigskip
+
+  {\bf Approximation}
+
+  \begin{itemize}
+  \item Set target precision $D$
+  \item Compute approximation $\approxw(\inputformula)$
+  \item Within specified precision
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Approximation Metrics}
+
+For value $v$ and its approximation $\approxv$:
+
+  \begin{displaymath}
+\aerror[\approxv, v] \;\; \doteq \;\; \left\{ \begin{array}{lll}
+  \frac{|\approxv - v|}{|v|}  & v \not = 0 & \textsf{Relative \; error}\\[0.5em]
+  0 & v  = \approxv = 0 & 0 \approx 0\\[0.5em]
+  1 & v = 0 \; \textrm{and} \; \approxv \not = 0 & 0 \not \approx \epsilon,\;\epsilon \not = 0
+  \end{array} \right.
+\end{displaymath}
+
+\bigskip
+
+\textbf{Digit Precision}
+
+\begin{displaymath}
+  \digitprecision(\approxv, v) \;\; \doteq \;\; \max(0, -\log_{10} \aerror[\approxv, v])
+\end{displaymath}
+
+\begin{itemize}
+ \item Number of trustworthy digits in decimal representation
+\item  $= \infty$ when $v = \approxv$
+\item $= 0$ when $v \not = 0$ and $\approxv = 0$
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Weighted Model Counting: Floating-Point Approximation}
+
+
+\begin{tikzpicture}[scale=0.035]
+  \node [left] at (0,75) {$D$};
+
+  \node [left] at (0,25) {$\inputformula$};
+  \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [left] at (0,-20){$w$};
+
+  \draw[fill=structure] (60,0) rectangle (160,50);
+
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+  \draw[line width=2pt] (0,75) -- (110,75) [-latex] -- (110,50);
+
+  \draw[line width=2pt] (0,25) [-latex] -- (60,25);
+  \draw[line width=2pt] (160,25) [-latex] -- (220,25);
+  \draw[line width=2pt] (0,-20) -- (110,-20) [-latex] -- (110,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+
+  \node [left] at (10,102) {Target};
+  \node [left] at (10,90) {Precision};
+
+
+  \node [left] at (10,52) {Input};
+  \node [left] at (10,40) {Formula};
+
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
+
+  \node [right] at (210,64) {Approximate};
+  \node [right] at (210,52) {Weighted};
+  \node [right] at (210,40) {Count};
+
+
+  \node[white] at (110,37) {Weighted};
+  \node[white] at (110,25) {Model};
+  \node[white] at (110,13) {Counter};
+\end{tikzpicture}
+
+\bigskip
+
+  {\bf Approximation}
+
+  \begin{itemize}
+  \item Set target precision $D$
+  \item Compute approximation $\approxw(\inputformula)$
+  \item Require $\digitprecision(\approxw, w) \geq D$
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Choosing Target Precision}
+
+\bigskip
+  $D = 1$
+  \begin{itemize}
+    \item $10\%$ accuracy
+    \item Good enough for 2020 Weighted Model Competition
+
+  \end{itemize}
+
+\bigskip
+  $D = 3$
+  \begin{itemize}
+    \item $0.1\%$ accuracy
+    \item Good enough for 2024 Weighted Model Competition
+  \end{itemize}
+
+\bigskip
+\only<2>{
+  $D = 30$
+  \begin{itemize}
+  \item Distance from Earth to Alpha Centauri $\approx 4.37$ light years.
+  \item Hydrogen atom diameter $\approx 100$ picometers.
+  \item $D=30$ can represent distance from Earth to Alpha Centauri to nearest picometer
+  \end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Via Knowledge Compilation}
+
+  \begin{center}
+\begin{tikzpicture}[scale=0.035]
+  \node [left] at (0,75) {$D$};
+  \node [left] at (0,25) {$\inputformula$};
+  \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [left] at (0,-20){$w$};
+
+  \node at (110,25) {$\psi$};
 
   \draw[fill=structure] (20,0) rectangle (80,50);
   \draw[fill=structure] (140,0) rectangle (200,50);
 
   \draw[line width=2pt] (0,25) [-latex] -- (20,25);
-  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+
+  \draw[line width=2pt] (80,25) [-latex] -- (100,25);  
+  \draw[line width=2pt] (120,25) [-latex] -- (140,25);
+
   \draw[line width=2pt] (200,25) [-latex] -- (220,25);
 
-  \node [left] at (10,55) {Input};
+  \draw[line width=2pt] (0,75) -- (170,75) [-latex] -- (170,50);
+  \draw[line width=2pt] (0,-20) -- (170,-20) [-latex] -- (170,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+  \node [left] at (10,102) {Target};
+  \node [left] at (10,90) {Precision};
+
+
+  \node [left] at (10,52) {Input};
   \node [left] at (10,40) {Formula};
 
-  \node at (110,60) {decision-DNNF};
-  \node at (110,45) {formula};
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
 
-  \node [right] at (210,55) {Weighted};
+  
+  \node at (110,60) {decision-DNNF};
+  \node at (110,48) {Formula};
+
+  \node [right] at (210,64) {Approximate};
+  \node [right] at (210,52) {Weighted};
   \node [right] at (210,40) {Count};
 
 
-  \node[white] at (50,30) {Knowledge};
-  \node[white] at (50,20) {Compiler};
+  \node[white] at (50,31) {Knowledge};
+  \node[white] at (50,19) {Compiler};
 
-  \node[white] at (170,30) {Weighted};
-  \node[white] at (170,20) {Counter};
-  
+  \node[white] at (170,37) {Weighted};
+  \node[white] at (170,25) {Model};
+  \node[white] at (170,13) {Counter};
 \end{tikzpicture}
 \end{center}
+
+  \begin{itemize}
+  \item Convert input formula $\inputformula$ into logically equivalent formula $\psi$
+  \item $\psi$ has form that makes weighted counting tractable
+  \end{itemize}
+
 \end{frame}
+
+\begin{frame}
+
+  \frametitle{Weighted Model Counting}
+
+  \begin{center}
+\begin{tikzpicture}[scale=0.035]
+  \node [left] at (0,75) {$D$};
+  \node [left] at (0,25) {$\inputformula$};
+  \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [left] at (0,-20){$w$};
+
+  \node at (110,25) {$\psi$};
+
+  \draw[fill=structure] (20,0) rectangle (80,50);
+  \draw[fill=structure] (140,0) rectangle (200,50);
+
+  \draw[line width=2pt] (0,25) [-latex] -- (20,25);
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+
+  \draw[line width=2pt] (80,25) [-latex] -- (100,25);  
+  \draw[line width=2pt] (120,25) [-latex] -- (140,25);
+
+  \draw[line width=2pt] (200,25) [-latex] -- (220,25);
+
+  \draw[line width=2pt] (0,75) -- (170,75) [-latex] -- (170,50);
+  \draw[line width=2pt] (0,-20) -- (170,-20) [-latex] -- (170,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+  \node [left] at (10,102) {Target};
+  \node [left] at (10,90) {Precision};
+
+
+  \node [left] at (10,52) {Input};
+  \node [left] at (10,40) {Formula};
+
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
+
+  
+  \node at (110,60) {decision-DNNF};
+  \node at (110,48) {Formula};
+
+  \node [right] at (210,64) {Approximate};
+  \node [right] at (210,52) {Weighted};
+  \node [right] at (210,40) {Count};
+
+
+  \node[white] at (50,31) {Knowledge};
+  \node[white] at (50,19) {Compiler};
+
+  \node[white] at (170,31) {Weighted};
+  \node[white] at (170,19) {Counter};
+\end{tikzpicture}
+
+\end{center}
+\end{frame}
+
 
 \end{document}
 
