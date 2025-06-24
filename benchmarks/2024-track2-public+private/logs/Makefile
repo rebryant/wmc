@@ -18,6 +18,8 @@ data:
 	#### Raw data
 	# Variables
 	$(INTERP) $(GRAB) "Data variables" mc2024_track2-random_*_*.count > all-variables-multi.csv
+	# Operations
+	$(INTERP) $(GRAB) "Binops  TOTAL" mc2024_track2-random_*_*.count > all-binops-multi.csv
 	# MPF Precision
 	$(INTERP) $(GRAB) 2 "MPF COUNT" mc2024_track2-random_*_1*.count > upos-mpf-prec-multi.csv
 	$(INTERP) $(GRAB) 2 "MPF COUNT" mc2024_track2-random_*_2*.count > epos-mpf-prec-multi.csv
@@ -52,6 +54,7 @@ data:
 	cat combo-mpfi2-secs.csv combo-mpfi2-fail-secs.csv | sort > all-mpfi2-secs.csv
 	# Minimize across runs
 	$(INTERP) $(MINIMIZE) all-variables-multi.csv > all-variables.csv
+	$(INTERP) $(MINIMIZE) all-binops-multi.csv > all-binops.csv
 	$(INTERP) $(MINIMIZE) upos-mpf-prec-multi.csv > upos-mpf-prec.csv
 	$(INTERP) $(MINIMIZE) epos-mpf-prec-multi.csv > epos-mpf-prec.csv
 	$(INTERP) $(MINIMIZE) uposneg-mpf-prec-multi.csv > uposneg-mpf-prec.csv
@@ -59,6 +62,8 @@ data:
 	$(INTERP) $(MINIMIZE) bposneg-mpf-prec-multi.csv > bposneg-mpf-prec.csv
 
 	#### Combinations
+	# d-DNNF information
+	$(INTERP) $(MERGE) all-variables.csv all-binops.csv > vars+binops.csv
 	# MPF Precision vs. vars
 	$(INTERP) $(MERGE) -f all-variables.csv upos-mpf-prec.csv > upos-mpf+vars.csv
 	$(INTERP) $(MERGE) -f all-variables.csv epos-mpf-prec.csv > epos-mpf+vars.csv
