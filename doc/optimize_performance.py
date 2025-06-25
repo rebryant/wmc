@@ -25,12 +25,13 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-m (c|t|e)] [-o OUT]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-C (p|n|b)] [-m (c|t|e)] [-o OUT]\n" % name)
     sys.stderr.write("  -v       Verbose\n")
     sys.stderr.write("  -l       Use reduced set of digit precision values\n")    
     sys.stderr.write("  -c       Show output as CSV\n")
     sys.stderr.write("  -d PATH  Directory with CSV files\n")
     sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
+    sys.stderr.write("  -C COLL  Specify which collections to include: positive (p), negative (n), or both (b)")
     sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e)\n")
     sys.stderr.write("  -o OUT   Specify output file\n")
 
@@ -45,6 +46,8 @@ dataPoints = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
 limitedPoints = [1, 10, 15, 20, 30, 35, 40, 70]
 
 constantFactor = 7
+
+collection = "b"
 
 csvOutput = False
 
@@ -84,6 +87,10 @@ class PrecisionType:
     nn_map = {}
     np_map = {}
 
+    all_Types = []
+    nn_Types = []
+    np_Types = []
+
     def __init__(self):
         self.nn_map = { self.dbl   :self.nn_dbl,
                         self.m64   :self.nn_m64,
@@ -94,7 +101,10 @@ class PrecisionType:
                         self.m128  : self.np_m128,
                         self.m256  : self.np_m256,
                         self.mpq   :self.all_mpq}
-
+        self.nn_types = [self.nn_dbl, self.nn_m64, self.nn_m128, self.nn_m256]
+        self.np_types = [self.np_m64, self.np_m128, self.np_m256, self.all_mpq]
+        self.all_types = self.nn_types + self.np_types
+        
     # Accumulate information about solutions
     # histo is array of tabulationCount entries
     def newHistogram(self):
@@ -336,10 +346,10 @@ class SolutionRange:
             sset = instances.solve(d)
             self.solutionSetList.append(sset)
         
-    def format(self, modeCharacter, outfile):
+    def format(self, modeCharacter, outfile, types):
         mode = self.solutionSetList[0].getMode(modeCharacter)
         histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
-        for t in range(tabulationCount):
+        for t in types:
             outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
             for i in range(len(self.solutionSetList)):
                 d = dataPoints[i]
@@ -347,13 +357,13 @@ class SolutionRange:
                 outfile.write("(%d,%.3f)" % (d, v))
             outfile.write("};\n")
 
-    def csvFormat(self, modeCharacter, outfile):
+    def csvFormat(self, modeCharacter, outfile, types):
         mode = self.solutionSetList[0].getMode(modeCharacter)
         slist = [] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
         histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
         sums = [0 for i in range(len(self.solutionSetList))]
-        for t in range(tabulationCount):
+        for t in types:
             slist = [ptyper.tabulateNames[t]] + [str(histoList[i][t]) for i in range(len(self.solutionSetList))]
             sums = [sums[i] + histoList[i][t] for i in range(len(self.solutionSetList))]
             outfile.write(",".join(slist) + '\n')
@@ -371,10 +381,11 @@ def run(name, args):
     global dataPoints
     global extraDigits
     global csvOutput
+    global collection
     ptyper = PrecisionType()
     modeCharacter = 'c'
     outName = None
-    optList, args = getopt.getopt(args, "hvlcd:m:o:x:")
+    optList, args = getopt.getopt(args, "hvlcd:m:o:x:C:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
@@ -393,7 +404,16 @@ def run(name, args):
             outName = val
         elif opt == '-x':
             extraDigits = float(val)
+        elif opt == '-C':
+            collection = val
     instances = InstanceSet()
+    
+    types = ptyper.all_types
+    if collection == 'n':
+        types = ptyper.np_types
+    if collection == 'p':
+        types = ptyper.nn_types
+
     for i in range(2):
         name = directory + "/" + fname[i]
         try:
@@ -403,7 +423,7 @@ def run(name, args):
             continue
         count = instances.load(infile, nonnegative[i])
         infile.close()
-##        print("Loaded %d instances from %s" % (count, name))
+
     srange = SolutionRange(instances)
     outfile = sys.stdout
     if outName is not None:
@@ -413,9 +433,9 @@ def run(name, args):
             print("Couldn't open output file '%s'" % outName)
             return 1
     if csvOutput:
-        srange.csvFormat(modeCharacter, outfile)
+        srange.csvFormat(modeCharacter, outfile, types)
     else:
-        srange.format(modeCharacter, outfile)
+        srange.format(modeCharacter, outfile, types)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
