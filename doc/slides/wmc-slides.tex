@@ -220,7 +220,7 @@
 {\bf Floating-Point Arithmetic}
 \begin{itemize}
   \bitem Approximate $v \in \mathbb{Q}$ as $\approxv = (-1)^s \times f \times 2^{e}$
-  \bitem Represent $f$ and $e$ with fixed number of bits
+  \bitem Represent fraction $f$ and exponent $e$ with fixed number of bits
   \bitem Low time and space cost
 \end{itemize}
 \end{minipage}
@@ -348,8 +348,8 @@ For value $v$ and its approximation $\approxv$:
   $D = 30$
   \begin{itemize}
   \item Distance from Earth to Alpha Centauri $\approx 4.37$ light years.
-  \item Hydrogen atom diameter $\approx 106$ picometers.
   \item $D=30$ can represent distance from Earth to Alpha Centauri to nearest picometer
+  \item Hydrogen atom diameter $\approx 106$ picometers.
   \end{itemize}
 }
 
@@ -431,8 +431,10 @@ For value $v$ and its approximation $\approxv$:
   \item Compile with D4 version 2 knowledge compiler
     \begin{itemize}
     \bitem Compiled 100 within limits of 3600 seconds and 64~GB
-    \bitem 33 -- 325,113 variables
-    \bitem 209 -- $1.66\times 10^9$ binary operations in compiled representation
+%    \bitem 33 -- 325,113 variables
+%    \bitem 209 -- $1.66\times 10^9$ binary operations in compiled representation
+    \bitem Up to 325,113 variables
+    \bitem Up to $1.66\times 10^9$ binary operations in compiled representation
     \end{itemize}
   \end{itemize}
 
@@ -725,51 +727,6 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 
-\begin{frame}
-  \frametitle{Floating-Point Cancellation}
-
-\medskip
-\textbf{IEEE Double Examples:}
-
-\smallskip
-
-  \begin{tabular}{rcl}
-    $(10^{15} + 3.1416) - 10^{15}$ & $\longrightarrow$ & $3.125$ \\[0.5em]
-%    $(10^{16} + 3.1416) - 10^{16}$ & $\longrightarrow$ & $4.000$ \\[0.5em]
-    $(10^{20} + 3.1416) - 10^{20}$ & $\longrightarrow$ & $0.000$ \\[0.5em]
-    $(10^{15} + 3.1416) - (10^{15} + 0.1)$ & $\longrightarrow$ & $3.000$ \\[0.5em]
-  \end{tabular}
-
-\medskip
-
-\textbf{General Case: For $T \gg s$ and $T \approx T'$}
-
-\medskip
-
-  \begin{tabular}{rcl}
-    $(T + s) - T$ & $\longrightarrow$ & $0$ \\[0.5em]
-    $(T + s) - T'$ & $\longrightarrow$ & ?? \\
-  \end{tabular}
-
-  \medskip
-
-  \textbf{Requirements for Cancellation}
-
-\smallskip
-
-  \begin{itemize}
-  \item Wide dynamic range: $T \gg s$
-    \begin{itemize}
-      \bitem Not present in Uniform$\pm$
-    \end{itemize}
-  \item Homogeneity: $T \approx T'$
-    \begin{itemize}
-      \bitem Not present in Exponential$\pm$
-    \end{itemize}
-
-  \end{itemize}
-
-\end{frame}
 
 \begin{frame}
   \frametitle{What About Negative Weights?}
@@ -781,7 +738,7 @@ For value $v$ and its approximation $\approxv$:
 \medskip
 
   \begin{itemize}
-    \item Devise weight assigmnent with high dynamic range and homogeneity
+    \item Devise weight assignment with high dynamic range and homogeneity
   \end{itemize}
 
 \medskip
@@ -793,7 +750,7 @@ For value $v$ and its approximation $\approxv$:
      \midrule
      Uniform$\pm$      & $(0.0, 1.0)$     & Uni.  & Rand.~$\pm$   & Ind. \\[0.5em]
      Exponential$\pm$ & $[10^{-9}, 10^{+9}]$ & Exp. & Rand.~$\pm$ & Ind. \\[0.5em]
-     Limits$\pm$ & $\{10^{-9}, 10^{+9}\}$ & Rand. & Rand.~$\pm$ & $w(x) + w(\obar{x}) \not = 0$ \\
+     \rtext{Limits$\pm$} & \rtext{$\{10^{-9}, 10^{+9}\}$} & \rtext{Rand.} & \rtext{Rand.~$\pm$} & \rtext{$w(x) + w(\obar{x}) \not = 0$} \\
 %     \bottomrule
    \end{tabular}
 \end{center}
@@ -1020,3 +977,49 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 \end{document}
+
+\begin{frame}
+  \frametitle{Floating-Point Cancellation}
+
+\medskip
+\textbf{IEEE Double Examples:}
+
+\smallskip
+
+  \begin{tabular}{rcl}
+    $(10^{15} + 3.1416) - 10^{15}$ & $\longrightarrow$ & $3.125$ \\[0.5em]
+%    $(10^{16} + 3.1416) - 10^{16}$ & $\longrightarrow$ & $4.000$ \\[0.5em]
+    $(10^{20} + 3.1416) - 10^{20}$ & $\longrightarrow$ & $0.000$ \\[0.5em]
+    $(10^{15} + 3.1416) - (10^{15} + 0.1)$ & $\longrightarrow$ & $3.000$ \\[0.5em]
+  \end{tabular}
+
+\medskip
+
+\textbf{General Case: For $T \gg s$ and $T \approx T'$}
+
+\medskip
+
+  \begin{tabular}{rcl}
+    $(T + s) - T$ & $\longrightarrow$ & $0$ \\[0.5em]
+    $(T + s) - T'$ & $\longrightarrow$ & ?? \\
+  \end{tabular}
+
+  \medskip
+
+  \textbf{Requirements for Cancellation}
+
+\smallskip
+
+  \begin{itemize}
+  \item Wide dynamic range: $T \gg s$
+    \begin{itemize}
+      \bitem Not present in Uniform$\pm$
+    \end{itemize}
+  \item Homogeneity: $T \approx T'$
+    \begin{itemize}
+      \bitem Not present in Exponential$\pm$
+    \end{itemize}
+
+  \end{itemize}
+
+\end{frame}
