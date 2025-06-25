@@ -661,6 +661,44 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 \begin{frame}
+
+\frametitle{Evaluating Nonnegative Benchmarks}
+
+\medskip
+
+\begin{tikzpicture}[scale = 0.80]
+  \begin{axis}[
+      ybar stacked,
+      ymax = 2500,
+      width = 12cm,
+      height=8cm,
+      bar width=15pt,
+%%      nodes near coords,
+%%      enlargelimits=0.15,
+      legend style={at={(0.435,-0.30)},
+      anchor=south, legend columns=-1},
+      ylabel = {Instance count},
+      xlabel = {Target precision $D$},
+      ytick = {500, 1000, 1500, 2000, 2500},
+      yticklabels ={500, 1000, 1500, 2000, 2500},
+      symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
+      xtick=data,
+      ]
+\input{data-formatted/tabulate-count-nonneg}
+\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256}
+  \end{axis}
+\end{tikzpicture}
+
+\medskip
+
+\begin{itemize}
+\item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
   \frametitle{What About Negative Weights?}
 
 \medskip
@@ -842,42 +880,6 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 
-\begin{frame}
-
-\frametitle{Evaluating Nonnegative Benchmarks with Hybrid Approach}
-
-\medskip
-
-\begin{tikzpicture}[scale = 0.80]
-  \begin{axis}[
-      ybar stacked,
-      ymax = 2500,
-      width = 12cm,
-      height=8cm,
-      bar width=15pt,
-%%      nodes near coords,
-%%      enlargelimits=0.15,
-      legend style={at={(0.435,-0.30)},
-      anchor=south, legend columns=-1},
-      ylabel = {Instance count},
-      xlabel = {Target precision $D$},
-      ytick = {500, 1000, 1500, 2000, 2500},
-      yticklabels ={500, 1000, 1500, 2000, 2500},
-      symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
-      xtick=data,
-      ]
-\input{data-formatted/tabulate-count-nonneg}
-\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256}
-  \end{axis}
-\end{tikzpicture}
-
-\medskip
-
-\begin{itemize}
-\item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
-\end{itemize}
-
-\end{frame}
 
 \begin{frame}
 
