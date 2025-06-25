@@ -403,7 +403,7 @@ def run(name, args):
             continue
         count = instances.load(infile, nonnegative[i])
         infile.close()
-        print("Loaded %d instances from %s" % (count, name))
+##        print("Loaded %d instances from %s" % (count, name))
     srange = SolutionRange(instances)
     outfile = sys.stdout
     if outName is not None:

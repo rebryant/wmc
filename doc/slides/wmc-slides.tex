@@ -41,6 +41,9 @@
 \newcommand{\modelset}{{\cal M}}
 \newcommand{\aerror}{\delta}
 \newcommand{\digitprecision}{\Delta}
+\newcommand{\vmin}{v^{-}}
+\newcommand{\vmax}{v^{+}}
+\newcommand{\interval}[1]{[\![#1]\!]}
 
 
 \newcommand{\inputformula}{\phi}
@@ -75,6 +78,16 @@
 \definecolor{mediumgreen}{RGB}{20,140,20}
 \definecolor{mediumblue}{RGB}{20,20,140}
 \definecolor{medgreen}{rgb}{0.34, 0.65, 0.34}
+
+\definecolor{dbl}{RGB}{49,97,160}
+\definecolor{mpflow}{RGB}{96,165,200}
+\definecolor{mpfmed}{RGB}{161,207,223}
+\definecolor{mpfhigh}{RGB}{224,243,248}
+\definecolor{mpfilow}{RGB}{215,48,39}
+\definecolor{mpfimed}{RGB}{253,174,97}
+\definecolor{mpfihigh}{RGB}{254,224,144}
+\definecolor{mpq}{RGB}{100,100,100}
+
 
 \newcommand{\red}[1]{\textcolor{red}{#1}}
 \definecolor{darkred}{RGB}{180,0,0}
@@ -214,7 +227,7 @@
 
 \bigskip
 \only<2>{
-\textbf{Claim:}
+\textbf{Assertion:}
 
 \begin{itemize}
 \item  Floating-point preferred
@@ -266,6 +279,7 @@ For value $v$ and its approximation $\approxv$:
 
   \node [left] at (0,25) {$\inputformula$};
   \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [right] at (220,11) {$\approx w(\inputformula)$};
   \node [left] at (0,-20){$w$};
 
   \draw[fill=structure] (60,0) rectangle (160,50);
@@ -349,7 +363,8 @@ For value $v$ and its approximation $\approxv$:
 \begin{tikzpicture}[scale=0.035]
   \node [left] at (0,75) {$D$};
   \node [left] at (0,25) {$\inputformula$};
-  \node [right] at (220,25) {$\approxw(\inputformula)$};
+  \node [right] at (220,25) {$\approxw(\psi)$};
+  \node [right] at (220,11) {$\approx w(\inputformula)$};
   \node [left] at (0,-20){$w$};
 
   \node at (110,25) {$\psi$};
@@ -415,7 +430,7 @@ For value $v$ and its approximation $\approxv$:
   \item 200 formulas from 2024 Weighted Model Competition
   \item Compile with D4 version 2 knowledge compiler
     \begin{itemize}
-    \bitem Succeessfully compiled 100 within 3600 seconds on machine with 64~GB memory
+    \bitem Compiled 100 within limits of 3600 seconds and 64~GB
     \bitem 33 -- 325,113 variables
     \bitem 209 -- $1.66\times 10^9$ binary operations in compiled representation
     \end{itemize}
@@ -430,9 +445,9 @@ For value $v$ and its approximation $\approxv$:
       \begin{itemize}
        \bitem Memory limit exceeded for two formulas
       \end{itemize}
-    \item Floating-point using GMP~MPF software floating-point library
+    \item Floating-point using GMP~MPF  library
       \begin{itemize}
-       \bitem Using fraction size $p = 128$
+       \bitem Fraction size $p = 128$
       \end{itemize}
     \end{itemize}
 
@@ -447,6 +462,8 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{frame}
 \frametitle{Digit Precision: Initial Evaluation}
+
+\medskip
 
 \begin{tikzpicture}[scale=0.8]
   \begin{axis}[mark options={scale=1.0},height=7cm,width=12cm,grid=both, grid style={black!10}, 
@@ -484,7 +501,7 @@ For value $v$ and its approximation $\approxv$:
 \textbf{Observations}
 \begin{itemize}
 \item High precision, even with billions of operations
-\item Trend: Linear decrease with $n$
+\item Trend: Lose one digit of precision when increase   $n$  by $10\times$.
 \end{itemize}
 
 \end{frame}
@@ -507,21 +524,21 @@ For value $v$ and its approximation $\approxv$:
 
 \medskip
 
-  \textbf{Added Weight Collections}
+  \textbf{Added Nonnegative Weight Collections}
 
  \begin{center}
    \begin{tabular}{cccc}
 %     \toprule
      Name & Range & Distribution & $w(x)\,:\,w(\obar{x})$ \\
      \midrule
-     Uniform$+$      & $(0.0, 1.0)$         & Uniform     & $w(x) + w(\obar{x}) = 1$ \\
+     Uniform$+$      & $(0.0, 1.0)$         & Uniform     & $w(x) + w(\obar{x}) = 1$ \\[0.5em]
      Exponential$+$ & $[10^{-9}, 10^{+9}]$ & Exponential & Independent \\
 %     \bottomrule
    \end{tabular}
  \end{center}
 
   \begin{itemize}
-    \item Five randomly generated weight assignments for each formula
+    \item \emph{Collection}: Five randomly generated weight assignments for each formula
     \item Record lowest digit precision achieved
   \end{itemize}
 
@@ -530,6 +547,8 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{frame}
 \frametitle{Digit Precision: Nonzero Weights}
+
+\medskip
 
 \begin{tikzpicture}[scale=0.8]
   \begin{axis}[mark options={scale=1.0},height=7cm,width=12cm,grid=both, grid style={black!10}, 
@@ -546,20 +565,20 @@ For value $v$ and its approximation $\approxv$:
 
 
     \input{data-formatted/original-mpf+vars}
-    \input{data-formatted/upos-mpf+vars}
-    \input{data-formatted/epos-mpf+vars}
+\only<2->{    \input{data-formatted/upos-mpf+vars}}
+\only<3->{    \input{data-formatted/epos-mpf+vars}}
 %    \input{data-formatted/optimized-product}
-    \legend{
-      \scriptsize \textsf{MC2024, Original},
-      \scriptsize \textsf{MC2024, Uniform$+$},
-      \scriptsize \textsf{MC2024, Exponential$+$},
-%      \scriptsize \textsf{Optimized Product}
-    }
+\only<1>{\legend{\scriptsize \textsf{MC2024, Original}}}
+\only<2>{\legend{\scriptsize \textsf{MC2024, Original}, \scriptsize \textsf{MC2024, Uniform$+$}}}
+\only<3->{\legend{\scriptsize \textsf{MC2024, Original},
+                   \scriptsize \textsf{MC2024, Uniform$+$},
+                   \scriptsize \textsf{MC2024, Exponential$+$}}}
+      
     \addplot[mark=none, dashed] coordinates{(10,49) (1e6, 49)};) 
     \input{data-formatted/original-mpf+vars}
-    \input{data-formatted/upos-mpf+vars}
-    \input{data-formatted/epos-mpf+vars}
-\only<2->{
+\only<2->{    \input{data-formatted/upos-mpf+vars}}
+\only<3->{    \input{data-formatted/epos-mpf+vars}}
+\only<4->{
     \addplot[mark=none] coordinates{(1,36.69) (1e7,30.69)};
     \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound}};
 }
@@ -567,6 +586,436 @@ For value $v$ and its approximation $\approxv$:
 %    \node[right] at (axis cs: 15, 28.0) {Target Precision};
  \end{axis}
 \end{tikzpicture}
+
+\only<2->{
+\begin{itemize}
+\item Precision stays high
+\item Same trend holds
+\only<4->{\item Precision guaranteed for nonnegative weights}
+\end{itemize}
+}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Precision Bound Theorem: Nonnegative Weights}
+
+\bigskip
+
+  \textbf{Assuming:}
+  \begin{itemize}
+  \item decision-DNNF formula $\psi$ over $n$ variables
+  \item Nonnegative weights: $w(x), w(\obar{x}) \geq 0$ for all $x \in X$
+  \item Floating point arithmetic with fraction size $p$
+  \item Parameters $n$ and $p$ satisfy $\log_2 n \;\leq\; p/2-1$
+  \item No overflow or underflow
+  \end{itemize}
+
+\medskip
+
+\textbf{Guarantee:}
+\begin{displaymath}
+\digitprecision(\approxw(\psi), w(\psi)) \;\; \geq \;\; p \cdot \log_{10}2 \rtext{- \log_{10}n} - \log_{10} 7
+\end{displaymath}
+
+\textbf{Key Properties:}
+\begin{itemize}
+\item Independent of weight values
+\item Independent of formula size
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Application of Theorem}
+
+\begin{itemize}
+\item Problem with $n$ variables
+\item Want to guarantee $\digitprecision(\approxw, w) \geq D$
+\item Choose fraction size $p$ such that two conditions hold:
+\begin{displaymath}
+\begin{array}{rcl}
+  p & \geq & 2(1 + \log_2 n)  \\[0.5em]
+  p & \geq & D \cdot \log_2 10 +\log_2 n + 2.9 
+\end{array}
+\end{displaymath}
+\end{itemize}
+
+\medskip
+
+{\bf Examples: $n = 10^6$}
+
+\begin{itemize}
+\item First condition: $p \geq 44.8$
+\item Second condition:
+  \begin{center}
+    \begin{tabular}{rr}
+      \makebox[40pt]{$D$} & \makebox[50pt]{Min.~$p$} \\
+      \midrule
+      $1$ & $26.2$ \\
+      $6$ & $42.8$ \\
+      $30$ & $122.5$ \\
+    \end{tabular}
+  \end{center}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{What About Negative Weights?}
+
+\medskip
+
+  \textbf{Added Weight Collections}
+
+\begin{center}
+   \begin{tabular}{ccccc}
+%     \toprule
+     Name & Magnitude  & Dist. & Sign & $w(x)\,:\,w(\obar{x})$ \\
+     \midrule
+     Uniform$\pm$      & $(0.0, 1.0)$     & Uni.  & Random $\pm$   & Ind. \\[0.5em]
+     Exponential$\pm$ & $[10^{-9}, 10^{+9}]$ & Exp. & Random $\pm$ & Ind. \\
+%     \bottomrule
+   \end{tabular}
+\end{center}
+
+  \begin{itemize}
+    \item Five randomly generated weight assignments for each formula
+    \item Record lowest digit precision achieved
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Digit Precision: Negative Weights}
+
+\medskip
+
+\begin{tikzpicture}[scale=0.8]
+  \begin{axis}[mark options={scale=1.0},height=7cm,width=12cm,grid=both, grid style={black!10}, 
+      legend style={at={(0.95,0.35)}},
+      legend cell align={left},
+                              %x post scale=2.0, y post scale=2.0,
+                              xmode=log,xmin=10,xmax=1e6,
+                              xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
+                              ymode=normal,ymin=0, ymax=45,
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0},
+                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+            ]
+
+
+
+    \input{data-formatted/uposneg-mpf+vars}
+    \input{data-formatted/eposneg-mpf+vars}
+    \legend{
+      \scriptsize \textsf{MC2024, Uniform$\pm$},
+      \scriptsize \textsf{MC2024, Exponential$\pm$},
+    }
+    \addplot[mark=none, dashed] coordinates{(10,49) (1e6, 49)};) 
+    \addplot[mark=none, dashed] coordinates{(1,36.69) (1e7,30.69)};
+    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound?}};
+%    \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
+%    \node[right] at (axis cs: 15, 28.0) {Target Precision};
+ \end{axis}
+\end{tikzpicture}
+
+\textbf{Observations}
+\begin{itemize}
+\item Seems to be OK
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Floating-Point Cancellation}
+
+\medskip
+\textbf{IEEE Double Examples:}
+
+\smallskip
+
+  \begin{tabular}{rcl}
+    $(10^{15} + 3.1416) - 10^{15}$ & $\longrightarrow$ & $3.125$ \\[0.5em]
+%    $(10^{16} + 3.1416) - 10^{16}$ & $\longrightarrow$ & $4.000$ \\[0.5em]
+    $(10^{20} + 3.1416) - 10^{20}$ & $\longrightarrow$ & $0.000$ \\[0.5em]
+    $(10^{15} + 3.1416) - (10^{15} + 0.1)$ & $\longrightarrow$ & $3.000$ \\[0.5em]
+  \end{tabular}
+
+\medskip
+
+\textbf{General Case: For $T \gg s$ and $T \approx T'$}
+
+\medskip
+
+  \begin{tabular}{rcl}
+    $(T + s) - T$ & $\longrightarrow$ & $0$ \\[0.5em]
+    $(T + s) - T'$ & $\longrightarrow$ & ?? \\
+  \end{tabular}
+
+  \medskip
+
+  \textbf{Requirements for Cancellation}
+
+\smallskip
+
+  \begin{itemize}
+  \item Wide dynamic range: $T \gg s$
+    \begin{itemize}
+      \bitem Not present in Uniform$\pm$
+    \end{itemize}
+  \item Homogeneity: $T \approx T'$
+    \begin{itemize}
+      \bitem Not present in Exponential$\pm$
+    \end{itemize}
+
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{What About Negative Weights?}
+
+\medskip
+
+  \textbf{Difficult Weight Collection}
+
+\medskip
+
+  \begin{itemize}
+    \item Devise weight assigmnent with high dynamic range and homogeneity
+  \end{itemize}
+
+\medskip
+
+\begin{center}
+   \begin{tabular}{ccccc}
+%     \toprule
+     Name & Magnitude  & Dist. & Sign & $w(x)\,:\,w(\obar{x})$ \\
+     \midrule
+     Uniform$\pm$      & $(0.0, 1.0)$     & Uni.  & Rand.~$\pm$   & Ind. \\[0.5em]
+     Exponential$\pm$ & $[10^{-9}, 10^{+9}]$ & Exp. & Rand.~$\pm$ & Ind. \\[0.5em]
+     Limits$\pm$ & $\{10^{-9}, 10^{+9}\}$ & Rand. & Rand.~$\pm$ & $w(x) + w(\obar{x}) \not = 0$ \\
+%     \bottomrule
+   \end{tabular}
+\end{center}
+
+\medskip
+
+  \begin{itemize}
+    \item Five randomly generated weight assignments for each formula
+    \item Record lowest digit precision achieved
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Digit Precision: Challenging Weight Assignments}
+
+\medskip
+
+\begin{tikzpicture}[scale=0.8]
+  \begin{axis}[mark options={scale=1.0},height=7cm,width=12cm,grid=both, grid style={black!10}, 
+      legend style={at={(0.95,0.35)}},
+      legend cell align={left},
+                              %x post scale=2.0, y post scale=2.0,
+                              xmode=log,xmin=10,xmax=1e6,
+                              xtick={1,10,100,1000,1e4,1e5,1e6,1e7}, xticklabels={1, $10^1$, $10^2$, $10^3$, $10^4$, $10^5$, $10^6$, $10^7$},
+                              ymode=normal,ymin=0, ymax=45,
+                              ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45},
+                              yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0},
+                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+            ]
+
+
+
+    \input{data-formatted/uposneg-mpf+vars}
+    \input{data-formatted/eposneg-mpf+vars}
+    \input{data-formatted/bposneg-mpf+vars}
+    \legend{
+      \scriptsize \textsf{MC2024, Uniform$\pm$},
+      \scriptsize \textsf{MC2024, Exponential$\pm$},
+      \scriptsize \textsf{MC2024, Limits$\pm$},
+    }
+    \addplot[mark=none, dashed] coordinates{(10,49) (1e6, 49)};) 
+    \addplot[mark=none, dashed] coordinates{(1,36.69) (1e7,30.69)};
+    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound?}};
+%    \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
+%    \node[right] at (axis cs: 15, 28.0) {Target Precision};
+ \end{axis}
+\end{tikzpicture}
+
+\textbf{Observations}
+\begin{itemize}
+\item Many failures
+\item Interesting band structure
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Using Interval Arithmetic}
+
+\medskip
+
+\textbf{MPFI Sofware Library}
+\begin{itemize}
+\item Maintain values of form $\interval{\vmin, \vmax}$
+\item $\vmin$ and $\vmax$ represented in floating-point
+\item Arithmetic operations generalized to operate on intervals
+\item Guarantee approximation of true value $v^{-} \leq v \leq v^{+}$
+\end{itemize}
+
+\bigskip
+
+\textbf{Interval Digit Precision}
+
+\begin{displaymath}
+\aerror(\interval{\vmin, \vmax}) \;\;\; = \;\;\; \left\{ \begin{array}{ll}
+  \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in \interval{\vmin, \vmax}\\[0.8em]
+  0 & \vmin = \vmax = 0 \\
+  1 & 0 \in \interval{\vmin, \vmax} \;\; \textrm{and} \;\; \vmin < \vmax
+  \end{array} \right. \label{eqn:interval:error}
+\end{displaymath}
+
+\begin{itemize}
+  \item Use to evaluate precision of computed value $\approxw(\psi)$
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Hybrid Approach}
+
+\smallskip
+
+\begin{itemize}
+\item decision-DNNF formula with $n$ variables
+\item Want to guarantee digit precision $D$
+\end{itemize}
+
+\medskip
+
+\textbf{Nonnegative Weight Assignments}
+
+\smallskip
+
+\begin{itemize}
+\item Compute required fraction size $p$
+\item Use IEEE double or MPF with appropriate fraction size
+  \begin{itemize}
+    \bitem Test for overflow / underflow with double
+    \bitem Switch to MPF when needed
+  \end{itemize}
+\item Theorem provides precision guarantee
+\end{itemize}
+
+\medskip
+
+\textbf{Weight Assignments with Negative Numbers}
+
+\smallskip
+
+\begin{itemize}
+\item Start with fraction size $p$ based on nonnegative case
+\item Use MPFI with increasing fraction sizes
+\item Use MPQ as last resort
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Evaluating All Benchmarks with Hybrid Approach}
+
+\medskip
+
+\begin{tikzpicture}[scale = 0.80]
+  \begin{axis}[
+      ybar stacked,
+      width = 12cm,
+      height=8cm,
+      bar width=15pt,
+%%      nodes near coords,
+%%      enlargelimits=0.15,
+      legend style={at={(0.435,-0.30)},
+      anchor=south, legend columns=-1},
+      ylabel = {Instance count},
+      xlabel = {Target precision $D$},
+      ytick = {500, 1000, 1500, 2000, 2500},
+      yticklabels ={500, 1000, 1500, 2000, 2500},
+      symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
+      xtick=data,
+      ]
+\input{data-formatted/tabulate-count}
+\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256, \strut MPFI-64, \strut MPFI-128, \strut MPFI-256, \strut MPQ}
+  \end{axis}
+\end{tikzpicture}
+
+\medskip
+
+\begin{itemize}
+\item 100 formulas $\times$ 5 weight collections $\times$ 5 random assignments
+\item 1000 nonnegative and 1500 with negative weights
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\medskip
+
+\frametitle{Hybrid Benchmark Evaluation Time}
+
+\begin{tikzpicture}[scale = 0.80]
+  \begin{axis}[
+      ybar stacked,
+      width = 12cm,
+      height=8cm,
+      bar width=15pt,
+%%      nodes near coords,
+%%      enlargelimits=0.15,
+      legend style={at={(0.42,-0.30)},
+        anchor=north, legend columns=-1},
+      ylabel = {Total Time (hours)},
+      xlabel = {Target precision $D$},
+      ymax = 30,
+      ytick = {5, 10, 15, 20, 25, 30},
+      yticklabels = {5, 10, 15, 20, 25, 30},
+      symbolic x coords={1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
+      xtick=data,
+      ]
+\input{data-formatted/tabulate-effort}
+\legend{\strut Double, \strut MPF-64, \strut MPF-128, \strut MPF-256, \strut MPFI-64, \strut MPFI-128, \strut MPFI-256, \strut MPQ}
+  \end{axis}
+\end{tikzpicture}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Conclusions}
+
+  \bigskip
+  
+\textbf{Observations}
+
+\medskip
+
+  \begin{itemize}
+  \item Can reliably use floating-point when all weights nonnegative
+  \item Hybrid interval + rational works well when some weights negative
+  \item Scheme works across wide range of target precisions
+  \end{itemize}
+
+  \bigskip
+  
+\textbf{Generalizations}  
+
+  \begin{itemize}
+  \item Ideas extend to other representations
+  \item d-DNNF
+  \item BDDs, MDDs, SDDs, etc.
+  \end{itemize}
 
 \end{frame}
 

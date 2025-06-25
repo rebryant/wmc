@@ -27,3 +27,9 @@ eg-formula-doc.wdd: eg-formula.dd
 
 eg-wmc-doc.wdd: eg-wmc.dd
 	cp eg-wmc.dd eg-wmc-doc.wdd
+
+decision-doc.wdd: decision.sdd
+	cp decision.sdd decision-doc.wdd
+
+product-doc.wdd: product.sdd
+	cp product.sdd product-doc.wdd
