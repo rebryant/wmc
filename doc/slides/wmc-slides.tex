@@ -664,18 +664,17 @@ For value $v$ and its approximation $\approxv$:
 
 \frametitle{Evaluating Nonnegative Benchmarks}
 
-\medskip
+\bigskip
 
 \begin{tikzpicture}[scale = 0.80]
   \begin{axis}[
       ybar stacked,
-      ymax = 2500,
       width = 12cm,
-      height=8cm,
+      height=4.5cm,
       bar width=15pt,
 %%      nodes near coords,
 %%      enlargelimits=0.15,
-      legend style={at={(0.435,-0.30)},
+      legend style={at={(0.435,-0.70)},
       anchor=south, legend columns=-1},
       ylabel = {Instance count},
       xlabel = {Target precision $D$},
@@ -693,6 +692,7 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
+\item When Double overflows or underflows, recompute with MPF-64
 \end{itemize}
 
 \end{frame}
@@ -885,18 +885,17 @@ For value $v$ and its approximation $\approxv$:
 
 \frametitle{Evaluating Mixed-Sign  Benchmarks with Hybrid Approach}
 
-\medskip
+\bigskip
 
 \begin{tikzpicture}[scale = 0.80]
   \begin{axis}[
       ybar stacked,
-      ymax = 2500,
       width = 12cm,
-      height=8cm,
+      height=6.0cm,
       bar width=15pt,
 %%      nodes near coords,
 %%      enlargelimits=0.15,
-      legend style={at={(0.435,-0.30)},
+      legend style={at={(0.435,-0.50)},
       anchor=south, legend columns=-1},
       ylabel = {Instance count},
       xlabel = {Target precision $D$},
@@ -914,6 +913,8 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item 100 formulas $\times$ 3 weight collections $\times$ 5 random assignments
+\item Use progressively higher MPFI precisions until target achieved
+\item Use MPQ when interval arithmetic fails
 \end{itemize}
 
 \end{frame}
