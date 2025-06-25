@@ -841,46 +841,6 @@ For value $v$ and its approximation $\approxv$:
 
 \end{frame}
 
-\begin{frame}
-
-\frametitle{Hybrid Approach}
-
-\smallskip
-
-\begin{itemize}
-\item decision-DNNF formula with $n$ variables
-\item Want to guarantee digit precision $D$
-\end{itemize}
-
-\medskip
-
-\textbf{Nonnegative Weight Assignments}
-
-\smallskip
-
-\begin{itemize}
-\item Compute required fraction size $p$
-\item Use IEEE double or MPF with appropriate fraction size
-  \begin{itemize}
-    \bitem Test for overflow / underflow with double
-    \bitem Switch to MPF when needed
-  \end{itemize}
-\item Theorem provides precision guarantee
-\end{itemize}
-
-\medskip
-
-\textbf{Weight Assignments with Negative Numbers}
-
-\smallskip
-
-\begin{itemize}
-\item Start with fraction size $p$ based on nonnegative case
-\item Use MPFI with increasing fraction sizes
-\item Use MPQ as last resort
-\end{itemize}
-
-\end{frame}
 
 \begin{frame}
 
@@ -1022,5 +982,46 @@ For value $v$ and its approximation $\approxv$:
     \end{itemize}
 
   \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Hybrid Approach}
+
+\smallskip
+
+\begin{itemize}
+\item decision-DNNF formula with $n$ variables
+\item Want to guarantee digit precision $D$
+\end{itemize}
+
+\medskip
+
+\textbf{Nonnegative Weight Assignments}
+
+\smallskip
+
+\begin{itemize}
+\item Compute required fraction size $p$
+\item Use IEEE double or MPF with appropriate fraction size
+  \begin{itemize}
+    \bitem Test for overflow / underflow with double
+    \bitem Switch to MPF when needed
+  \end{itemize}
+\item Theorem provides precision guarantee
+\end{itemize}
+
+\medskip
+
+\textbf{Weight Assignments with Negative Numbers}
+
+\smallskip
+
+\begin{itemize}
+\item Start with fraction size $p$ based on nonnegative case
+\item Use MPFI with increasing fraction sizes
+\item Use MPQ as last resort
+\end{itemize}
 
 \end{frame}
