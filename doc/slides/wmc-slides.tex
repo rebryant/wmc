@@ -180,15 +180,15 @@
 
 \end{center}
 
-%% \vskip -10pt
+\vskip -10pt
   {\bf Given}
 
   \begin{itemize}
   \item CNF formula $\inputformula$ over variables $X$
-%%    \begin{itemize}
-%%      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
-%%      \bitem Each model $\assign$ is set of literals 
-%%    \end{itemize}
+    \begin{itemize}
+      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
+      \bitem Each model $\assign$ is set of literals 
+    \end{itemize}
   \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
   \end{itemize}
 
@@ -593,7 +593,7 @@ For value $v$ and its approximation $\approxv$:
 \begin{itemize}
 \item Precision stays high
 \item Same trend holds
-\only<4->{\item Theorem: Precision guaranteed for nonnegative weights}
+\only<4->{\item \emph{Theorem}: Precision guaranteed for nonnegative weights}
 \end{itemize}
 }
 \end{frame}
@@ -693,6 +693,8 @@ For value $v$ and its approximation $\approxv$:
 \begin{itemize}
 \item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
 \item When Double overflows or underflows, recompute with MPF-64
+\item Rely on Precision Bound Theorem to guarantee precision
+\item No redundant work required
 \end{itemize}
 
 \end{frame}
@@ -796,10 +798,10 @@ For value $v$ and its approximation $\approxv$:
 
 \medskip
 
-  \begin{itemize}
-    \item Five randomly generated weight assignments for each formula
-    \item Record lowest decimal precision achieved
-  \end{itemize}
+%%  \begin{itemize}
+%%    \item Five randomly generated weight assignments for each formula
+%%    \item Record lowest decimal precision achieved
+%%  \end{itemize}
 
 \end{frame}
 
@@ -856,7 +858,7 @@ For value $v$ and its approximation $\approxv$:
 \textbf{MPFI Software Library}
 \begin{itemize}
 \item Maintain values of form $\interval{\vmin, \vmax}$
-\item $\vmin$ and $\vmax$ represented in floating-point
+\item $\vmin$ and $\vmax$ represented in floating-point (MPF)
 \item Arithmetic operations generalized to operate on intervals
 \item Guarantee approximation of true value $v^{-} \leq v \leq v^{+}$
 \end{itemize}
@@ -874,7 +876,7 @@ For value $v$ and its approximation $\approxv$:
 \end{displaymath}
 
 \begin{itemize}
-  \item Use to evaluate precision of computed value $\approxw(\psi)$
+  \item Use to estimate precision of computed value $\approxw(\psi)$
 \end{itemize}
 
 \end{frame}
@@ -885,7 +887,7 @@ For value $v$ and its approximation $\approxv$:
 
 \frametitle{Evaluating Mixed-Sign  Benchmarks with Hybrid Approach}
 
-\bigskip
+\medskip
 
 \begin{tikzpicture}[scale = 0.80]
   \begin{axis}[
@@ -909,12 +911,13 @@ For value $v$ and its approximation $\approxv$:
   \end{axis}
 \end{tikzpicture}
 
-\medskip
+\smallskip
 
 \begin{itemize}
 \item 100 formulas $\times$ 3 weight collections $\times$ 5 random assignments
 \item Use progressively higher MPFI precisions until target achieved
 \item Use MPQ when interval arithmetic fails
+\item May require redundant work
 \end{itemize}
 
 \end{frame}
