@@ -631,6 +631,7 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item Problem with $n$ variables
+\item All weights nonnegative
 \item Want to guarantee $\decimalprecision(\approxw, w) \geq D$
 \item Choose fraction size $p$ such that two conditions hold:
 \begin{displaymath}
@@ -641,20 +642,20 @@ For value $v$ and its approximation $\approxv$:
 \end{displaymath}
 \end{itemize}
 
-\medskip
+\smallskip
 
-{\bf Examples: $n = 10^6$}
+{\bf For $n = 10^6$:}
 
 \begin{itemize}
 \item First condition: $p \geq 44.8$
 \item Second condition:
   \begin{center}
-    \begin{tabular}{rr}
-      \makebox[40pt]{$D$} & \makebox[50pt]{Min.~$p$} \\
+    \begin{tabular}{rrl}
+      \makebox[40pt]{$D$} & \makebox[50pt]{Min.~$p$} & Comment\\
       \midrule
-      $1$ & $26.2$ \\
-      $6$ & $42.8$ \\
-      $30$ & $122.5$ \\
+      $1$ & $26.2$ & Dominated by first condition\\
+      $9$ & $52.8$ & IEEE Double \\
+      $31$ & $125.9$ & MPF-128 \\
     \end{tabular}
   \end{center}
 \end{itemize}
@@ -701,7 +702,7 @@ For value $v$ and its approximation $\approxv$:
 
 
 \begin{frame}
-  \frametitle{What About Negative Weights?}
+  \frametitle{What About Mixed Positive/Negative Weights?}
 
 \medskip
 
@@ -726,7 +727,7 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 \begin{frame}
-\frametitle{Decimal Precision: Negative Weights}
+\frametitle{Decimal Precision: Mixed Weights}
 
 \medskip
 
@@ -769,7 +770,7 @@ For value $v$ and its approximation $\approxv$:
 
 
 \begin{frame}
-  \frametitle{What About Negative Weights?}
+  \frametitle{What About Mixed Weights?}
 
 \medskip
 
@@ -1002,8 +1003,8 @@ For value $v$ and its approximation $\approxv$:
 \medskip
 
   \begin{itemize}
-  \item Can reliably use floating-point when all weights nonnegative
-  \item Hybrid interval + rational works well when some weights negative
+  \item Can reliably use floating-point for nonnegative weights
+  \item Hybrid interval + rational works well for mixed weights
   \item Scheme works across wide range of target precisions
   \end{itemize}
 
