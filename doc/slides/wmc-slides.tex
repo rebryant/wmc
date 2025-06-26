@@ -864,7 +864,7 @@ For value $v$ and its approximation $\approxv$:
 
 \frametitle{Interval Arithmetic}
 
-\medskip
+\smallskip
 
 \textbf{MPFI Software Library}
 \begin{itemize}
@@ -874,17 +874,20 @@ For value $v$ and its approximation $\approxv$:
 \item Guarantee approximation of true value $v^{-} \leq v \leq v^{+}$
 \end{itemize}
 
-\bigskip
+\smallskip
 
 \textbf{Interval Decimal Precision}
 
-\begin{displaymath}
-\aerror(\interval{\vmin, \vmax}) \;\;\; = \;\;\; \left\{ \begin{array}{ll}
+\vskip -10pt
+
+\begin{eqnarray*}
+\aerror(\interval{\vmin, \vmax}) & = & \left\{ \begin{array}{ll}
   \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in \interval{\vmin, \vmax}\\[0.8em]
   0 & \vmin = \vmax = 0 \\
   1 & 0 \in \interval{\vmin, \vmax} \;\; \textrm{and} \;\; \vmin < \vmax
-  \end{array} \right. \label{eqn:interval:error}
-\end{displaymath}
+  \end{array} \right.\\[0.5em]
+\decimalprecision(\interval{\vmin, \vmax})  & = &  \max[0, -\log_{10} \aerror(\interval{\vmin, \vmax})]
+\end{eqnarray*}
 
 \begin{itemize}
   \item Use to estimate precision of computed value $\approxw(\psi)$
