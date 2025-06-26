@@ -40,7 +40,7 @@
 \newcommand{\assign}{\alpha}
 \newcommand{\modelset}{{\cal M}}
 \newcommand{\aerror}{\delta}
-\newcommand{\digitprecision}{\Delta}
+\newcommand{\decimalprecision}{\Delta}
 \newcommand{\vmin}{v^{-}}
 \newcommand{\vmax}{v^{+}}
 \newcommand{\interval}[1]{[\![#1]\!]}
@@ -180,15 +180,15 @@
 
 \end{center}
 
-\vskip -10pt
+%% \vskip -10pt
   {\bf Given}
 
   \begin{itemize}
   \item CNF formula $\inputformula$ over variables $X$
-    \begin{itemize}
-      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
-      \bitem Each model $\assign$ is set of literals 
-    \end{itemize}
+%%    \begin{itemize}
+%%      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
+%%      \bitem Each model $\assign$ is set of literals 
+%%    \end{itemize}
   \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
   \end{itemize}
 
@@ -254,10 +254,10 @@ For value $v$ and its approximation $\approxv$:
 \medskip
 
 \only<2>{
-\textbf{Digit Precision}
+\textbf{Decimal Precision}
 
 \begin{displaymath}
-  \digitprecision(\approxv, v) \;\; \doteq \;\; \max(0, -\log_{10} \aerror[\approxv, v])
+  \decimalprecision(\approxv, v) \;\; \doteq \;\; \max(0, -\log_{10} \aerror[\approxv, v])
 \end{displaymath}
 
 \begin{itemize}
@@ -320,7 +320,7 @@ For value $v$ and its approximation $\approxv$:
   \begin{itemize}
   \item Set target precision $D$
   \item Compute approximation $\approxw(\inputformula)$
-  \item Require $\digitprecision(\approxw, w) \geq D$
+  \item Require $\decimalprecision(\approxw, w) \geq D$
   \end{itemize}
 
 \end{frame}
@@ -414,7 +414,7 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{itemize}
   \item Convert input formula $\inputformula$ into logically equivalent formula $\psi$
-  \item $\psi$ has form that makes weighted counting tractable
+  \item $\psi$ has structure that makes weighted counting tractable
   \end{itemize}
 
 \end{frame}
@@ -457,13 +457,13 @@ For value $v$ and its approximation $\approxv$:
 
   \textbf{Evaluation}
   \begin{itemize}
-  \item Compute digit precision of floating-point results
+  \item Compute decimal precision of floating-point results
   \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-\frametitle{Digit Precision: Initial Evaluation}
+\frametitle{Decimal Precision: Initial Evaluation}
 
 \medskip
 
@@ -477,7 +477,7 @@ For value $v$ and its approximation $\approxv$:
                               ymode=normal,ymin=0, ymax=50,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 49},
                               yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, $+\infty$},
-                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+                              xlabel={Number of variables $n$}, ylabel={Decimal Precision}
             ]
 
 
@@ -541,14 +541,14 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{itemize}
     \item \emph{Collection}: Five randomly generated weight assignments for each formula
-    \item Record lowest digit precision achieved
+    \item Record lowest decimal precision achieved
   \end{itemize}
 
 \end{frame}
 
 
 \begin{frame}
-\frametitle{Digit Precision: Nonzero Weights}
+\frametitle{Decimal Precision: Nonnegative Weights}
 
 \medskip
 
@@ -562,7 +562,7 @@ For value $v$ and its approximation $\approxv$:
                               ymode=normal,ymin=0, ymax=50,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 49},
                               yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, $+\infty$},
-                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+                              xlabel={Number of variables $n$}, ylabel={Decimal Precision}
             ]
 
 
@@ -593,13 +593,13 @@ For value $v$ and its approximation $\approxv$:
 \begin{itemize}
 \item Precision stays high
 \item Same trend holds
-\only<4->{\item Precision guaranteed for nonnegative weights}
+\only<4->{\item Theorem: Precision guaranteed for nonnegative weights}
 \end{itemize}
 }
 \end{frame}
 
 \begin{frame}
-  \frametitle{Precision Bound Theorem: Nonnegative Weights}
+  \frametitle{Precision Bound Theorem}
 
 \bigskip
 
@@ -616,7 +616,7 @@ For value $v$ and its approximation $\approxv$:
 
 \textbf{Guarantee:}
 \begin{displaymath}
-\digitprecision(\approxw(\psi), w(\psi)) \;\; \geq \;\; p \cdot \log_{10}2 \rtext{- \log_{10}n} - \log_{10} 7
+\decimalprecision(\approxw(\psi), w(\psi)) \;\; \geq \;\; p \cdot \log_{10}2 \rtext{- \log_{10}n} - \log_{10} 7
 \end{displaymath}
 
 \textbf{Key Properties:}
@@ -631,7 +631,7 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item Problem with $n$ variables
-\item Want to guarantee $\digitprecision(\approxw, w) \geq D$
+\item Want to guarantee $\decimalprecision(\approxw, w) \geq D$
 \item Choose fraction size $p$ such that two conditions hold:
 \begin{displaymath}
 \begin{array}{rcl}
@@ -718,13 +718,13 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{itemize}
     \item Five randomly generated weight assignments for each formula
-    \item Record lowest digit precision achieved
+    \item Record lowest decimal precision achieved
   \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-\frametitle{Digit Precision: Negative Weights}
+\frametitle{Decimal Precision: Negative Weights}
 
 \medskip
 
@@ -738,7 +738,7 @@ For value $v$ and its approximation $\approxv$:
                               ymode=normal,ymin=0, ymax=45,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45},
                               yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0},
-                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+                              xlabel={Number of variables $n$}, ylabel={Decimal Precision}
             ]
 
 
@@ -798,13 +798,13 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{itemize}
     \item Five randomly generated weight assignments for each formula
-    \item Record lowest digit precision achieved
+    \item Record lowest decimal precision achieved
   \end{itemize}
 
 \end{frame}
 
 \begin{frame}
-\frametitle{Digit Precision: Challenging Weight Assignments}
+\frametitle{Decimal Precision: Challenging Weight Assignments}
 
 \medskip
 
@@ -818,7 +818,7 @@ For value $v$ and its approximation $\approxv$:
                               ymode=normal,ymin=0, ymax=45,
                               ytick={0, 5, 10, 15, 20, 25, 30, 35, 40, 45},
                               yticklabels={0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0},
-                              xlabel={Number of variables $n$}, ylabel={Digit Precision}
+                              xlabel={Number of variables $n$}, ylabel={Decimal Precision}
             ]
 
 
@@ -833,7 +833,7 @@ For value $v$ and its approximation $\approxv$:
     }
     \addplot[mark=none, dashed] coordinates{(10,49) (1e6, 49)};) 
     \addplot[mark=none, dashed] coordinates{(1,36.69) (1e7,30.69)};
-    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Precision Bound?}};
+    \node[right] at (axis cs: 15, 33.2) {\rotatebox{-2.8}{Invalid Precision Bound}};
 %    \addplot[mark=none, color=darkred] coordinates{(1,30) (1e7,30)};
 %    \node[right] at (axis cs: 15, 28.0) {Target Precision};
  \end{axis}
@@ -863,7 +863,7 @@ For value $v$ and its approximation $\approxv$:
 
 \bigskip
 
-\textbf{Interval Digit Precision}
+\textbf{Interval Decimal Precision}
 
 \begin{displaymath}
 \aerror(\interval{\vmin, \vmax}) \;\;\; = \;\;\; \left\{ \begin{array}{ll}
@@ -1072,7 +1072,7 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item decision-DNNF formula with $n$ variables
-\item Want to guarantee digit precision $D$
+\item Want to guarantee decimal precision $D$
 \end{itemize}
 
 \medskip
