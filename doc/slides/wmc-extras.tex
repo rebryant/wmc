@@ -1,0 +1,319 @@
+\documentclass[t,pdf]{beamer}
+\mode<presentation>{}
+
+
+\usecolortheme[RGB={196, 30, 58}]{structure}
+
+
+\usepackage{color}
+\usepackage{animate}
+\usepackage{tikz}
+\usetikzlibrary{shadings,shadows}
+\usetikzlibrary{shapes, arrows}
+\usetikzlibrary{decorations.pathreplacing,angles,quotes}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning}
+\usepackage{pgfplots}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage{scrextend}
+\usepackage{booktabs}
+
+
+\usepackage{hyperref}
+%% Colored hyperlink 
+\newcommand{\cref}[2]{\href{#1}{\color{blue}#2}}
+%% Colored hyperlink showing link in TT font
+% \newcommand{\chref}[1]{\href{#1}{\small\tt \color{blue}#1}}
+\newcommand{\hcref}[1]{\cref{#1}{\small\tt #1}}
+
+\newcommand{\obar}[1]{\overline{#1}}
+\newcommand{\nil}{\bot}
+\newcommand{\bitem}{\item[$\bullet$]}
+\newcommand{\opos}[1]{#1}
+\newcommand{\oneg}[1]{\overline{#1}}
+\newcommand{\xnot}{\oneg{x}}
+\newcommand{\lit}{\ell}
+\newcommand{\approximate}[1]{\hat{#1}}
+\newcommand{\approxv}{\approximate{v}}
+\newcommand{\approxw}{\approximate{w}}
+\newcommand{\assign}{\alpha}
+\newcommand{\modelset}{{\cal M}}
+\newcommand{\aerror}{\delta}
+\newcommand{\decimalprecision}{\Delta}
+\newcommand{\vmin}{v^{-}}
+\newcommand{\vmax}{v^{+}}
+\newcommand{\interval}[1]{[\![#1]\!]}
+
+
+\newcommand{\inputformula}{\phi}
+\newcommand{\compiledformula}{\psi}
+
+\usepackage{booktabs,colortbl}
+
+\definecolor{redorange}{rgb}{0.878431, 0.235294, 0.192157}
+\definecolor{lightblue}{rgb}{0.552941, 0.72549, 0.792157}
+\definecolor{clearyellow}{rgb}{0.964706, 0.745098, 0}
+\definecolor{clearorange}{rgb}{0.917647, 0.462745, 0}
+\definecolor{mildgray}{rgb}{0.54902, 0.509804, 0.47451}
+\definecolor{softblue}{rgb}{0.643137, 0.858824, 0.909804}
+\definecolor{bluegray}{rgb}{0.141176, 0.313725, 0.603922}
+\definecolor{lightgreen}{rgb}{0.709804, 0.741176, 0}
+\definecolor{redpurple}{rgb}{0.835294, 0, 0.196078}
+\definecolor{midblue}{rgb}{0, 0.592157, 0.662745}
+\definecolor{clearpurple}{rgb}{0.67451, 0.0784314, 0.352941}
+\definecolor{browngreen}{rgb}{0.333333, 0.313725, 0.145098}
+\definecolor{darkestpurple}{rgb}{0.396078, 0.113725, 0.196078}
+\definecolor{greypurple}{rgb}{0.294118, 0.219608, 0.298039}
+\definecolor{darktruqoise}{rgb}{0, 0.239216, 0.298039}
+\definecolor{darkbrown}{rgb}{0.305882, 0.211765, 0.160784}
+\definecolor{midgreen}{rgb}{0.560784, 0.6, 0.243137}
+\definecolor{darkred}{rgb}{0.576471, 0.152941, 0.172549}
+\definecolor{darkpurple}{rgb}{0.313725, 0.027451, 0.470588}
+\definecolor{darkestblue}{rgb}{0, 0.156863, 0.333333}
+\definecolor{lightpurple}{rgb}{0.776471, 0.690196, 0.737255}
+\definecolor{softgreen}{rgb}{0.733333, 0.772549, 0.572549}
+\definecolor{offwhite}{rgb}{0.839216, 0.823529, 0.768627}
+
+\definecolor{mediumgreen}{RGB}{20,140,20}
+\definecolor{mediumblue}{RGB}{20,20,140}
+\definecolor{medgreen}{rgb}{0.34, 0.65, 0.34}
+
+\definecolor{dbl}{RGB}{49,97,160}
+\definecolor{mpflow}{RGB}{96,165,200}
+\definecolor{mpfmed}{RGB}{161,207,223}
+\definecolor{mpfhigh}{RGB}{224,243,248}
+\definecolor{mpfilow}{RGB}{215,48,39}
+\definecolor{mpfimed}{RGB}{253,174,97}
+\definecolor{mpfihigh}{RGB}{254,224,144}
+\definecolor{mpq}{RGB}{100,100,100}
+
+
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+\definecolor{darkred}{RGB}{180,0,0}
+\newcommand{\darkred}[1]{\textcolor{darkred}{#1}}
+\definecolor{dominocolor}{RGB}{0,0,128}
+\definecolor{darkgreen}{RGB}{0,180,0}
+\definecolor{darkgray}{RGB}{128,128,128}
+%%\newcommand{\ground}{blue}
+
+%%\newcommand{\ft}[1]{\frametitle{#1}}
+%%\newcommand{\ig}[2]{\includegraphics[#1]{#2}}
+
+\definecolor{xred}{rgb}{0.77, 0.12, 0.23}
+\definecolor{xgreen}{rgb}{0.3, 0.6, 0}
+\definecolor{xblue}{rgb}{0., 0.25, 1}
+
+\newcommand{\btext}[1]{\textcolor{xblue}{#1}}
+\newcommand{\rtext}[1]{\textcolor{xred}{#1}}
+\newcommand{\gtext}[1]{\textcolor{xgreen}{#1}}
+\newcommand{\wtext}[1]{\textcolor{white}{#1}}
+
+\title{\huge Numerical Considerations \\ for Weighted Model Counting}
+%\subtitle{}
+\author{Randal E. Bryant}
+\institute{\includegraphics[height=50pt]{CMU_Logo}}
+
+\date{\textcolor{black}{Workshop on Counting, Sampling, and Synthesis 2025}}
+
+
+\setbeamertemplate{footline}
+{
+	\leavevmode%
+	\hbox{%
+	\begin{beamercolorbox}[wd=0.35\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+%%	\tiny {\url{http://www.cs.cmu.edu/~bryant}}
+%%			\vspace{4pt}
+	\end{beamercolorbox}%
+	\begin{beamercolorbox}[wd=0.45\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+	\end{beamercolorbox}%
+	\begin{beamercolorbox}[wd=0.2\paperwidth,ht=2.5ex,dp=1ex,right]{date in head/foot}%
+		\structure{\scriptsize \insertframenumber{} / \inserttotalframenumber\hspace*{3ex}}
+		\vspace{3pt}
+	\end{beamercolorbox}}%
+	\vskip0pt%
+}
+
+\beamertemplatenavigationsymbolsempty
+
+\begin{document}
+
+
+\begin{frame}
+
+  \frametitle{Weighted Model Counting Definition}
+
+  \begin{center}
+\begin{tikzpicture}[scale=0.035]
+  \node [left] at (0,25) {$\inputformula$};
+  \node [right] at (220,25) {$w(\inputformula)$};
+  \node [left] at (0,-20){$w$};
+
+  \draw[fill=structure] (60,0) rectangle (160,50);
+
+%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
+  \draw[line width=2pt] (0,25) [-latex] -- (60,25);
+  \draw[line width=2pt] (160,25) [-latex] -- (220,25);
+  \draw[line width=2pt] (0,-20) -- (110,-20) [-latex] -- (110,0);
+
+% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
+
+  \node [left] at (10,52) {Input};
+  \node [left] at (10,40) {Formula};
+
+  \node [left] at (10, 7) {Weight};
+  \node [left] at (10,-5) {Assignment};
+
+  \node [right] at (210,52) {Weighted};
+  \node [right] at (210,40) {Count};
+
+
+  \node[white] at (110,37) {Weighted};
+  \node[white] at (110,25) {Model};
+  \node[white] at (110,13) {Counter};
+\end{tikzpicture}
+
+\end{center}
+
+\vskip -10pt
+  {\bf Given}
+
+  \begin{itemize}
+  \item CNF formula $\inputformula$ over variables $X$
+    \begin{itemize}
+      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
+      \bitem Each model $\assign$ is set of literals 
+    \end{itemize}
+  \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
+  \end{itemize}
+
+  {\bf Compute}
+  \begin{displaymath}
+  w(\inputformula) \;\; \doteq \;\; \sum_{\assign \in \modelset(\inputformula)} \;\;\prod_{\lit \in \assign} w(\lit) 
+  \end{displaymath}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Floating-Point Cancellation}
+
+\medskip
+\textbf{IEEE Double Examples:}
+
+\smallskip
+
+  \begin{tabular}{rcl}
+    $(10^{15} + 3.1416) - 10^{15}$ & $\longrightarrow$ & $3.125$ \\[0.5em]
+%    $(10^{16} + 3.1416) - 10^{16}$ & $\longrightarrow$ & $4.000$ \\[0.5em]
+    $(10^{20} + 3.1416) - 10^{20}$ & $\longrightarrow$ & $0.000$ \\[0.5em]
+    $(10^{15} + 3.1416) - (10^{15} + 0.1)$ & $\longrightarrow$ & $3.000$ \\[0.5em]
+  \end{tabular}
+
+\medskip
+
+\textbf{General Case: For $T \gg s$ and $T \approx T'$}
+
+\medskip
+
+  \begin{tabular}{rcl}
+    $(T + s) - T$ & $\longrightarrow$ & $0$ \\[0.5em]
+    $(T + s) - T'$ & $\longrightarrow$ & ?? \\
+  \end{tabular}
+
+  \medskip
+
+  \textbf{Requirements for Cancellation}
+
+\smallskip
+
+  \begin{itemize}
+  \item Wide dynamic range: $T \gg s$
+    \begin{itemize}
+      \bitem Not present in Uniform$\pm$
+    \end{itemize}
+  \item Homogeneity: $T \approx T'$
+    \begin{itemize}
+      \bitem Not present in Exponential$\pm$
+    \end{itemize}
+
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Interval Arithmetic}
+
+\smallskip
+
+\textbf{MPFI Software Library}
+\begin{itemize}
+\item Maintain values of form $\interval{\vmin, \vmax}$
+\item $\vmin$ and $\vmax$ represented in floating-point (MPF)
+\item Arithmetic operations generalized to operate on intervals
+\item Guarantee approximation of true value $v^{-} \leq v \leq v^{+}$
+\end{itemize}
+
+\smallskip
+
+\textbf{Interval Decimal Precision}
+
+\vskip -10pt
+
+\begin{eqnarray*}
+\aerror(\interval{\vmin, \vmax}) & = & \left\{ \begin{array}{ll}
+  \frac{\vmax - \vmin}{\min(|\vmin|, |\vmax|)}  & 0 \not \in \interval{\vmin, \vmax}\\[0.8em]
+  0 & \vmin = \vmax = 0 \\
+  1 & 0 \in \interval{\vmin, \vmax} \;\; \textrm{and} \;\; \vmin < \vmax
+  \end{array} \right.\\[0.5em]
+\decimalprecision(\interval{\vmin, \vmax})  & = &  \max[0, -\log_{10} \aerror(\interval{\vmin, \vmax})]
+\end{eqnarray*}
+
+\begin{itemize}
+  \item Use to estimate precision of computed value $\approxw(\psi)$
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+
+\frametitle{Hybrid Approach}
+
+\smallskip
+
+\begin{itemize}
+\item decision-DNNF formula with $n$ variables
+\item Want to guarantee decimal precision $D$
+\end{itemize}
+
+\medskip
+
+\textbf{Nonnegative Weight Assignments}
+
+\smallskip
+
+\begin{itemize}
+\item Compute required fraction size $p$
+\item Use IEEE double or MPF with appropriate fraction size
+  \begin{itemize}
+    \bitem Test for overflow / underflow with double
+    \bitem Switch to MPF when needed
+  \end{itemize}
+\item Theorem provides precision guarantee
+\end{itemize}
+
+\medskip
+
+\textbf{Weight Assignments with Negative Numbers}
+
+\smallskip
+
+\begin{itemize}
+\item Start with fraction size $p$ based on nonnegative case
+\item Use MPFI with increasing fraction sizes
+\item Use MPQ as last resort
+\end{itemize}
+
+\end{frame}
+
+\end{document}
