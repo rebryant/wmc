@@ -25,21 +25,21 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-C (p|n|b)] [-m (c|t|e)] [-o OUT]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-C (p|n|b)] [-m (c|t|e|w)] [-o OUT]\n" % name)
     sys.stderr.write("  -v       Verbose\n")
     sys.stderr.write("  -l       Use reduced set of digit precision values\n")    
     sys.stderr.write("  -c       Show output as CSV\n")
     sys.stderr.write("  -d PATH  Directory with CSV files\n")
     sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
     sys.stderr.write("  -C COLL  Specify which collections to include: positive (p), negative (n), or both (b)")
-    sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e)\n")
+    sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e) work (w)\n")
     sys.stderr.write("  -o OUT   Specify output file\n")
 
 directory = "."
 verbose = False
 
 
-extraDigits = 0
+extraDigits = 2
 
 dataPoints = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
 
@@ -140,6 +140,18 @@ class PrecisionType:
         return guaranteedPrecision(nvar, self.bits[ptype])
 
 ptyper = None
+
+class Mode:
+    count, effort, time, work  = range(4)
+    modeCharacters = ['c', 'e', 't', 'w']
+
+    def parseMode(self, ch):
+        for m in range(len(self.modeCharacters)):
+            if self.modeCharacters[m] == ch:
+                return m
+        raise "Can't parse mode character '%s'" % ch
+
+moder = None
 
 
 # Characterize optimal strategy for one instance and one target precision
@@ -277,18 +289,10 @@ class Instance:
 class SolutionSet:
     targetPrecision = 0
     solutionList = []
-    count, effort, time  = range(3)
-    modeCharacters = ['c', 'e', 't']
 
     def __init__(self, targetPrecision):
         self.targetPrecision = 0
         self.solutionList = []
-
-    def getMode(self, c):
-        for i in range(len(self.modeCharacters)):
-            if c == self.modeCharacters[i]:
-                return i
-        return 0
 
     def addSolution(self, s):
         self.solutionList.append(s)
@@ -311,20 +315,24 @@ class SolutionSet:
             s.accumulateEffort(histo)
         return histo
     
-    def tabulateWork(self):
+    def tabulateWork(self, collection):
         (real, redundant) = (0.0, 0.0)
         for s in self.solutionList:
+            if collection == 'n' and s.isNonnegative():
+                continue
+            if collection == 'p' and not s.isNonnegative():
+                continue
             sreal, sredundant = s.divideWork()
             real += sreal
             redundant += sredundant
         return [real, redundant]
 
     def tabulate(self, mode):
-        if mode == self.count:
+        if mode == moder.count:
             return self.tabulateCount()
-        elif mode == self.effort:
+        elif mode == moder.effort:
             return self.tabulateEffort()
-        elif mode == self.time:
+        elif mode == moder.time:
             return self.tabulateTime()
         
 
@@ -366,8 +374,7 @@ class SolutionRange:
             sset = instances.solve(d)
             self.solutionSetList.append(sset)
         
-    def format(self, modeCharacter, outfile, types):
-        mode = self.solutionSetList[0].getMode(modeCharacter)
+    def format(self, mode, outfile, types):
         histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
         for t in types:
             outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
@@ -377,33 +384,32 @@ class SolutionRange:
                 outfile.write("(%d,%.3f)" % (d, v))
             outfile.write("};\n")
 
-    def csvFormat(self, modeCharacter, outfile, types):
-        mode = self.solutionSetList[0].getMode(modeCharacter)
+    def csvFormat(self, mode, outfile, types):
         slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
         histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
         sums = [0 for i in range(len(self.solutionSetList))]
         for t in types:
-            slist = [ptyper.tabulateNames[t]] + [str(histoList[i][t]) for i in range(len(self.solutionSetList))]
+            slist = [ptyper.tabulateNames[t]] + ["%.4f" % histoList[i][t] for i in range(len(self.solutionSetList))]
             sums = [sums[i] + histoList[i][t] for i in range(len(self.solutionSetList))]
             outfile.write(",".join(slist) + '\n')
-        slist = ["Sum"] + [str(sums[i]) for i in range(len(self.solutionSetList))]
+        slist = ["Sum"] + ["%.4f" % sums[i] for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')        
 
-    def csvFormatWork(self, outfile):
+    def csvFormatWork(self, outfile, collection):
         names = ["Real", "Redundant"]
         slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
-        pairList = [ss.tabulateWork() for ss in self.solutionSetList]
+        pairList = [ss.tabulateWork(collection) for ss in self.solutionSetList]
         sums = [0 for i in range(len(self.solutionSetList))]
         for t in range(2):
-            slist = [names[t]] + [str(pairList[i][t]) for i in range(len(self.solutionSetList))]
+            slist = [names[t]] + ["%.4f" % pairList[i][t] for i in range(len(self.solutionSetList))]
             sums = [sums[i] + pairList[i][t] for i in range(len(self.solutionSetList))]
             outfile.write(",".join(slist) + '\n')
-        slist = ["Sum"] + [str(sums[i]) for i in range(len(self.solutionSetList))]
+        slist = ["Sum"] + ["%.4f" % sums[i] for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')        
         fracs = [pairList[i][1]/sums[i] for i in range(len(self.solutionSetList))]
-        flist = ["RFrac"] + [str(fracs[i]) for i in range(len(self.solutionSetList))]
+        flist = ["RFrac"] + ["%.4f" % fracs[i] for i in range(len(self.solutionSetList))]
         outfile.write(",".join(flist) + '\n')
 
 def run(name, args):
@@ -412,11 +418,13 @@ def run(name, args):
     global verbose
     global directory
     global ptyper
+    global moder
     global dataPoints
     global extraDigits
     global csvOutput
     global collection
     ptyper = PrecisionType()
+    moder = Mode()
     modeCharacter = 'c'
     outName = None
     optList, args = getopt.getopt(args, "hvlcd:m:o:x:C:")
@@ -466,13 +474,20 @@ def run(name, args):
         except:
             print("Couldn't open output file '%s'" % outName)
             return 1
+
+    mode = moder.parseMode(modeCharacter)
+
+    if mode == moder.work and not csvOutput:
+        sys.stderr.write("Can only tabulate work when generating CSV\n")
+        return 1
+
     if csvOutput:
-        if modeCharacter == 'w':
-            srange.csvFormatWork(outfile)
+        if mode == moder.work:
+            srange.csvFormatWork(outfile, collection)
         else:
-            srange.csvFormat(modeCharacter, outfile, types)
+            srange.csvFormat(mode, outfile, types)
     else:
-        srange.format(modeCharacter, outfile, types)
+        srange.format(mode, outfile, types)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
