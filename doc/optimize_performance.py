@@ -105,7 +105,7 @@ class PrecisionType:
         self.np_types = [self.np_m64, self.np_m128, self.np_m256, self.all_mpq]
         self.all_types = self.nn_types + self.np_types
         
-    # Accumulate information about solutions
+    # Accumulatte information about solutions
     # histo is array of tabulationCount entries
     def newHistogram(self):
         return [0] * tabulationCount
@@ -126,6 +126,14 @@ class PrecisionType:
     def accumulateTime(self, isNonnegative, ptype, total, histo):
         tidx = self.nn_map[ptype] if isNonnegative else self.np_map[ptype]
         histo[tidx] += total / 3600.0
+
+    def divideWork(self, ptype, timeList):
+        redundant = 0.0
+        for t in range(ptype):
+            redundant += timeList[t]
+        real = timeList[ptype]
+        return (real / 3600.0, redundant / 3600.0)
+        
 
 
     def guaranteedPrecision(self, ptype, nvar):
@@ -163,6 +171,9 @@ class Solution:
 
     def accumulateEffort(self, histo):
         ptyper.accumulateEffort(self.isNonnegative(), self.time, histo)
+
+    def divideWork(self):
+        return ptyper.divideWork(self.ptype, self.time)
 
     def __str__(self):
         s = self.instance.name()
@@ -250,8 +261,8 @@ class Instance:
                     s.ptype = t
                     s.achievedPrecision = self.precisions[t]
                     break
-                elif t == ptyper.dbl and self.include(t, digitPrecision):
-                    s.time[t] = self.seconds[t]
+#                elif t == ptyper.dbl and self.include(t, digitPrecision):
+#                    s.time[t] = self.seconds[t]
 
         else:
             for t in range(1, precisionCount):
@@ -266,7 +277,7 @@ class Instance:
 class SolutionSet:
     targetPrecision = 0
     solutionList = []
-    count, effort, time = range(3)
+    count, effort, time  = range(3)
     modeCharacters = ['c', 'e', 't']
 
     def __init__(self, targetPrecision):
@@ -300,13 +311,22 @@ class SolutionSet:
             s.accumulateEffort(histo)
         return histo
     
+    def tabulateWork(self):
+        (real, redundant) = (0.0, 0.0)
+        for s in self.solutionList:
+            sreal, sredundant = s.divideWork()
+            real += sreal
+            redundant += sredundant
+        return [real, redundant]
+
     def tabulate(self, mode):
         if mode == self.count:
             return self.tabulateCount()
         elif mode == self.effort:
             return self.tabulateEffort()
-        else:
+        elif mode == self.time:
             return self.tabulateTime()
+        
 
 class InstanceSet:
     instanceList = []
@@ -359,7 +379,7 @@ class SolutionRange:
 
     def csvFormat(self, modeCharacter, outfile, types):
         mode = self.solutionSetList[0].getMode(modeCharacter)
-        slist = [] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
+        slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
         histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
         sums = [0 for i in range(len(self.solutionSetList))]
@@ -370,7 +390,21 @@ class SolutionRange:
         slist = ["Sum"] + [str(sums[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')        
 
-
+    def csvFormatWork(self, outfile):
+        names = ["Real", "Redundant"]
+        slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
+        outfile.write(",".join(slist) + '\n')
+        pairList = [ss.tabulateWork() for ss in self.solutionSetList]
+        sums = [0 for i in range(len(self.solutionSetList))]
+        for t in range(2):
+            slist = [names[t]] + [str(pairList[i][t]) for i in range(len(self.solutionSetList))]
+            sums = [sums[i] + pairList[i][t] for i in range(len(self.solutionSetList))]
+            outfile.write(",".join(slist) + '\n')
+        slist = ["Sum"] + [str(sums[i]) for i in range(len(self.solutionSetList))]
+        outfile.write(",".join(slist) + '\n')        
+        fracs = [pairList[i][1]/sums[i] for i in range(len(self.solutionSetList))]
+        flist = ["RFrac"] + [str(fracs[i]) for i in range(len(self.solutionSetList))]
+        outfile.write(",".join(flist) + '\n')
 
 def run(name, args):
     fname = ["nonneg-tabulate.csv", "negpos-tabulate.csv"]
@@ -433,7 +467,10 @@ def run(name, args):
             print("Couldn't open output file '%s'" % outName)
             return 1
     if csvOutput:
-        srange.csvFormat(modeCharacter, outfile, types)
+        if modeCharacter == 'w':
+            srange.csvFormatWork(outfile)
+        else:
+            srange.csvFormat(modeCharacter, outfile, types)
     else:
         srange.format(modeCharacter, outfile, types)
 
