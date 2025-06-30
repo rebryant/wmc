@@ -38,9 +38,10 @@
 */
 #define DBL_EXP_OFFSET 52
 #define DBL_SIGN_OFFSET 63
-#define DBL_EXP_MASK 0x1fff;
+#define DBL_EXP_MASK 0x7ff
+#define DBL_MAX_PREC 54
 
-#define DBL_BIAS 0x0fff;
+#define DBL_BIAS 0x3ff;
 
 int get_sign(int64_t val) {
     return val < 0;
@@ -87,7 +88,7 @@ static double dbl_from_bits(uint64_t bx) {
 /* Get exponent as signed integer */
 static int dbl_get_exponent(double x) {
     uint64_t bx = dbl_get_bits(x);
-    int bexp = (x >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
+    int bexp = (bx >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
     return bexp - DBL_BIAS;
 }
 
@@ -98,17 +99,15 @@ static int dbl_get_sign(double x) {
 
 static uint64_t dbl_get_fraction(double x) {
     uint64_t bx = dbl_get_bits(x);
-    uint64_t umask = ((uint64_t) 1) << DBL_SIGN_OFFSET;
-    umask += ((uint64_t DBL_EXP_MASK)) << DBL_EXP_OFFSET;
-    umask = ~umask;
+    uint64_t umask = ((int64_t) 1 << DBL_EXP_OFFSET) - 1;
     return bx & umask;
 }
 
 static double dbl_assemble(int sign, int exp, uint64_t frac) {
     int bexp = exp + DBL_BIAS;
     uint64_t bx = frac;
-    bx += ((uint64_t) sign) << DBL_SIGN_OFFSET;
     bx += ((uint64_t) bexp) << DBL_EXP_OFFSET;
+    bx += ((uint64_t) sign) << DBL_SIGN_OFFSET;
     return dbl_from_bits(bx);
 }
 
@@ -119,39 +118,55 @@ static double dbl_replace_exponent(double x, double exp) {
 }
 
 static int64_t erd_get_full_exponent(erd_t a) {
-    int64_t ehigh = a.exp;
+    int64_t ehigh = a.exh;
     int64_t elow = (int64_t) dbl_get_exponent(a.dbl);
-    return = ehigh * ERD_MODULUS + elow;
+    return ehigh * ER_MODULUS + elow;
 }
 
 
 static erd_t erd_normalize(erd_t a) {
-    erd_t result;
+    erd_t nval;
     int64_t texp = erd_get_full_exponent(a);
-    int64_t nehigh = signed_divide(texp, ERD_MODULUS);
-    int nelow = (int) signed_remainder(texp, ERD_MODULUS);
-    result.exp = nehigh;
-    result.dbl = dbl_replace_exponent(a.dbl, nelow);
-    return result;
+    int64_t nehigh = signed_divide(texp, ER_MODULUS);
+    int nelow = (int) signed_remainder(texp, ER_MODULUS);
+    nval.exh = nehigh;
+    nval.dbl = dbl_replace_exponent(a.dbl, nelow);
+    return nval;
 }
 
 erd_t erd_from_double(double dval) {
     erd_t nval;
     nval.dbl = dval;
-    nval.exp = 0;
+    nval.exh = 0;
     return erd_normalize(nval);
 }
 
 erd_t erd_from_mpf(mpf_srcptr fval) {
     erd_t nval;
+    mpf_t mfval;
+    mpf_init(mfval);
+    mpf_set(mfval, fval);
+    int64_t mpf_exp = mfval[0]._mp_exp;
+    mfval[0]._mp_exp = 0;
+    double d = mpf_get_d(mfval);
+    mpf_exp += dbl_get_exponent(d);
+    nval.exh = signed_divide(mpf_exp, ER_MODULUS);
+    int nexp = (int) signed_remainder(mpf_exp, ER_MODULUS);
+    nval.dbl  = dbl_replace_exponent(d, nexp);
+    return erd_normalize(nval);
 }
 
-erd_t erd_to_mpf(mpf_ptr dest, erd_t eval) {
-    erd_t nval;
+void erd_to_mpf(mpf_ptr dest, erd_t eval) {
+    mpf_set_d(dest, eval.dbl);
+    if (eval.exh < 0)
+	mpf_div_2exp(dest, dest, -eval.exh * ER_MODULUS);
+    else
+	mpf_mul_2exp(dest, dest, eval.exh * ER_MODULUS);
+    
 }
-
 
 erd_t erd_add(erd_t a, erd_t b) {
+    erd_t nval;
     /* Sort by exponent */
     erd_t eh, el;
     int64_t th, tl;
@@ -164,24 +179,63 @@ erd_t erd_add(erd_t a, erd_t b) {
 	eh = b; th = tb;
 	el = a; tl = ta;
     }
-    /* Equalize exponents */
-    int64_t tm = (th + tl) / 2;
-    int hexp = (int) signed_remainder(tm - th, ERD_MODULUS);
-    int lexp = (int) signed_remainder(tm - tl, ERD_MODULUS);
-    int64_t nexp = signed_divide(tm, ERD_MODULUS);
-    
-    erd_t nval;
-}
+
+    if (th - tl > DBL_MAX_PREC)
+	// Smaller value will not affect sum
+	return eh;
+    // Must equalize extended exponents
+    int nexp = dbl_get_exponent(el.dbl) - (eh.exh - el.exh) * ER_MODULUS;
+    double nl = dbl_replace_exponent(el.dbl, nexp);
+
+    nval.dbl = eh.dbl + nl;
+    nval.exh = eh.exh;
+    return erd_normalize(nval);
+}    
 
 erd_t erd_mul(erd_t a, erd_t b) {
     erd_t nval;
+    nval.exh = a.exh + b.exh;
+    nval.dbl = a.dbl * b.dbl;
+    return erd_normalize(nval);
 }
 
 erd_t erd_recip(erd_t a) {
     erd_t nval;
+    nval.exh = -a.exh;
+    nval.dbl = 1.0/a.dbl;
+    return erd_normalize(nval);
 }
 
 int erd_cmp(erd_t a, erd_t b) {
+    int sa = dbl_get_sign(a.dbl);
+    int sb = dbl_get_sign(b.dbl);
+    int factor = 1;
+    if (sa) {
+	// a < 0
+	if (sb)
+	    // b < 0
+	    factor = -1;
+	else
+	    // b >= 0
+	    return -1;
+    } else {
+	/* a >= 0 */
+	if (sb)
+	    // b < 0
+	    return 1;
+    }
+    if (a.exh > b.exh)
+	return factor;
+    else if (a.exh < b.exh)
+	return -factor;
+    else {
+	if (a.dbl < b.dbl)
+	    return -1;
+	else if (a.dbl > b.dbl)
+	    return 1;
+	else
+	    return 0;
+    }
 }
 
 

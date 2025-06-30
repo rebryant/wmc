@@ -46,12 +46,12 @@ extern "C" {
  */
 typedef struct {
     double dbl; 
-    int64_t exp; 
+    int64_t exh; 
 } erd_t;
 
 erd_t erd_from_double(double dval);
 erd_t erd_from_mpf(mpf_srcptr fval);
-erd_t erd_to_mpf(mpf_ptr dest, erd_t eval);
+void erd_to_mpf(mpf_ptr dest, erd_t eval);
 
 erd_t erd_add(erd_t a, erd_t b);
 erd_t erd_mul(erd_t a, erd_t b);
