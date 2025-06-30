@@ -7,6 +7,7 @@ CXXFLAGS=-std=c++11
 INC = -I..
 LDIR = ../../lib
 IDIR = ../../include
+LOCAL=/opt/homebrew
 
 LFILE = wmc_arithmetic_arm.a
 
@@ -18,13 +19,16 @@ LOCAL=/opt/homebrew
 
 ACFLAGS=$(CFLAGS) -I $(LOCAL)/include
 
-
-all: $(LFILE) $(IFILES)
+all: $(LFILE) $(IFILES)zi=
 	cp -p $(LFILE) $(LDIR)
 	cp -p $(IFILES) $(IDIR)
 
 $(LFILE): $(OFILES)
 	ar cr $(LFILE) $(OFILES)
+
+er_test: er_double.c
+	$(CC) $(ACFLAGS) -DDEBUG -o er_test er_double.c $(LOCAL)/lib/libgmp.a
+
 
 .c.o:
 	$(CC) $(ACFLAGS) $(INC) -c $<

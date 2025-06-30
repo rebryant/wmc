@@ -50,5 +50,8 @@ random_product: random_product.c q25.o analysis.o
 mptest: mptest.c q25.o
 	$(CC) $(CFLAGS) -o mptest mptest.c q25.o $(GLIB)
 
+er_test: er_double.c
+	$(CC) $(CFLAGS) -DDEBUG -o er_test er_double.c $(GLIB)
+
 clean:
 	 rm -f *.a *.o *~

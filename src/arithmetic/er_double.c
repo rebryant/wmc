@@ -25,13 +25,26 @@
 
 #include "er_double.h"
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#include <stdio.h>
+#include <stdlib.h>
+#endif
+
 /* Important constants */
 
 /* 
    Range of exponents stored in double.
    Should be power of 2 between 64 and 512
 */
+#if DEBUG
+#define ER_MODULUS 64
+#else
 #define ER_MODULUS 512
+#endif
 
 /*
   Properties of double-precision representation
@@ -144,9 +157,9 @@ erd_t erd_from_double(double dval) {
 erd_t erd_from_mpf(mpf_srcptr fval) {
     erd_t nval;
     mpf_t mfval;
-    mpf_init(mfval);
+    mpf_init2(mfval, 64);
     mpf_set(mfval, fval);
-    int64_t mpf_exp = mfval[0]._mp_exp;
+    int64_t mpf_exp = mfval[0]._mp_exp * GMP_LIMB_BITS;
     mfval[0]._mp_exp = 0;
     double d = mpf_get_d(mfval);
     mpf_exp += dbl_get_exponent(d);
@@ -239,3 +252,85 @@ int erd_cmp(erd_t a, erd_t b) {
 }
 
 
+/************* Debugging Support **********************/
+static void show_double(double d) {
+    int sign = dbl_get_sign(d);
+    int exp = dbl_get_exponent(d);
+    uint64_t frac = dbl_get_fraction(d);
+    printf("Sign=%d, Exp=%d, Frac=0x%llx, Val=%.8f", sign, exp, (unsigned long long) frac, d);
+}
+
+static void show_erd(erd_t a) {
+    int sign = dbl_get_sign(a.dbl);
+    int la = dbl_get_exponent(a.dbl);
+    uint64_t frac = dbl_get_fraction(a.dbl);
+    int64_t ha = a.exh;
+    int64_t ta = erd_get_full_exponent(a);
+    printf("Sign=%d, Exp=(%lld*%d)+%d = %lld, Frac=0x%llx", sign, (long long) ha, ER_MODULUS, la,
+	   (long long) ta, (unsigned long long) frac);
+}
+
+static int fcmp(double a, double b) {
+    if (a < b)
+	return -1;
+    if (a > b)
+	return 1;
+    return 0;
+}
+
+static void check_mismatch(double a, erd_t xa) {
+    int64_t texp = erd_get_full_exponent(xa);
+    double na = dbl_replace_exponent(xa.dbl, texp);
+    if (a == na)
+	printf(" *==* ");
+    else
+	printf(" *!!* ");
+    mpf_t from_d;
+    mpf_t from_erd;
+    mpf_init2(from_d, 64);
+    mpf_init2(from_erd, 64);
+    mpf_set_d(from_d, a);
+    erd_to_mpf(from_erd, xa);
+    erd_t mxa = erd_from_mpf(from_d);
+    if (mpf_cmp(from_d, from_erd) == 0)
+	printf(" *=DMXM=* ");
+    else
+	printf(" *!DMXM!* ");
+    if (erd_cmp(xa, mxa) == 0)
+	printf(" *=DXMD=* ");
+    else {
+	printf(" *!DXMD!* "); 
+	show_erd(mxa);
+    }
+
+}
+
+
+static void process(double a, double b) {
+    erd_t xa = erd_from_double(a);
+    erd_t xb = erd_from_double(b);
+    printf("a =     "); show_double(a); printf("\n");
+    printf("    --> "); show_erd(xa); check_mismatch(a, xa); printf("\n");
+    printf("b =     "); show_double(b); printf("\n");
+    printf("    --> "); show_erd(xb); check_mismatch(b, xb); printf("\n");
+    printf("a * b = "); show_double(a*b); printf("\n");
+    printf("    --> "); show_erd(erd_mul(xa, xb)); check_mismatch(a*b, erd_mul(xa, xb)); printf("\n");
+    printf("a + b = "); show_double(a+b); printf("\n");
+    printf("    --> "); show_erd(erd_add(xa, xb)); check_mismatch(a+b, erd_add(xa, xb)); printf("\n");
+    printf("1/a   = "); show_double(1.0/a);  printf("\n");
+    printf("    --> "); show_erd(erd_recip(xa));  check_mismatch(1.0/a, erd_recip(xa)); printf("\n");
+    printf("a:b   = "); printf("%d\n", fcmp(a, b));
+    printf("    --> "); printf("%d\n", erd_cmp(xa, xb));
+
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+	fprintf(stderr, "Usage: %s A B\n", argv[0]);
+	return 0;
+    }
+    double a = atof(argv[1]);
+    double b = atof(argv[2]);
+    process(a, b);
+    return 0;
+}
