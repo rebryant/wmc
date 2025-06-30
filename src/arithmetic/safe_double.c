@@ -4,14 +4,18 @@
 
 #include "safe_double.h"
 
+#define DBL_EXP_OFFSET 52
+#define DBL_SIGN_OFFSET 63
+#define DBL_EXP_MASK 0x7ff;
+
 static bool bad_exponent(double val) {
     union {
 	double   d;
 	uint64_t b;
     } u;
     u.d = val;
-    unsigned exponent = (u.b >> 52) & 0x1FFF;
-    return exponent == 0 || exponent == 0x1fff;
+    unsigned exponent = (u.b >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
+    return exponent == 0 || exponent == DBL_EXP_MASK;
 }
 
 static void force_mpf(safe_double_ptr sd) {
