@@ -1377,7 +1377,7 @@ void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
 	computed_method = weights->all_nonnegative ? COMPUTE_MPF_NOMPQ : COMPUTE_MPFI_NOMPQ;
     else
 	computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
-    int constant = egraph->is_smoothed ? 3 : 5;
+    int constant = egraph->is_smoothed ? 4 : 7;
     if (bit_precision == 0)
 	bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
     int save_precision = mpf_get_default_prec();
