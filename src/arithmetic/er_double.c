@@ -251,7 +251,7 @@ int erd_cmp(erd_t a, erd_t b) {
     }
 }
 
-
+#if DEBUG
 /************* Debugging Support **********************/
 static void show_double(double d) {
     int sign = dbl_get_sign(d);
@@ -334,3 +334,4 @@ int main(int argc, char *argv[]) {
     process(a, b);
     return 0;
 }
+#endif
