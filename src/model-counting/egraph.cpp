@@ -981,8 +981,7 @@ erd_t Evaluator_erd::evaluate_edge(Egraph_edge &e) {
 	return erd_from_double(0.0);
     mpf_t mval;
     mpf_init2(mval, 64);
-    erd_t eval;
-    eval = erd_from_double(1.0);
+    erd_t eval = erd_from_double(1.0);
     // Values are in mpq
     for (int lit : e.literals) {
 	mpf_set_q(mval, weights->evaluation_weights[lit].get_mpq_t());
@@ -1007,7 +1006,6 @@ erd_t Evaluator_erd::evaluate_edge(Egraph_edge &e) {
 
 void Evaluator_erd::evaluate(mpf_class &count) {
     clear_evaluation();
-    rescale = erd_from_double(1.0);
     mpf_t mval;
     mpf_init2(mval, 64);
     for (mpq_class wt : weights->rescale_weights) {
@@ -1359,7 +1357,6 @@ Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecis
     target_precision = tprecision;
     bit_precision = bprecision;
     instrument = instr;
-    computed_method = COMPUTE_MPF;
     max_bytes = 24;
     mpf_seconds = 0.0;
     mpfi_seconds = 0.0;

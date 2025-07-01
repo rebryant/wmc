@@ -212,6 +212,18 @@ void run(const char *cnf_name) {
     lprintf("%s     DBL required %.3f seconds\n",
 	    prefix, end_time - start_time);
 
+    start_time = tod();
+    Evaluator_erd erdev = Evaluator_erd(eg, weights);
+    mpf_class erdcount = 0.0;
+    erdev.evaluate(erdcount);
+    end_time = tod();
+    double erd_seconds = end_time - start_time;
+    double erdprecision = digit_precision_mpf(erdcount.get_mpf_t(), mpq_count.get_mpq_t());
+    const char *secount = mpf_string(erdcount.get_mpf_t(), (int) target_precision);
+    lprintf("%s   %s ERD COUNT    = %s   precision = %.3f\n", prefix, wlabel, secount, erdprecision);
+    lprintf("%s     ERD required %.3f seconds\n",
+	    prefix, erd_seconds);
+
     double mpfi_seconds = 0.0;
     mpfi_t mpfi_count;
     double min_digit_precision = 0.0;
