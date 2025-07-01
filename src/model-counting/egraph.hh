@@ -43,6 +43,7 @@
 #include <mpfr.h>
 #include <mpfi.h>
 
+#include "er_double.h"
 #include "q25.h"
 
 /* Some useful utility functions */
@@ -182,6 +183,29 @@ private:
     void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights);
     double evaluate_edge(Egraph_edge &e);
 };
+
+/*******************************************************************************************************************
+Evaluation via extended-range double-precision.  Use MPF as way to get weights in and out
+*******************************************************************************************************************/
+
+class Evaluator_erd {
+private:
+    Egraph *egraph;
+    // For evaluation
+    Egraph_weights *weights;
+    erd_t rescale;
+
+public:
+
+    Evaluator_erd(Egraph *egraph, Egraph_weights *weights);
+    // literal_weights == NULL for unweighted
+    void evaluate(mpf_class &count);
+    void clear_evaluation();
+
+private:
+    erd_t evaluate_edge(Egraph_edge &e);
+};
+
 
 /*******************************************************************************************************************
 Evaluation via Gnu multi-precision floating point

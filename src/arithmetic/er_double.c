@@ -175,7 +175,13 @@ void erd_to_mpf(mpf_ptr dest, erd_t eval) {
 	mpf_div_2exp(dest, dest, -eval.exh * ER_MODULUS);
     else
 	mpf_mul_2exp(dest, dest, eval.exh * ER_MODULUS);
-    
+}
+
+erd_t erd_negate(erd_t a) {
+    erd_t nval;
+    nval.exh = a.exh;
+    nval.dbl = -a.dbl;
+    return nval;
 }
 
 erd_t erd_add(erd_t a, erd_t b) {

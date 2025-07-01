@@ -11,15 +11,15 @@ LOCAL=/opt/homebrew
 
 LFILE = wmc_arithmetic_arm.a
 
-OFILES = q25.o analysis.o
-IFILES = q25.h analysis.h
+OFILES = q25.o analysis.o er_double.o
+IFILES = q25.h analysis.h er_double.h
 
 # ARM specific things
 LOCAL=/opt/homebrew
 
 ACFLAGS=$(CFLAGS) -I $(LOCAL)/include
 
-all: $(LFILE) $(IFILES)zi=
+all: $(LFILE) $(IFILES) 
 	cp -p $(LFILE) $(LDIR)
 	cp -p $(IFILES) $(IDIR)
 
