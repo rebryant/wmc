@@ -23,6 +23,8 @@
   SOFTWARE.
 ========================================================================*/
 
+#include <stdbool.h>
+
 #include "er_double.h"
 
 /* Simple debugging */
@@ -34,7 +36,6 @@
 #if EDEBUG
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 
 
@@ -68,7 +69,7 @@ static void erd_to_mpf_with_init(mpf_ptr dest, erd_t eval);
 #define DBL_EXP_MASK 0x7ff
 #define DBL_MAX_PREC 54
 
-#define DBL_BIAS 0x3ff;
+#define DBL_BIAS 0x3ff
 
 int get_sign(int64_t val) {
     return val < 0;
@@ -112,21 +113,6 @@ static double dbl_from_bits(uint64_t bx) {
     return u.d;
 }
 
-/* Signed exponent too small */
-static bool dbl_exponent_below(int exp) {
-    return exp <= -((int) DBL_BIAS);
-}
-
-/* Signed exponent too large */
-static bool dbl_exponent_above(int exp) {
-    return exp >= (int) (DBL_EXP_MASK - DBL_BIAS);
-}
-
-static bool dbl_bad_exponent(double x) {
-    int exp = dbl_get_exponent(x);
-    return dbl_exponent_below(exp) || dbl_exponent_above(exp);
-}
-
 /* Get exponent as signed integer */
 static int dbl_get_exponent(double x) {
     uint64_t bx = dbl_get_bits(x);
@@ -144,6 +130,22 @@ static uint64_t dbl_get_fraction(double x) {
     uint64_t umask = ((int64_t) 1 << DBL_EXP_OFFSET) - 1;
     return bx & umask;
 }
+
+/* Signed exponent too small */
+static bool dbl_exponent_below(int exp) {
+    return exp <= -((int) DBL_BIAS);
+}
+
+/* Signed exponent too large */
+static bool dbl_exponent_above(int exp) {
+    return exp >= (int) (DBL_EXP_MASK - DBL_BIAS);
+}
+
+static bool dbl_bad_exponent(double x) {
+    int exp = dbl_get_exponent(x);
+    return dbl_exponent_below(exp) || dbl_exponent_above(exp);
+}
+
 
 static double dbl_assemble(int sign, int exp, uint64_t frac) {
     int bexp = exp + DBL_BIAS;
@@ -235,6 +237,8 @@ erd_t erd_add(erd_t a, erd_t b) {
     mpf_t ma, mb;
     erd_to_mpf_with_init(ma, a);
     erd_to_mpf_with_init(mb, b);
+    double da = erd_to_double(a);
+    double db = erd_to_double(b);
 #endif
     erd_t nval;
     /* Sort by exponent */
@@ -259,12 +263,29 @@ erd_t erd_add(erd_t a, erd_t b) {
 
     nval.dbl = eh.dbl + nl;
     nval.exh = eh.exh;
+    nval = erd_normalize(nval);
 #if EDEBUG
-    erd_mpf_check("erd_add result", erd_normalize(nval));
+    if (!dbl_bad_exponent(da) && !dbl_bad_exponent(db)) {
+	double dsum = da + db;
+	double dnval = erd_to_double(nval);
+	if (dsum != dnval) {
+	    fprintf(stderr, "Double sum mismatch:\n");
+	    fprintf(stderr, "  Double A = %.10f [", da); show_double(da); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    A =       ["); show_erd(a); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double B = %.10f [", db); show_double(db); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    B =       ["); show_erd(b); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double Sum    = %.10f [", dsum); show_double(dsum); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double Result = %.10f [", dnval); show_double(dnval); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    Sum =       ["); show_erd(nval); fprintf(stderr, "]\n");
+	} else
+	    fprintf(stderr, "Sum OK\n");
+    } else
+	fprintf(stderr, "Out of range argument for sum\n");
+    erd_mpf_check("erd_add result", nval);
     mpf_t csum;
     mpf_init2(csum, 64);
     mpf_add(csum, ma, mb);
-    if (!erd_compare_mpf(erd_normalize(nval), csum)) {
+    if (!erd_compare_mpf(nval, csum)) {
 	fprintf(stderr, "   Computing sum:\n");
 	fprintf(stderr, "   A = %s [", mpf_string(ma)); show_erd(a); fprintf(stderr, "]\n");
 	fprintf(stderr, "   B = %s [", mpf_string(ma)); show_erd(b); fprintf(stderr, "]\n");
@@ -272,7 +293,7 @@ erd_t erd_add(erd_t a, erd_t b) {
     }
     mpf_clear(ma); mpf_clear(mb); mpf_clear(csum);
 #endif /* EDEBUG */
-    return erd_normalize(nval);
+    return nval;
 }    
 
 erd_t erd_mul(erd_t a, erd_t b) {
@@ -282,11 +303,29 @@ erd_t erd_mul(erd_t a, erd_t b) {
     mpf_t ma, mb;
     erd_to_mpf_with_init(ma, a);
     erd_to_mpf_with_init(mb, b);
+    double da = erd_to_double(a);
+    double db = erd_to_double(b);
 #endif
     erd_t nval;
     nval.exh = a.exh + b.exh;
     nval.dbl = a.dbl * b.dbl;
 #if EDEBUG
+    if (!dbl_bad_exponent(da) && !dbl_bad_exponent(db)) {
+	double dprod = da * db;
+	double dnval = erd_to_double(nval);
+	if (dprod != dnval) {
+	    fprintf(stderr, "Double prod mismatch:\n");
+	    fprintf(stderr, "  Double A = %.10f [", da); show_double(da); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    A =       ["); show_erd(a); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double B = %.10f [", db); show_double(db); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    B =       ["); show_erd(b); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double Prod    = %.10f [", dprod); show_double(dprod); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  Double Result = %.10f [", dnval); show_double(dnval); fprintf(stderr, "]\n");
+	    fprintf(stderr, "  ERD    Prod =       ["); show_erd(nval); fprintf(stderr, "]\n");
+	} else
+	    fprintf(stderr, "Product OK\n");
+    } else
+	fprintf(stderr, "Out-of-range argument for product\n");
     erd_mpf_check("erd_mul result", erd_normalize(nval));
     mpf_t cprod;
     mpf_init2(cprod, 64);
