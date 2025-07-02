@@ -2,7 +2,7 @@ CC=gcc
 CXX=g++
 OPT = -O2
 #OPT = -O0
-DFLAGS = -DEDEBUG
+#DFLAGS = -DEDEBUG
 CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
 INC = -I..

@@ -78,6 +78,7 @@ int detail_level = 1;
 bool instrument = false;
 double target_precision = 30.0;
 int bit_precision = 0;
+int mpf_precision = 128;
 Egraph *eg;
 Cnf *core_cnf = NULL;
 Evaluator_combo *combo_ev = NULL;
@@ -90,9 +91,9 @@ void setup(FILE *cnf_file, FILE *nnf_file, FILE *out_file) {
     core_cnf->import_file(cnf_file, true, false);
 
     if (bit_precision == 0)
-	bit_precision = required_bit_precision(target_precision, core_cnf->variable_count(), 5);
-    mpf_set_default_prec(bit_precision);
-    mpfr_set_default_prec(bit_precision);
+	mpf_precision = required_bit_precision(target_precision, core_cnf->variable_count(), 5, false);
+    mpf_set_default_prec(mpf_precision);
+    mpfr_set_default_prec(mpf_precision);
 
 
     eg = new Egraph(core_cnf->data_variables, core_cnf->variable_count());
@@ -293,6 +294,7 @@ void run_combo(const char *cnf_name) {
     bool abort_mpq = detail_level == 0;
     combo_ev->evaluate(ccount, abort_mpq);
     double precision = combo_ev->guaranteed_precision;
+    bit_precision = combo_ev->used_bit_precision();
     const char *sccount = mpf_string(ccount.get_mpf_t(), (int) target_precision);
     lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
     lprintf("%s      COMBO used %s with %.3f seconds and %d max bytes\n",

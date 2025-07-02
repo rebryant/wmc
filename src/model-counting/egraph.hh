@@ -58,9 +58,9 @@ double digit_precision_bound(int bit_precision, int nvar, double constant);
 /*
   How many bits of floating-point precision are required to achieve
   target digit precision when all weights are nonnegative?
-  constant = 3 for smoothed evaluation and 5 for unsmoothed
+  constant = 4 for smoothed evaluation and 7 for unsmoothed
  */
-int required_bit_precision(double target_precision, int nvar, double constant);
+int required_bit_precision(double target_precision, int nvar, double constant, bool nonnegative);
 
 
 const char *mpf_string(mpf_srcptr val, int digits);
@@ -282,7 +282,8 @@ private:
 Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and switch to MPQ if needed
 *******************************************************************************************************************/
 
-typedef enum { COMPUTE_MPF, COMPUTE_MPFI, COMPUTE_MPQ, COMPUTE_MPF_NOMPQ, COMPUTE_MPFI_NOMPQ, COMPUTE_MPQ_NOMPQ } computed_t;
+typedef enum { COMPUTE_ERD, COMPUTE_MPF, COMPUTE_MPFI, COMPUTE_MPQ, 
+	       COMPUTE_ERD_NOMPQ, COMPUTE_MPF_NOMPQ, COMPUTE_MPFI_NOMPQ, COMPUTE_MPQ_NOMPQ } computed_t;
 
 class Evaluator_combo {
 private:
@@ -303,13 +304,16 @@ public:
     const char *method();
     double guaranteed_precision;
     size_t max_bytes;
+    int used_bit_precision() { return bit_precision; }
     // Leftover stuff that can be reused
     // Times for different evaluations.  Set to 0.0 if not used
+    double erd_seconds;
     double mpf_seconds;
     double mpfi_seconds;
     double mpq_seconds;
     mpq_class mpq_count;
     mpf_class mpf_count;
+    mpf_class erd_count;
     mpfi_t mpfi_count;
     double min_digit_precision;
 };

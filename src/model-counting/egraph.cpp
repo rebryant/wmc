@@ -56,8 +56,10 @@ double digit_precision_bound(int bit_precision, int nvar, double constant) {
   target digit precision when all weights are nonnegative?
   constant = 3 for smoothed evaluation and 5 for unsmoothed
  */
-int required_bit_precision(double target_precision, int nvar, double constant) {
+int required_bit_precision(double target_precision, int nvar, double constant, bool nonnegative) {
     double minp = target_precision * log2(10.0) + log2(nvar * constant);
+    if (nonnegative && minp <= 52)
+	return 52;
     /* Must be multiple of 64 */
     return 64 * ceil(minp/64);
 }
@@ -1014,12 +1016,6 @@ void Evaluator_erd::evaluate(mpf_class &count) {
 	rescale = erd_mul(rescale, ewt);
     }
 
-    /* DEBUG */
-    mpf_class erescale = 1.0;
-    erd_to_mpf(erescale.get_mpf_t(), rescale);
-    printf("Rescale using ERD: %s\n", mpf_string(erescale.get_mpf_t(), 10));
-    /* DEBUG */
-
     std::vector<erd_t> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1044,13 +1040,6 @@ void Evaluator_erd::evaluate(mpf_class &count) {
 	    operation_values[e.to_id-1] = erd_add(operation_values[e.to_id-1], product);
     }
     erd_t ecount = operation_values[egraph->root_id-1];
-
-    /* DEBUG */
-    mpf_class mcount = 1.0;
-    erd_to_mpf(mcount.get_mpf_t(), ecount);
-    printf("Unscaled count using ERD: %s\n", mpf_string(mcount.get_mpf_t(), 10));
-    /* DEBUG */
-
 
     operation_values.clear();
     mpf_clear(mval);
@@ -1100,10 +1089,6 @@ void Evaluator_mpf::evaluate(mpf_class &count) {
     for (mpf_class wt : weights->rescale_weights)
 	rescale *= wt;
 
-    /* DEBUG */
-    printf("Rescale using MPF: %s\n", mpf_string(rescale.get_mpf_t(), 10));
-    /* DEBUG */
-
     std::vector<mpf_class> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1147,10 +1132,6 @@ void Evaluator_mpf::evaluate(mpf_class &count) {
 	}
     }
     count = operation_values[egraph->root_id-1];
-
-    /* DEBUG */
-    printf("unscaled count using MPF: %s\n", mpf_string(count.get_mpf_t(), 10));
-    /* DEBUG */
 
     //    for (int id = 1; id <= egraph->operations.size(); id++)
     //	mpf_clear(operation_values[id-1]);
@@ -1374,7 +1355,8 @@ Evaluation.  When no negative weights, use MPI.  Otherwise, start with MFPI and 
 // Don't attempt floating-point if it requires too many bits 
 #define MPQ_THRESHOLD 1024
 
-static const char* method_name[6] = {"MPF", "MPFI", "MPQ", "MPF_ONLY", "MPFI_ONLY", "MPQ_ABORT"};
+static const char* method_name[8] = 
+    {"ERD", "MPF", "MPFI", "MPQ", "ERD_ONLY", "MPF_ONLY", "MPFI_ONLY", "MPQ_ABORT"};
 
 Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecision, int bprecision, int instr) {
     egraph = eg;
@@ -1383,11 +1365,13 @@ Evaluator_combo::Evaluator_combo(Egraph *eg, Egraph_weights *wts, double tprecis
     bit_precision = bprecision;
     instrument = instr;
     max_bytes = 24;
+    erd_seconds = 0.0;
     mpf_seconds = 0.0;
     mpfi_seconds = 0.0;
     mpq_seconds = 0.0;
     mpq_count = 0.0;
     mpf_count = 0.0;
+    erd_count = 0.0;
     mpfi_init(mpfi_count);
     mpfi_set_d(mpfi_count, 0.0);
     min_digit_precision = 0.0;
@@ -1398,13 +1382,18 @@ const char *Evaluator_combo::method() {
 }
 
 void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
-    if (no_mpq)
-	computed_method = weights->all_nonnegative ? COMPUTE_MPF_NOMPQ : COMPUTE_MPFI_NOMPQ;
-    else
-	computed_method = weights->all_nonnegative ? COMPUTE_MPF : COMPUTE_MPFI;
     int constant = egraph->is_smoothed ? 4 : 7;
     if (bit_precision == 0)
-	bit_precision = required_bit_precision(target_precision, egraph->nvar, constant);
+	bit_precision = required_bit_precision(target_precision, egraph->nvar, constant,
+					       weights->all_nonnegative);
+    if (no_mpq) {
+	computed_method = weights->all_nonnegative ? 
+	    (bit_precision < 54 ? COMPUTE_ERD_NOMPQ : COMPUTE_MPF_NOMPQ)
+	    : COMPUTE_MPFI_NOMPQ;
+    } else
+	computed_method = weights->all_nonnegative ? 
+	    (bit_precision < 54 ? COMPUTE_ERD : COMPUTE_MPF)
+	    : COMPUTE_MPFI;
     int save_precision = mpf_get_default_prec();
     max_bytes = 8 + bit_precision/8;
     if (bit_precision > MPQ_THRESHOLD)
@@ -1414,6 +1403,17 @@ void Evaluator_combo::evaluate(mpf_class &count, bool no_mpq) {
 
     double start_time = tod();
     switch (computed_method) {
+    case COMPUTE_ERD:
+    case COMPUTE_ERD_NOMPQ:
+	{
+	    max_bytes = 8;
+	    Evaluator_erd ev = Evaluator_erd(egraph, weights);
+	    ev.evaluate(count);
+	    guaranteed_precision = digit_precision_bound(bit_precision, egraph->nvar, constant);
+	    erd_seconds = tod() - start_time;
+	    erd_count = count;
+	}
+	break;
     case COMPUTE_MPF:
     case COMPUTE_MPF_NOMPQ:
 	{

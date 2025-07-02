@@ -28,8 +28,7 @@ $(LFILE): $(OFILES)
 	ar cr $(LFILE) $(OFILES)
 
 er_test: er_double.c
-	$(CC) $(ACFLAGS) -DDEBUG -o er_test er_double.c $(LOCAL)/lib/libgmp.a
-
+	$(CC) $(ACFLAGS) -DEDEBUG -o er_test er_double.c $(LOCAL)/lib/libgmp.a
 
 .c.o:
 	$(CC) $(ACFLAGS) $(INC) -c $<
