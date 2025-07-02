@@ -2,6 +2,7 @@ CC=gcc
 CXX=g++
 OPT = -O2
 #OPT = -O0
+#DFLAGS = -DEDEBUG
 CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
 INC = -I..
@@ -10,8 +11,8 @@ IDIR = ../../include
 
 LFILE = wmc_arithmetic.a
 
-OFILES = q25.o analysis.o safe_double.o
-IFILES = q25.h analysis.h safe_double.h
+OFILES = q25.o analysis.o er_double.o
+IFILES = q25.h analysis.h er_double.h
 
 GLIB = -lz -lgmpxx -lgmp
 
@@ -50,8 +51,8 @@ random_product: random_product.c q25.o analysis.o
 mptest: mptest.c q25.o
 	$(CC) $(CFLAGS) -o mptest mptest.c q25.o $(GLIB)
 
-er_test: er_double.c
-	$(CC) $(CFLAGS) -DDEBUG -o er_test er_double.c $(GLIB)
+er_test: er_test.c er_double.c
+	$(CC) $(CFLAGS) -DDEBUG -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
 
 clean:
 	 rm -f *.a *.o *~

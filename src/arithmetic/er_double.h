@@ -52,6 +52,7 @@ typedef struct {
 erd_t erd_from_double(double dval);
 erd_t erd_from_mpf(mpf_srcptr fval);
 void erd_to_mpf(mpf_ptr dest, erd_t eval);
+double erd_to_double(erd_t eval);
 
 erd_t erd_negate(erd_t a);
 erd_t erd_add(erd_t a, erd_t b);

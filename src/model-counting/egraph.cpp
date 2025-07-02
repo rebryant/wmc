@@ -1013,6 +1013,13 @@ void Evaluator_erd::evaluate(mpf_class &count) {
 	erd_t ewt = erd_from_mpf(mval);
 	rescale = erd_mul(rescale, ewt);
     }
+
+    /* DEBUG */
+    mpf_class erescale = 1.0;
+    erd_to_mpf(erescale.get_mpf_t(), rescale);
+    printf("Rescale using ERD: %s\n", mpf_string(erescale.get_mpf_t(), 10));
+    /* DEBUG */
+
     std::vector<erd_t> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1037,6 +1044,14 @@ void Evaluator_erd::evaluate(mpf_class &count) {
 	    operation_values[e.to_id-1] = erd_add(operation_values[e.to_id-1], product);
     }
     erd_t ecount = operation_values[egraph->root_id-1];
+
+    /* DEBUG */
+    mpf_class mcount = 1.0;
+    erd_to_mpf(mcount.get_mpf_t(), ecount);
+    printf("Unscaled count using ERD: %s\n", mpf_string(mcount.get_mpf_t(), 10));
+    /* DEBUG */
+
+
     operation_values.clear();
     mpf_clear(mval);
 
@@ -1084,6 +1099,11 @@ void Evaluator_mpf::evaluate(mpf_class &count) {
     rescale = 1.0;
     for (mpf_class wt : weights->rescale_weights)
 	rescale *= wt;
+
+    /* DEBUG */
+    printf("Rescale using MPF: %s\n", mpf_string(rescale.get_mpf_t(), 10));
+    /* DEBUG */
+
     std::vector<mpf_class> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1127,6 +1147,11 @@ void Evaluator_mpf::evaluate(mpf_class &count) {
 	}
     }
     count = operation_values[egraph->root_id-1];
+
+    /* DEBUG */
+    printf("unscaled count using MPF: %s\n", mpf_string(count.get_mpf_t(), 10));
+    /* DEBUG */
+
     //    for (int id = 1; id <= egraph->operations.size(); id++)
     //	mpf_clear(operation_values[id-1]);
     operation_values.clear();

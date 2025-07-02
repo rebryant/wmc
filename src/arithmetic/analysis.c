@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include "analysis.h"
 
+#ifndef DEBUG
 #define DEBUG 0
+#endif
 
 static uint64_t double2bits(double x) {
     union {

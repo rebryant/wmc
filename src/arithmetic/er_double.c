@@ -25,14 +25,28 @@
 
 #include "er_double.h"
 
-#ifndef DEBUG
-#define DEBUG 0
+/* Simple debugging */
+#ifndef EDEBUG
+#define EDEBUG 0
 #endif
 
-#if DEBUG
+
+#if EDEBUG
 #include <stdio.h>
 #include <stdlib.h>
-#endif
+#include <stdbool.h>
+#include <string.h>
+
+
+/* Forward Declarations */
+static void erd_fail();
+static const char *mpf_string(mpf_srcptr val);
+static bool erd_compare_mpf(erd_t val, mpf_srcptr mval);
+static void show_double(double d);
+static void show_erd(erd_t val);
+static bool erd_mpf_check(const char *context, erd_t val);
+static void erd_to_mpf_with_init(mpf_ptr dest, erd_t eval);
+#endif /* EDEBUG */
 
 /* Important constants */
 
@@ -40,10 +54,10 @@
    Range of exponents stored in double.
    Should be power of 2 between 64 and 512
 */
-#if DEBUG
+#ifdef SMALL_MODULUS
 #define ER_MODULUS 64
 #else
-#define ER_MODULUS 512
+#define ER_MODULUS 256
 #endif
 
 /*
@@ -98,6 +112,21 @@ static double dbl_from_bits(uint64_t bx) {
     return u.d;
 }
 
+/* Signed exponent too small */
+static bool dbl_exponent_below(int exp) {
+    return exp <= -((int) DBL_BIAS);
+}
+
+/* Signed exponent too large */
+static bool dbl_exponent_above(int exp) {
+    return exp >= (int) (DBL_EXP_MASK - DBL_BIAS);
+}
+
+static bool dbl_bad_exponent(double x) {
+    int exp = dbl_get_exponent(x);
+    return dbl_exponent_below(exp) || dbl_exponent_above(exp);
+}
+
 /* Get exponent as signed integer */
 static int dbl_get_exponent(double x) {
     uint64_t bx = dbl_get_bits(x);
@@ -122,6 +151,14 @@ static double dbl_assemble(int sign, int exp, uint64_t frac) {
     bx += ((uint64_t) bexp) << DBL_EXP_OFFSET;
     bx += ((uint64_t) sign) << DBL_SIGN_OFFSET;
     return dbl_from_bits(bx);
+}
+
+static double dbl_infinity(int sign) {
+    return dbl_assemble(sign, DBL_EXP_MASK - DBL_BIAS, 0);
+}
+
+static double dbl_zero() {
+    return dbl_from_bits(0);
 }
 
 static double dbl_replace_exponent(double x, double exp) {
@@ -156,16 +193,12 @@ erd_t erd_from_double(double dval) {
 
 erd_t erd_from_mpf(mpf_srcptr fval) {
     erd_t nval;
-    mpf_t mfval;
-    mpf_init2(mfval, 64);
-    mpf_set(mfval, fval);
-    int64_t mpf_exp = mfval[0]._mp_exp * GMP_LIMB_BITS;
-    mfval[0]._mp_exp = 0;
-    double d = mpf_get_d(mfval);
-    mpf_exp += dbl_get_exponent(d);
-    nval.exh = signed_divide(mpf_exp, ER_MODULUS);
-    int nexp = (int) signed_remainder(mpf_exp, ER_MODULUS);
-    nval.dbl  = dbl_replace_exponent(d, nexp);
+    long int exp;
+    double d = mpf_get_d_2exp(&exp, fval);
+    int64_t nexp = (int64_t) exp + dbl_get_exponent(d);
+    nval.exh = signed_divide(nexp, ER_MODULUS);
+    int dexp = signed_remainder(nexp, ER_MODULUS);
+    nval.dbl = dbl_replace_exponent(d, dexp);
     return erd_normalize(nval);
 }
 
@@ -177,6 +210,17 @@ void erd_to_mpf(mpf_ptr dest, erd_t eval) {
 	mpf_mul_2exp(dest, dest, eval.exh * ER_MODULUS);
 }
 
+double erd_to_double(erd_t eval) {
+    int64_t exp = erd_get_full_exponent(eval);
+    if (dbl_exponent_below(exp))
+	return dbl_zero();
+    if (dbl_exponent_above(exp)) {
+	int sign = dbl_get_sign(eval.dbl);
+	return dbl_infinity(sign);
+    }
+    return dbl_replace_exponent(eval.dbl, exp);
+}
+
 erd_t erd_negate(erd_t a) {
     erd_t nval;
     nval.exh = a.exh;
@@ -185,6 +229,13 @@ erd_t erd_negate(erd_t a) {
 }
 
 erd_t erd_add(erd_t a, erd_t b) {
+#if EDEBUG
+    erd_mpf_check("erd_add a", a);
+    erd_mpf_check("erd_add b", b);
+    mpf_t ma, mb;
+    erd_to_mpf_with_init(ma, a);
+    erd_to_mpf_with_init(mb, b);
+#endif
     erd_t nval;
     /* Sort by exponent */
     erd_t eh, el;
@@ -208,13 +259,46 @@ erd_t erd_add(erd_t a, erd_t b) {
 
     nval.dbl = eh.dbl + nl;
     nval.exh = eh.exh;
+#if EDEBUG
+    erd_mpf_check("erd_add result", erd_normalize(nval));
+    mpf_t csum;
+    mpf_init2(csum, 64);
+    mpf_add(csum, ma, mb);
+    if (!erd_compare_mpf(erd_normalize(nval), csum)) {
+	fprintf(stderr, "   Computing sum:\n");
+	fprintf(stderr, "   A = %s [", mpf_string(ma)); show_erd(a); fprintf(stderr, "]\n");
+	fprintf(stderr, "   B = %s [", mpf_string(ma)); show_erd(b); fprintf(stderr, "]\n");
+	fprintf(stderr, "   Expected sum = %s\n", mpf_string(csum));
+    }
+    mpf_clear(ma); mpf_clear(mb); mpf_clear(csum);
+#endif /* EDEBUG */
     return erd_normalize(nval);
 }    
 
 erd_t erd_mul(erd_t a, erd_t b) {
+#if EDEBUG
+    erd_mpf_check("erd_mul a", a);
+    erd_mpf_check("erd_mul b", b);
+    mpf_t ma, mb;
+    erd_to_mpf_with_init(ma, a);
+    erd_to_mpf_with_init(mb, b);
+#endif
     erd_t nval;
     nval.exh = a.exh + b.exh;
     nval.dbl = a.dbl * b.dbl;
+#if EDEBUG
+    erd_mpf_check("erd_mul result", erd_normalize(nval));
+    mpf_t cprod;
+    mpf_init2(cprod, 64);
+    mpf_mul(cprod, ma, mb);
+    if (!erd_compare_mpf(erd_normalize(nval), cprod)) {
+	fprintf(stderr, "   Computing product:\n");
+	fprintf(stderr, "   A = %s [", mpf_string(ma)); show_erd(a); fprintf(stderr, "]\n");
+	fprintf(stderr, "   B = %s [", mpf_string(ma)); show_erd(b); fprintf(stderr, "]\n");
+	fprintf(stderr, "   Expected product = %s\n", mpf_string(cprod));
+    }
+    mpf_clear(ma); mpf_clear(mb); mpf_clear(cprod);
+#endif
     return erd_normalize(nval);
 }
 
@@ -257,8 +341,73 @@ int erd_cmp(erd_t a, erd_t b) {
     }
 }
 
-#if DEBUG
-/************* Debugging Support **********************/
+#if EDEBUG
+
+#define SHADOW_TOLERANCE 0.0001
+
+static char shadow_buf[2048];
+
+static const char *mpf_string(mpf_srcptr val) {
+    int digits = 10;
+    char boffset = 0;
+    mp_exp_t ecount;
+    char *sval = mpf_get_str(NULL, &ecount, 10, digits, val);
+    if (!sval || strlen(sval) == 0 || sval[0] == '0') {
+	strcpy(shadow_buf, "0.0");
+    } else {
+	int voffset = 0;
+	bool neg = sval[0] == '-';
+	if (neg) {
+	    voffset++;
+	    shadow_buf[boffset++] = '-';
+	}
+	if (ecount == 0) {
+	    shadow_buf[boffset++] = '0';
+	    shadow_buf[boffset++] = '.';
+	} else {
+	    shadow_buf[boffset++] = sval[voffset++];
+	    shadow_buf[boffset++] = '.';
+	    ecount--;
+	}
+	if (sval[voffset] == 0)
+	    shadow_buf[boffset++] = '0';
+	else {
+	    while(sval[voffset] != 0)
+		shadow_buf[boffset++] = sval[voffset++];
+	}
+	if (ecount != 0) {
+	    shadow_buf[boffset++] = 'e';
+	    snprintf(&shadow_buf[boffset], 24, "%ld", (long) ecount);
+	} else
+	    shadow_buf[boffset] = 0;
+    }
+    free(sval);
+    return shadow_buf;
+}
+
+
+static bool erd_compare_mpf(erd_t val, mpf_srcptr mval) {
+    mpf_t tval;
+    mpf_init2(tval, 64);
+    erd_to_mpf(tval, val);
+    mpf_sub(tval, tval, mval);
+    mpf_div(tval, tval, mval);
+    mpf_abs(tval, tval);
+    double err = mpf_get_d(tval);
+    bool ok = true;
+    if (err > SHADOW_TOLERANCE) {
+	ok = false;
+	erd_to_mpf(tval, val);
+	fprintf(stderr, "Shadow mismatch:\n");
+	fprintf(stderr, "   ERD Value: %s [", mpf_string(tval)); show_erd(val); fprintf(stderr, "]\n");
+	fprintf(stderr, "   MPF Value: %s\n", mpf_string(mval));
+    }	    
+    mpf_clear(tval);
+    return ok;
+}
+
+
+
 static void show_double(double d) {
     int sign = dbl_get_sign(d);
     int exp = dbl_get_exponent(d);
@@ -311,8 +460,37 @@ static void check_mismatch(double a, erd_t xa) {
 
 }
 
+static void erd_to_mpf_with_init(mpf_ptr dest, erd_t eval) {
+    mpf_init2(dest, 64);
+    erd_to_mpf(dest, eval);
+}
 
-static void process(double a, double b) {
+static bool erd_mpf_check(const char *context, erd_t val) {
+    mpf_t mval;
+    erd_to_mpf_with_init(mval, val);
+    erd_t nval = erd_from_mpf(mval);
+    bool ok  = true;
+    if (erd_cmp(val, nval) != 0) {
+	ok = false;
+	fprintf(stderr, "ERD->MPF->ERD failure (%s)\n", context);
+	fprintf(stderr, "   Original  value: \n");
+	show_erd(val); fprintf(stderr, "\n");
+	fprintf(stderr, "   MPF value: %s\n", mpf_string(mval));
+	fprintf(stderr, "   Generated value: \n");
+	show_erd(val); fprintf(stderr, "\n");
+    }
+    mpf_clear(mval);
+    return ok;
+}
+
+volatile int sink;
+
+static void erd_fail() {
+    int *p = NULL;
+    sink = *p;
+}
+
+void er_check(double a, double b) {
     erd_t xa = erd_from_double(a);
     erd_t xb = erd_from_double(b);
     printf("a =     "); show_double(a); printf("\n");
@@ -330,14 +508,4 @@ static void process(double a, double b) {
 
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-	fprintf(stderr, "Usage: %s A B\n", argv[0]);
-	return 0;
-    }
-    double a = atof(argv[1]);
-    double b = atof(argv[2]);
-    process(a, b);
-    return 0;
-}
 #endif

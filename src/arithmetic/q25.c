@@ -42,7 +42,9 @@
    Must fit into uint32_t
 */
 
+#ifndef DEBUG
 #define DEBUG 0
+#endif
 
 #define Q25_DIGITS 9
 #define Q25_RADIX (1000*1000*1000)
