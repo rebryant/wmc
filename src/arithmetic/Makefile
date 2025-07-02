@@ -2,7 +2,7 @@ CC=gcc
 CXX=g++
 OPT = -O2
 #OPT = -O0
-#DFLAGS = -DEDEBUG
+DFLAGS = -DEDEBUG
 CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
 INC = -I..
@@ -52,7 +52,7 @@ mptest: mptest.c q25.o
 	$(CC) $(CFLAGS) -o mptest mptest.c q25.o $(GLIB)
 
 er_test: er_test.c er_double.c
-	$(CC) $(CFLAGS) -DDEBUG -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
+	$(CC) $(CFLAGS) -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
 
 clean:
 	 rm -f *.a *.o *~
