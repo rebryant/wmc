@@ -74,14 +74,14 @@ maxPrecision = 70
 
 
 class PrecisionType:
-    dbl, m64, m128, m256, mpq = range(precisionCount)
-    nonnegNames = ["dbl", "mpf64", "mpf128", "mpf256", "mpq"]
+    erd, m64, m128, m256, mpq = range(precisionCount)
+    nonnegNames = ["erd", "mpf64", "mpf128", "mpf256", "mpq"]
     negposNames = ["", "mpfi64", "mpfi128", "mpfi256", "mpq"]
     bits = [53, 63, 127, 255, 10000]
     
-    nn_dbl, nn_m64, nn_m128, nn_m256, np_m64, np_m128, np_m256, all_mpq = range(tabulationCount)
-    tabulateNames = ["double", "mpf-64", "mpf-128", "mpf-256", "mpfi-64", "mpfi-128", "mpfi-256", "mpq"]
-    tabulateColors = ["dbl", "mpflow", "mpfmed", "mpfhigh", "mpfilow", "mpfimed", "mpfihigh", "mpq"]
+    nn_erd, nn_m64, nn_m128, nn_m256, np_m64, np_m128, np_m256, all_mpq = range(tabulationCount)
+    tabulateNames = ["erd", "mpf-64", "mpf-128", "mpf-256", "mpfi-64", "mpfi-128", "mpfi-256", "mpq"]
+    tabulateColors = ["erd", "mpflow", "mpfmed", "mpfhigh", "mpfilow", "mpfimed", "mpfihigh", "mpq"]
 
 
     nn_map = {}
@@ -92,7 +92,7 @@ class PrecisionType:
     np_Types = []
 
     def __init__(self):
-        self.nn_map = { self.dbl   :self.nn_dbl,
+        self.nn_map = { self.erd   :self.nn_erd,
                         self.m64   :self.nn_m64,
                         self.m128  :self.nn_m128,
                         self.m256  :self.nn_m256,
@@ -101,11 +101,11 @@ class PrecisionType:
                         self.m128  : self.np_m128,
                         self.m256  : self.np_m256,
                         self.mpq   :self.all_mpq}
-        self.nn_types = [self.nn_dbl, self.nn_m64, self.nn_m128, self.nn_m256]
+        self.nn_types = [self.nn_erd, self.nn_m64, self.nn_m128, self.nn_m256]
         self.np_types = [self.np_m64, self.np_m128, self.np_m256, self.all_mpq]
         self.all_types = self.nn_types + self.np_types
         
-    # Accumulatte information about solutions
+    # Accumulate information about solutions
     # histo is array of tabulationCount entries
     def newHistogram(self):
         return [0] * tabulationCount
@@ -213,21 +213,13 @@ class Instance:
         if (isNonnegative):
             for t in range(precisionCount):
                 tkey = ptyper.nonnegNames[t]
-                if t == ptyper.dbl:
-                    sval = csvDict[tkey + "-prec"]
-                    if len(sval) == 0:
-                        sval = "0.0"
-                    if float(sval) > 0:
-                        self.precisions[t] = ptyper.guaranteedPrecision(t, self.nvar)                        
-                    else:
-                        self.precisions[t] = 0.0
-                elif t == ptyper.mpq:
+                if t == ptyper.mpq:
                     self.precisions[t] = 1e6
                 else:
                     self.precisions[t] = ptyper.guaranteedPrecision(t, self.nvar)
                 sval = csvDict[tkey + "-sec"]
                 if len(sval) == 0:
-                    sval = "0.0" if t == ptyper.dbl else str(failTime(self.bench))
+                    sval = str(failTime(self.bench))
                 self.seconds[t] = max(float(sval), 0.001)
         else:
             for t in range(1, precisionCount):
@@ -273,9 +265,6 @@ class Instance:
                     s.ptype = t
                     s.achievedPrecision = self.precisions[t]
                     break
-#                elif t == ptyper.dbl and self.include(t, digitPrecision):
-#                    s.time[t] = self.seconds[t]
-
         else:
             for t in range(1, precisionCount):
                 if self.include(t, digitPrecision):
