@@ -177,12 +177,26 @@ static int64_t erd_get_full_exponent(erd_t a) {
 
 
 static erd_t erd_normalize(erd_t a) {
+#if EDEBUG
+    if (dbl_bad_exponent(a.dbl)) {
+	fprintf(stdout, "Attempting to normalize ERD with bad exponent: ");
+	show_erd(a);
+	fprintf(stdout, "\n");
+    }
+#endif
     erd_t nval;
     int64_t texp = erd_get_full_exponent(a);
     int64_t nehigh = signed_divide(texp, ER_MODULUS);
     int nelow = (int) signed_remainder(texp, ER_MODULUS);
     nval.exh = nehigh;
     nval.dbl = dbl_replace_exponent(a.dbl, nelow);
+#if EDEBUG
+    if (dbl_bad_exponent(nval.dbl)) {
+	fprintf(stdout, "Normalization yielded ERD with bad exponent: ");
+	show_erd(nval);
+	fprintf(stdout, "\n");
+    }
+#endif
     return nval;
 }
 
