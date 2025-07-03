@@ -1,10 +1,10 @@
-c: CNT:     Reading files and constructing graph required 5.153 seconds
+c: CNT:     Reading files and constructing graph required 5.253 seconds
 c: CNT:     Using weights from file 'mc2024_track2-random_011_102.cnf'
-c: CNT:    COMBO COUNT    = 4.6456e-39379  guaranteed precision = 9.790
-c: CNT:      COMBO used ERD_ONLY with 1.168 seconds and 8 max bytes
+c: CNT:    COMBO COUNT    = 4.6455547e-39379  guaranteed precision = 9.790
+c: CNT:      COMBO used ERD_ONLY with 1.007 seconds and 8 max bytes
 c: CNT:   Options           : 
 c: CNT:     Smooth:         : false
-c: CNT:     Digit precision : 5.0
+c: CNT:     Digit precision : 8.0
 c: CNT:     Bit precision   : 52
 c: CNT:   Data variables    : 104433
 c: CNT:     Smooth variables: 0
