@@ -186,11 +186,6 @@ erd_t erd_add(erd_t a, erd_t b) {
 }
 
 erd_t erd_mul(erd_t a, erd_t b) {
-#if 0
-    /* Not needed */
-    if (erd_is_zero(a) || erd_is_zero(b))
-	return erd_zero();
-#endif
     erd_t nval;
     nval.exp = a.exp + b.exp;
     nval.dbl = a.dbl * b.dbl;
