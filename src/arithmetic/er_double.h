@@ -46,7 +46,7 @@ extern "C" {
  */
 typedef struct {
     double dbl; 
-    int64_t exh; 
+    int64_t exp; 
 } erd_t;
 
 erd_t erd_from_double(double dval);
