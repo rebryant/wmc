@@ -13,7 +13,7 @@ LOCAL=/opt/homebrew
 LFILE = wmc_arithmetic_arm.a
 
 OFILES = q25.o analysis.o er_double.o
-IFILES = q25.h analysis.h er_double.h
+IFILES = q25.h analysis.h er_double.h er_double.hh
 
 # ARM specific things
 LOCAL=/opt/homebrew
