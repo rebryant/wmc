@@ -132,5 +132,103 @@ public:
 	return Erd(prod, e);
     }
 
+#define PROD_RENORM_COUNT 100
+
+    friend Erd product_reduce_x1(std::vector<Erd> &arguments) {
+	double dp = 1.0;
+	int64_t ep = 0.0;
+	int rcount = 0;
+	for (int i = 0; i < arguments.size(); i++) {
+	    dp *= arguments[i].dbl;
+	    ep += arguments[i].exp;
+	    if (++rcount >= PROD_RENORM_COUNT) {
+		Erd mid = Erd(dp, ep);
+		dp = mid.dbl;
+		ep = mid.exp;
+		rcount = 0;
+	    }
+
+	}
+	return Erd(dp, ep);
+    }
+
+    friend Erd product_reduce_x2(std::vector<Erd> &arguments) {
+	double dp[2] = { 1.0, 1.0 };
+	int64_t ep[2] = { 0, 0 };
+	int rcount = 0;
+	int i = 0;
+	int len = (int) arguments.size();
+	for (i = 0; i <= len - 2; i+= 2) {
+	    for (int j = 0; j < 2; j++) {
+		dp[j] *= arguments[i+j].dbl;
+		ep[j] += arguments[i+j].exp;
+	    }
+	    if (++rcount >= PROD_RENORM_COUNT) {
+		for (int j = 0; j < 2; j++) {
+		    Erd mid = Erd(dp[j], ep[j]);
+		    dp[j] = mid.dbl;
+		    ep[j] = mid.exp;
+		}
+		rcount = 0;
+	    }
+	}
+	for (; i < len; i++) {
+	    dp[0] *= arguments[i].dbl;
+	    ep[0] += arguments[i].exp;
+	}
+	for (int j = 1; j < 2; j++) {
+	    dp[0] *= dp[j];
+	    ep[0] += ep[j];
+	}
+	return Erd(dp[0], ep[0]);
+    }
+
+    friend Erd product_reduce_x4(std::vector<Erd> &arguments) {
+	double dp[4] = { 1.0, 1.0, 1.0, 1.0 };
+	int64_t ep[4] = { 0, 0, 0, 0 };
+	int rcount = 0;
+	int i = 0;
+	int len = (int) arguments.size();
+	for (i = 0; i <= len - 4; i+= 4) {
+	    for (int j = 0; j < 4; j++) {
+		dp[j] *= arguments[i+j].dbl;
+		ep[j] += arguments[i+j].exp;
+	    }
+	    if (++rcount >= PROD_RENORM_COUNT) {
+		for (int j = 0; j < 4; j++) {
+		    Erd mid = Erd(dp[j], ep[j]);
+		    dp[j] = mid.dbl;
+		    ep[j] = mid.exp;
+		}
+		rcount = 0;
+	    }
+	}
+	for (; i < len; i++) {
+	    dp[0] *= arguments[i].dbl;
+	    ep[0] += arguments[i].exp;
+	}
+	for (int j = 1; j < 4; j++) {
+	    dp[0] *= dp[j];
+	    ep[0] += ep[j];
+	}
+	return Erd(dp[0], ep[0]);
+    }
+
+
+
+    friend Erd product_reduce_slow(std::vector<Erd> &arguments) {
+	Erd result(1.0);
+	for (Erd arg : arguments)
+	    result = result.mul(arg);
+	return result;
+    }
+
+    friend Erd product_reduce(std::vector<Erd> &arguments) {
+	if (arguments.size() > 8)
+	    return product_reduce_x4(arguments);
+	else
+	    return product_reduce_x1(arguments);
+    }
+
 };
 

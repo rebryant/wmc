@@ -194,6 +194,10 @@ private:
     // For evaluation
     Egraph_weights *weights;
     Erd rescale;
+    // Used for product computations
+    std::vector<Erd> arguments;
+    
+
 
 public:
 

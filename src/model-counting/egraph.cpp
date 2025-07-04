@@ -983,18 +983,17 @@ Erd Evaluator_erd::evaluate_edge(Egraph_edge &e) {
 	return Erd(0.0);
     mpf_t mval;
     mpf_init2(mval, 64);
-    Erd eval(1.0);
+    arguments.clear();
     // Values are in mpq
     for (int lit : e.literals) {
 	mpf_set_q(mval, weights->evaluation_weights[lit].get_mpq_t());
-	Erd wt(mval);
-	eval = eval.mul(wt);
+	arguments.push_back(Erd(mval));
     }
     for (int v : e.smoothing_variables) {
 	mpf_set_q(mval, weights->smoothing_weights[v].get_mpq_t());
-	Erd wt(mval);
-	eval = eval.mul(wt);
+	arguments.push_back(Erd(mval));
     }
+    Erd eval = product_reduce(arguments);
     if (verblevel >= 4) {
 	eval.get_mpf(mval);
 	mp_exp_t exp;
