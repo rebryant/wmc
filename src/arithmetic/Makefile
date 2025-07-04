@@ -12,7 +12,7 @@ IDIR = ../../include
 LFILE = wmc_arithmetic.a
 
 OFILES = q25.o analysis.o er_double.o
-IFILES = q25.h analysis.h er_double.h
+IFILES = q25.h analysis.h er_double.h er_double.hh
 
 GLIB = -lz -lgmpxx -lgmp
 

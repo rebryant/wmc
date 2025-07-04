@@ -43,7 +43,7 @@
 #include <mpfr.h>
 #include <mpfi.h>
 
-#include "er_double.h"
+#include "er_double.hh"
 #include "q25.h"
 
 /* Some useful utility functions */
@@ -193,7 +193,7 @@ private:
     Egraph *egraph;
     // For evaluation
     Egraph_weights *weights;
-    erd_t rescale;
+    Erd rescale;
 
 public:
 
@@ -203,7 +203,7 @@ public:
     void clear_evaluation();
 
 private:
-    erd_t evaluate_edge(Egraph_edge &e);
+    Erd evaluate_edge(Egraph_edge &e);
 };
 
 
