@@ -225,7 +225,7 @@ public:
 
     friend Erd product_reduce(std::vector<Erd> &arguments) {
 	if (arguments.size() > 8)
-	    return product_reduce_x4(arguments);
+	    return product_reduce_x2(arguments);
 	else
 	    return product_reduce_x1(arguments);
     }
