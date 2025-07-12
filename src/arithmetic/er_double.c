@@ -65,7 +65,7 @@ static int dbl_get_exponent(double x) {
 
 static int dbl_get_sign(double x) {
     uint64_t bx = dbl_get_bits(x);
-    return (bx >> DBL_SIGN_OFFSET) & 0x1f;
+    return (bx >> DBL_SIGN_OFFSET) & 0x1;
 }
 
 static uint64_t dbl_get_fraction(double x) {
