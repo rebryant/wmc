@@ -1,6 +1,6 @@
 CC=gcc
 CXX=g++
-OPT = -O2
+OPT = -O3
 #OPT = -O0
 #DFLAGS = -DEDEBUG
 CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
@@ -53,6 +53,12 @@ mptest: mptest.c q25.o
 
 er_test: er_test.c er_double.c
 	$(CC) $(CFLAGS) -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
+
+erd_eval: erd_eval.c
+	$(CC) $(CFLAGS) $(INC) -I$(IDIR) -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(LFILE) $(GLIB)
+
+erd_eval.s: erd_eval.c
+	$(CC) $(OPT) $(INC) -I$(IDIR) -S -o erd_eval.s erd_eval.c
 
 clean:
 	 rm -f *.a *.o *~

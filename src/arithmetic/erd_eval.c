@@ -11,9 +11,6 @@
 #include <gmp.h>
 
 #include "report.h"
-#include "q25.h"
-#include "analysis.h"
-
 
 /*
   Representation of floating-point numbers based on double,
@@ -107,17 +104,28 @@ static double dbl_replace_exponent(double x, int64_t exp) {
     return dbl_from_bits(bx);
 }
 
-static double dbl_clear_exponent(double x) {
-    uint64_t bx = dbl_get_bits(x);
-    uint64_t mask = ~(DBL_EXP_MASK << DBL_EXP_OFFSET);
-    bx &= mask;
-    return dbl_from_bits(bx);
-}
-
-
 static double dbl_infinity(int sign) {
     return dbl_assemble(sign, DBL_EXP_MASK - DBL_BIAS, 0);
 }
+
+
+/*** Debugging help ***/
+
+void frees(const char *s) {
+    free((void *) s);
+}
+
+const char* erdz_document(erd_t a) {
+    char buf[100];
+    int sign = dbl_get_sign(a.dbl);
+    int exp = dbl_get_exponent(a.dbl);
+    uint64_t frac = dbl_get_fraction(a.dbl);
+    snprintf(buf, 100, "Sign=%d, Exp=%d+%lld=%lld, Frac=0x%llx", sign, 
+	     exp, (long long) a.exp, (long long) exp + a.exp,
+	     (unsigned long long) frac);
+    return archive_string(buf);
+}
+
 
 
 /********************* ERDZ *************************/
@@ -137,9 +145,15 @@ erd_t erdz_zero() {
 static erd_t erdz_normalize(erd_t a) {
     if (erdz_is_zero(a))
 	return erdz_zero();
+    const char *as = erdz_document(a);
     erd_t nval;
     nval.exp = a.exp + dbl_get_exponent(a.dbl);
-    nval.dbl = dbl_clear_exponent(a.dbl);
+    nval.dbl = dbl_replace_exponent(a.dbl, 0);
+#if DEBUG
+    const char *ns = erdz_document(nval);
+    report(4, "Normalizing [%s] --> [%s]\n", as, ns);
+    frees(as); frees(ns);
+#endif
     return nval;
 }
 
@@ -220,7 +234,7 @@ erd_t erdz_muladd(erd_t a, erd_t b, erd_t c) {
 	return c;
     prod.exp = a.exp + b.exp;
     prod.exp += dbl_get_exponent(prod.dbl);
-    prod.dbl = dbl_clear_exponent(prod.dbl);
+    prod.dbl = dbl_replace_exponent(prod.dbl, 0);
     if (c.dbl == 0)
 	return prod;
     if (prod.exp > c.exp + DBL_MAX_PREC)
@@ -301,20 +315,16 @@ erd_t erdz_div(erd_t a, erd_t b) {
     return erdz_normalize(nval);
 }
 
+#if 0
 q25_ptr erdz_to_q25(erd_t a) {
     q25_ptr q = q25_from_double(a.dbl);
     q25_inplace_scale(q, (int32_t) a.exp, 0);
     return q;
 }
+#endif
 
-double digit_precision_erdz(erd_t x_est, mpf_srcptr x) {
-    int pos = q25_enter();
-    q25_ptr q_est = erdz_to_q25(x_est);
-    q25_ptr q = q25_from_mpf(x);
-    double p = digit_precision_q25(q_est, q);
-    q25_leave(pos);
-    return p;
-}
+
+
 
 
 /*********** Useful functions ***********/
@@ -403,19 +413,101 @@ double run_sum_mpf(mpf_t result, double *dval, int len, int reps) {
 double run_sum_erdz(erd_t *result, double *dval, int len, int reps) {
     erd_t *eval = calloc(len, sizeof(erd_t));
     int i;
-    for (i = 0; i < len; i++)
+#if DEBUG
+    report(3, "  Data:\n");
+#endif
+    for (i = 0; i < len; i++) {
 	eval[i] = erdz_from_double(dval[i]);
+#if DEBUG
+	const char *ev = erdz_string(eval[i]);
+	const char *es = erdz_document(eval[i]);
+	report(3, "  i = %d: %s [%s]:\n", i, ev, es);
+	frees(ev); frees(es);
+#endif
+    }
     int r;
     double t = tod();
     erd_t s = erdz_zero();
+#if DEBUG
+    const char *sv = erdz_string(s);
+    const char *ss = erdz_document(s);
+    report(3, "  Initial sum: %s [%s]\n", sv, ss);
+    frees(ss); frees(sv);
+#endif
     for (r = 0; r < reps; r++)
-	for (i = 0; i < len; i++)
+	for (i = 0; i < len; i++) {
 	    s = erdz_add(s, eval[i]);
+#if DEBUG
+	    const char *av = erdz_string(eval[i]);
+	    const char *as = erdz_document(eval[i]);
+	    sv = erdz_string(s);
+	    ss = erdz_document(s);
+	    report(3, "    + %s [%s] --> %s [%s]\n", av, as, sv, ss);
+	    frees(av); frees(sv);
+	    frees(as); frees(ss);
+#endif
+	}
     *result = s;
     t = tod() - t;
     free(eval);
     return t;
 }
+
+/* Time and run products  */
+double run_prod_dbl(double *result, double *dval, int len, int reps) {
+    int i, r;
+    double t = tod();
+    double s = 1.0;
+    for (r = 0; r < reps; r++)
+	for (i = 0; i < len; i++)
+	    s *= dval[i];
+    *result = s;
+    t = tod() - t;
+    return t;
+}
+
+/* Time and run products  */
+double run_prod_mpf(mpf_t result, double *dval, int len, int reps) {
+    /* Run with MPF */
+    mpf_t *mval = calloc(len, sizeof(mpf_t));
+    int i;
+    for (i = 0; i < len; i++) {
+	mpf_init2(mval[i], 64);
+	mpf_set_d(mval[i], dval[i]);
+    }
+    int r;
+    double t = tod();
+    mpf_set_d(result, 1.0);
+    for (r = 0; r < reps; r++)
+	for (i = 0; i < len; i++)
+	    mpf_mul(result, result, mval[i]);
+    t = tod() - t;
+    for (i = 0; i < len; i++)
+	mpf_clear(mval[i]);
+    free(mval);
+    return t;
+}
+
+/* Time and run products  */
+double run_prod_erdz(erd_t *result, double *dval, int len, int reps) {
+    erd_t *eval = calloc(len, sizeof(erd_t));
+    int i;
+    for (i = 0; i < len; i++) {
+	eval[i] = erdz_from_double(dval[i]);
+    }
+    int r;
+    double t = tod();
+    erd_t s = erdz_from_double(1.0);
+    for (r = 0; r < reps; r++) {
+	erd_t p = erdz_mul_seq(eval, len);
+	s = erdz_mul(s, p);
+    }
+    *result = s;
+    t = tod() - t;
+    free(eval);
+    return t;
+}
+
 
 double uniform_value(double min, double max) {
     double u = (double) random() / (double) ((1L<<31)-1);
@@ -450,40 +542,96 @@ double *exponential_array(int len, double base, double minp, double maxp, unsign
     return dval;
 }
 
+double digit_precision(mpf_srcptr x_est, mpf_srcptr x) {
+    if (mpf_cmp(x_est, x) == 0)
+	return 1e6;
+    if (mpf_cmp_d(x_est, 0.0) == 0)
+	return 0.0;
+    if (mpf_cmp_d(x, 0.0) == 0)
+	return 0.0;
+    mpf_t rel;
+    mpf_init2(rel, 128);
+    mpf_sub(rel, x_est, x);
+    mpf_div(rel, rel, x);
+    mpf_abs(rel, rel);
+    long int exp;
+    double drel = mpf_get_d_2exp(&exp, rel);
+    double dp = -(log10(drel) + log10(2.0) * exp);
+    return dp < 0 ? 0 : dp;
+}
+
 void run_sum(char *prefix, double *data, int len, int reps) {
     double dval;
     mpf_t mval;
     mpf_init2(mval, 64);
     erd_t eval;
     double dt = run_sum_dbl(&dval, data, len, reps);
-    report(2, "Ran double\n");
     double mt = run_sum_mpf(mval, data, len, reps);
-    report(2, "Ran MPF\n");
     double et = run_sum_erdz(&eval, data, len, reps);
-    report(2, "Ran ERD\n");
     const char *ms = mpf_string(mval, 20);
     const char *es = erdz_string(eval);
-
-    int pos = q25_enter();
-    report(2, "Converting to Q25\n");
-    q25_ptr dq = q25_from_double(dval);
-    q25_ptr mq = q25_from_mpf(mval);
-    q25_ptr eq = erdz_to_q25(eval);
-    report(2, "Computing digit precision\n");
-    double dpd = digit_precision_q25(dq, mq);
-    double dpe = digit_precision_q25(eq, mq);
+    mpf_t md;
+    mpf_init2(md, 64);
+    double dpd;
+    if (dbl_exponent_below(dbl_get_exponent(dval)) || dbl_exponent_above(dbl_get_exponent(dval)))
+	dpd = 0.0;
+    else {
+	mpf_set_d(md, dval);
+	dpd = digit_precision(md, mval);
+    }
+    mpf_t me;
+    mpf_init2(me, 64);
+    erdz_to_mpf(me, eval);
+    double dpe = digit_precision(me, mval);
     long sums = (long) len * reps;
     report(1, "%s: Len = %d reps = %d sums = %ld\n",
 	   prefix, len, reps, sums);
-    report(1, "    Double: Sum = %.20f ns/sum = %.2f precision = %.2f\n",
+    report(1, "    DBL: Sum = %.20f ns/sum = %.2f precision = %.2f\n",
 	   dval, dt * 1e9 / sums, dpd);
     report(1, "    ERD: Sum = %s ns/sum = %.2f precision = %.2f\n",
 	   es, et * 1e9 / sums, dpe);
     report(1, "    MPF: Sum = %s ns/sum = %.2f\n",
 	   ms, mt * 1e9 / sums);
-    q25_leave(pos);
-    free((void *) ms); free((void *) es);
+    mpf_clear(mval); mpf_clear(md); mpf_clear(me);
+    frees(ms); frees(es);
 }
+
+void run_prod(char *prefix, double *data, int len, int reps) {
+    double dval;
+    mpf_t mval;
+    mpf_init2(mval, 64);
+    erd_t eval;
+    double dt = run_prod_dbl(&dval, data, len, reps);
+    double mt = run_prod_mpf(mval, data, len, reps);
+    double et = run_prod_erdz(&eval, data, len, reps);
+    const char *ms = mpf_string(mval, 20);
+    const char *es = erdz_string(eval);
+    mpf_t md;
+    mpf_init2(md, 64);
+    double dpd;
+    if (dbl_exponent_below(dbl_get_exponent(dval)) || dbl_exponent_above(dbl_get_exponent(dval)))
+	dpd = 0.0;
+    else {
+	mpf_set_d(md, dval);
+	dpd = digit_precision(md, mval);
+    }
+    mpf_t me;
+    mpf_init2(me, 64);
+    erdz_to_mpf(me, eval);
+    double dpe = digit_precision(me, mval);
+    long prods = (long) len * reps;
+    report(1, "%s: Len = %d reps = %d prods = %ld\n",
+	   prefix, len, reps, prods);
+    report(1, "    DBL: Product = %.20f ns/prod = %.2f precision = %.2f\n",
+	   dval, dt * 1e9 / prods, dpd);
+    report(1, "    ERD: Product = %s ns/prod = %.2f precision = %.2f\n",
+	   es, et * 1e9 / prods, dpe);
+    report(1, "    MPF: Product = %s ns/prod = %.2f\n",
+	   ms, mt * 1e9 / prods);
+    mpf_clear(mval); mpf_clear(md); mpf_clear(me);
+    frees(ms); frees(es);
+}
+
 
 void usage(char *name) {
     fprintf(stderr, "Usage: %s [-h] [-v VERB] [-n CNT] [-r REPS] [-s SEED] [-d (u|e)] [-m DMIN] [-M DMAX]\n", name);
@@ -532,12 +680,12 @@ int main(int argc, char *argv[]) {
     }
     char buf[100];
     snprintf(buf, 100, "%s[%.2f, %.2f]", exponential ? "Exp" : "Uni", dmin, dmax);
-    printf("Running %s\n", buf);
     double *data = exponential 
 	? exponential_array(len, 10, dmin, dmax, seed)
 	: uniform_array(len, dmin, dmax, seed);
-    printf("Generated data\n");
     run_sum(buf, data, len, reps);
+    report(1, "\n");
+    run_prod(buf, data, len, reps);
     free(data);
     return 0;
 }
