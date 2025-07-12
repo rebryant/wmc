@@ -103,3 +103,10 @@ double digit_precision(double x_est, double x) {
     q25_leave(pos);
     return result;
 }
+
+/* Compute digit precision of estimated value compared to true value */
+double digit_precision_mpf(mpf_srcptr x_est, mpf_srcptr x) {
+    q25_ptr q_est = q25_from_mpf(x_est);
+    q25_ptr q = q25_from_mpf(x);
+    return digit_precision_q25(q_est, q);
+}

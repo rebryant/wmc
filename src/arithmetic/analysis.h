@@ -49,6 +49,9 @@ double digit_precision_mix(q25_ptr x_est, double x);
 
 double digit_precision(double x_est, double x);
 
+double digit_precision_mpf(mpf_srcptr x_est, mpf_srcptr x);
+
+
 #ifdef CPLUSPLUS
 }
 #endif

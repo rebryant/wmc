@@ -198,15 +198,15 @@ q25_ptr q25_mark(q25_ptr q);
    Will fail if q is special value
 */
 bool q25_to_mpq(mpq_ptr dest, q25_ptr q);
-q25_ptr q25_from_mpq(mpq_ptr z);
+q25_ptr q25_from_mpq(mpq_srcptr z);
 
 /* Only fails for infinite and special values */
 bool q25_to_mpf(mpf_ptr dest, q25_ptr q);
-q25_ptr q25_from_mpf(mpf_ptr z);
+q25_ptr q25_from_mpf(mpf_srcptr z);
 
 /* Will return false if rounding disabled and not integer */
 bool q25_to_mpz(mpz_ptr dest, q25_ptr q, bool round);
-q25_ptr q25_from_mpz(mpz_ptr z);
+q25_ptr q25_from_mpz(mpz_srcptr z);
 
 #endif /* INCLUDE_GMP */
 

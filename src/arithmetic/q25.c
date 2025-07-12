@@ -1807,7 +1807,7 @@ bool q25_to_mpq(mpq_ptr dest, q25_ptr q) {
     return true;
 }
 
-q25_ptr q25_from_mpq(mpq_ptr z) {
+q25_ptr q25_from_mpq(mpq_srcptr z) {
     bool is_negative = false;
     switch (mpq_sgn(z)) {
     case -1:
@@ -1871,7 +1871,7 @@ bool q25_to_mpf(mpf_ptr dest, q25_ptr q) {
     return true;
 }
 
-q25_ptr q25_from_mpf(mpf_ptr z) {
+q25_ptr q25_from_mpf(mpf_srcptr z) {
     mpq_t mz;
     mpq_init(mz);
     mpq_set_f(mz, z);
@@ -1895,7 +1895,7 @@ bool q25_to_mpz(mpz_ptr dest, q25_ptr q, bool round) {
     return true;
 }
 
-q25_ptr q25_from_mpz(mpz_ptr z) {
+q25_ptr q25_from_mpz(mpz_srcptr z) {
     mpq_t mz;
     mpq_init(mz);
     mpq_set_z(mz, z);

@@ -25,7 +25,7 @@ $(LFILE): $(OFILES)
 	ar cr $(LFILE) $(OFILES)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INC) -c $<
+	$(CC) $(CFLAGS) $(INC) $(IDIR) -c $<
 
 .cxx.o:
 	$(CXX) $(CFLAGS) $(INC) -c $<
