@@ -31,7 +31,7 @@ er_test: er_double.c
 	$(CC) $(ACFLAGS) -DEDEBUG -o er_test er_double.c $(LOCAL)/lib/libgmp.a
 
 erd_eval: erd_eval.c
-	$(CC) $(ACFLAGS) $(INC)  -o erd_eval erd_eval.c $(LFILE) $(LDIR)/wmc_util.a $(LOCAL)/lib/libgmp.a
+	$(CC) $(ACFLAGS) $(INC)  -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(LOCAL)/lib/libgmp.a
 
 .c.o:
 	$(CC) $(ACFLAGS) $(INC) -c $<

@@ -370,14 +370,38 @@ const char *erd_string(erd_t a) {
     return mpf_string(mval, 20);
 }
 
+static double dbl_sum_seq_x4(double *val, int len) {
+    // Assume that len >= 4
+    int i, j;
+    double sum[4];
+    for (j = 0; j < 4; j++)
+	sum[j] = val[j];
+    for (i = 4; i <= len-4; i+=4)
+	for (j = 0; j < 4; j++)
+	    sum[j] += val[i+j];
+    double result = (sum[0]+sum[1])+(sum[2]+sum[3]);
+    for (; i < len; i++)
+	result += val[i];
+    return result;
+}
+
+static double dbl_sum_seq(double *val, int len) {
+    if (len >= 4)
+	return dbl_sum_seq_x4(val, len);
+    double result = 0.0;
+    int i;
+    for (i = 0; i < len; i++)
+	result += val[i];
+    return result;
+}
+
 /* Time and run summations  */
 double run_sum_dbl(double *result, double *dval, int len, int reps) {
     int i, r;
     double t = tod();
     double s = 0.0;
     for (r = 0; r < reps; r++)
-	for (i = 0; i < len; i++)
-	    s += dval[i];
+	s += dbl_sum_seq(dval, len);
     *result = s;
     t = tod() - t;
     return t;
@@ -423,14 +447,40 @@ double run_sum_erd(erd_t *result, double *dval, int len, int reps) {
     return t;
 }
 
+
+static double dbl_prod_seq_x4(double *val, int len) {
+    // Assume that len >= 4
+    int i, j;
+    double prod[4];
+    for (j = 0; j < 4; j++)
+	prod[j] = val[j];
+    for (i = 4; i <= len-4; i+=4)
+	for (j = 0; j < 4; j++)
+	    prod[j] *= val[i+j];
+    double result = (prod[0]*prod[1])*(prod[2]*prod[3]);
+    for (; i < len; i++)
+	result *= val[i];
+    return result;
+}
+
+static double dbl_prod_seq(double *val, int len) {
+    if (len >= 4)
+	return dbl_prod_seq_x4(val, len);
+    double result = 1.0;
+    int i;
+    for (i = 0; i < len; i++)
+	result *= val[i];
+    return result;
+}
+
+
 /* Time and run products  */
 double run_prod_dbl(double *result, double *dval, int len, int reps) {
     int i, r;
     double t = tod();
     double s = 1.0;
     for (r = 0; r < reps; r++)
-	for (i = 0; i < len; i++)
-	    s *= dval[i];
+	s *= dbl_prod_seq(dval, len);
     *result = s;
     t = tod() - t;
     return t;
@@ -562,12 +612,14 @@ void run_sum(char *prefix, double *data, int len, int reps) {
     long sums = (long) len * reps;
     report(1, "%s: Len = %d reps = %d sums = %ld\n",
 	   prefix, len, reps, sums);
-    report(1, "    DBL: Sum = %.20f ns/sum = %.2f precision = %.2f\n",
-	   dval, dt * 1e9 / sums, dpd);
-    report(1, "    ERD: Sum = %s ns/sum = %.2f precision = %.2f\n",
-	   es, et * 1e9 / sums, dpe);
-    report(1, "    MPF: Sum = %s ns/sum = %.2f\n",
-	   ms, mt * 1e9 / sums);
+    report(1, "    DBL: Sum = %.20f ps/sum = %.2f precision = %.2f\n",
+	   dval, dt * 1e12 / sums, dpd);
+    report(1, "    ERD: Sum = %s ps/sum = %.2f precision = %.2f\n",
+	   es, et * 1e12 / sums, dpe);
+    report(1, "    MPF: Sum = %s ps/sum = %.2f\n",
+	   ms, mt * 1e12 / sums);
+    report(1, "    MPF:DBL = %f  MPF:ERD = %f ERD:DBL = %f\n",
+	   mt/dt, mt/et, et/dt);
     mpf_clear(mval); mpf_clear(md); mpf_clear(me);
     frees(ms); frees(es);
 }
@@ -580,6 +632,7 @@ void run_prod(char *prefix, double *data, int len, int reps) {
     double dt = run_prod_dbl(&dval, data, len, reps);
     double mt = run_prod_mpf(mval, data, len, reps);
     double et = run_prod_erd(&eval, data, len, reps);
+    report(1, "Times: DBL %f MPF %f ERD %f\n", dt, mt, et);
     const char *ms = mpf_string(mval, 20);
     const char *es = erd_string(eval);
     mpf_t md;
@@ -598,12 +651,14 @@ void run_prod(char *prefix, double *data, int len, int reps) {
     long prods = (long) len * reps;
     report(1, "%s: Len = %d reps = %d prods = %ld\n",
 	   prefix, len, reps, prods);
-    report(1, "    DBL: Product = %.20f ns/prod = %.2f precision = %.2f\n",
-	   dval, dt * 1e9 / prods, dpd);
-    report(1, "    ERD: Product = %s ns/prod = %.2f precision = %.2f\n",
-	   es, et * 1e9 / prods, dpe);
-    report(1, "    MPF: Product = %s ns/prod = %.2f\n",
-	   ms, mt * 1e9 / prods);
+    report(1, "    DBL: Product = %.20f ps/prod = %.2f precision = %.2f\n",
+	   dval, dt * 1e12 / prods, dpd);
+    report(1, "    ERD: Product = %s ps/prod = %.2f precision = %.2f\n",
+	   es, et * 1e12 / prods, dpe);
+    report(1, "    MPF: Product = %s ps/prod = %.2f\n",
+	   ms, mt * 1e12 / prods);
+    report(1, "    MPF:DBL = %f  MPF:ERD = %f ERD:DBL = %f\n",
+	   mt/dt, mt/et, et/dt);
     mpf_clear(mval); mpf_clear(md); mpf_clear(me);
     frees(ms); frees(es);
 }
