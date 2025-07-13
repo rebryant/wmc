@@ -122,7 +122,7 @@ void frees(const char *s) {
     free((void *) s);
 }
 
-const char* erd_document(erd_t a) {
+static const char* erd_document(erd_t a) {
     char buf[100];
     int sign = dbl_get_sign(a.dbl);
     int exp = dbl_get_exponent(a.dbl);
@@ -231,7 +231,7 @@ erd_t erd_add(erd_t a, erd_t b) {
     return erd_normalize(nval);
 }
 
-erd_t erd_quick_mul(erd_t a, erd_t b) {
+static erd_t erd_quick_mul(erd_t a, erd_t b) {
     erd_t nval;
     nval.exp = a.exp + b.exp;
     nval.dbl = a.dbl * b.dbl;
@@ -243,7 +243,7 @@ erd_t erd_mul(erd_t a, erd_t b) {
     return erd_normalize(erd_quick_mul(a, b));
 }
 
-erd_t erd_mul_seq_slow(erd_t *val, int len) {
+static erd_t erd_mul_seq_slow(erd_t *val, int len) {
     erd_t result = erd_from_double(1.0);
     int i;
     for (i = 0; i < len; i++)
@@ -254,7 +254,7 @@ erd_t erd_mul_seq_slow(erd_t *val, int len) {
 /* Max number of times fractions can be multiplied without overflowing exponent */
 #define MAX_MUL 1000
 
-erd_t erd_mul_seq_x1(erd_t *val, int len) {
+static erd_t erd_mul_seq_x1(erd_t *val, int len) {
     erd_t result = len == 0 ? erd_from_double(1.0) : val[0];
     int i;
     int count = 1;
@@ -269,7 +269,7 @@ erd_t erd_mul_seq_x1(erd_t *val, int len) {
     return erd_normalize(result);
 }
 
-erd_t erd_mul_seq_x4(erd_t *val, int len) {
+static erd_t erd_mul_seq_x4(erd_t *val, int len) {
     // Assume len >= 4
     erd_t prod[4];
     int i, j;
@@ -299,7 +299,7 @@ erd_t erd_mul_seq_x4(erd_t *val, int len) {
 }
 
 erd_t erd_mul_seq(erd_t *val, int len) {
-    if (len <= 8)
+    if (len < 4)
 	return erd_mul_seq_x1(val, len);
     return erd_mul_seq_x4(val, len);
 }
