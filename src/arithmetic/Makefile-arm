@@ -12,8 +12,8 @@ LOCAL=/opt/homebrew
 
 LFILE = wmc_arithmetic_arm.a
 
-OFILES = q25.o analysis.o er_double.o
-IFILES = q25.h analysis.h er_double.h erd-header.h erd.h
+OFILES = q25.o analysis.o
+IFILES = q25.h analysis.h erd-header.h erd.h
 
 # ARM specific things
 LOCAL=/opt/homebrew
@@ -26,9 +26,6 @@ all: $(LFILE) $(IFILES)
 
 $(LFILE): $(OFILES)
 	ar cr $(LFILE) $(OFILES)
-
-er_test: er_double.c
-	$(CC) $(ACFLAGS) -DEDEBUG -o er_test er_double.c $(LOCAL)/lib/libgmp.a
 
 erd_eval: erd_eval.c erd-header.h erd.h
 	$(CC) $(ACFLAGS) $(INC)  -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(LOCAL)/lib/libgmp.a
