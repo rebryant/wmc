@@ -24,17 +24,9 @@
 ========================================================================*/
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <gmp.h>
 
-/*
-  Representation of floating-point numbers based on double,
-  but with additional exponent field to support extended range
- */
-typedef struct {
-    double dbl; 
-    int64_t exp; 
-} erd_t;
+#include "erd-header.h"
 
 /* 
    Support two versions: 
@@ -42,7 +34,6 @@ typedef struct {
    ERDZ:        0.0 has exp = 0
 
 */
-
 #define ERDZ 0
 
 #if ERDZ

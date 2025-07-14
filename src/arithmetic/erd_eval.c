@@ -10,8 +10,6 @@
 #include "report.h"
 #include "erd.h"
 
-
-
 /*********** Useful functions ***********/
 
 const char *mpf_string(mpf_srcptr val, int digits) {

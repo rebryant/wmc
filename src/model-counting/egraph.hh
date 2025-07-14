@@ -43,7 +43,7 @@
 #include <mpfr.h>
 #include <mpfi.h>
 
-#include "er_double.hh"
+#include "erd-header.h"
 #include "q25.h"
 
 /* Some useful utility functions */
@@ -193,9 +193,9 @@ private:
     Egraph *egraph;
     // For evaluation
     Egraph_weights *weights;
-    Erd rescale;
+    erd_t rescale;
     // Used for product computations
-    std::vector<Erd> arguments;
+    std::vector<erd_t> arguments;
     
 
 
@@ -207,7 +207,7 @@ public:
     void clear_evaluation();
 
 private:
-    Erd evaluate_edge(Egraph_edge &e);
+    erd_t evaluate_edge(Egraph_edge &e);
 };
 
 

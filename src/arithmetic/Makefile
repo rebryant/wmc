@@ -54,10 +54,10 @@ mptest: mptest.c q25.o
 er_test: er_test.c er_double.c
 	$(CC) $(CFLAGS) -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
 
-erd_eval: erd_eval.c
+erd_eval: erd_eval.c erd.h
 	$(CC) $(CFLAGS) $(INC) -I$(IDIR) -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(GLIB)
 
-erd_eval.s: erd_eval.c
+erd_eval.s: erd_eval.c erd.h
 	$(CC) $(OPT) $(INC) -I$(IDIR) -S -o erd_eval.s erd_eval.c
 
 clean:

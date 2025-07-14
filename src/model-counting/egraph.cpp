@@ -37,6 +37,7 @@
 #include "analysis.h"
 #include "egraph.hh"
 #include "cnf_info.hh"
+#include "erd.h"
 
 /*
   Useful functions
@@ -975,27 +976,27 @@ Evaluator_erd::Evaluator_erd(Egraph *eg, Egraph_weights *wts) {
 }
     
 void Evaluator_erd::clear_evaluation() {
-    rescale = Erd(1.0);
+    rescale = erd_from_double(1.0);
 }
 
-Erd Evaluator_erd::evaluate_edge(Egraph_edge &e) {
+erd_t Evaluator_erd::evaluate_edge(Egraph_edge &e) {
     if (e.has_zero)
-	return Erd(0.0);
+	return erd_zero();
     mpf_t mval;
     mpf_init2(mval, 64);
     arguments.clear();
     // Values are in mpq
     for (int lit : e.literals) {
 	mpf_set_q(mval, weights->evaluation_weights[lit].get_mpq_t());
-	arguments.push_back(Erd(mval));
+	arguments.push_back(erd_from_mpf(mval));
     }
     for (int v : e.smoothing_variables) {
 	mpf_set_q(mval, weights->smoothing_weights[v].get_mpq_t());
-	arguments.push_back(Erd(mval));
+	arguments.push_back(erd_from_mpf(mval));
     }
-    Erd eval = product_reduce(arguments);
+    erd_t eval = erd_mul_seq(arguments.data(), arguments.size());
     if (verblevel >= 4) {
-	eval.get_mpf(mval);
+	erd_to_mpf(mval, eval);
 	mp_exp_t exp;
 	char *svalue = mpf_get_str(NULL, &exp, 10, 40, mval);
 	report(4, "MPF: Evaluating edge (%d <-- %d).  Value = 0.%se%ld\n", e.to_id, e.from_id, svalue, exp);
@@ -1011,40 +1012,40 @@ void Evaluator_erd::evaluate(mpf_class &count) {
     mpf_init2(mval, 64);
     for (mpq_class wt : weights->rescale_weights) {
 	mpf_set_q(mval, wt.get_mpq_t());
-	Erd ewt(mval);
-	rescale = rescale.mul(ewt);
+	erd_t ewt = erd_from_mpf(mval);
+	rescale = erd_mul(rescale, ewt);
     }
 
-    std::vector<Erd> operation_values;
+    std::vector<erd_t> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
 	switch (egraph->operations[id-1].type) {
 	case NNF_TRUE:
 	case NNF_AND:
-	    operation_values[id-1] = Erd(1.0);
+	    operation_values[id-1] = erd_from_double(1.0);
 	    break;
 	case NNF_FALSE:
 	case NNF_OR:
 	default:
-	    operation_values[id-1] = Erd(0.0);
+	    operation_values[id-1] = erd_zero();
 	}
     }
     for (Egraph_edge e : egraph->edges) {
-	Erd product = evaluate_edge(e);
-	product = product.mul(operation_values[e.from_id-1]);
+	erd_t product = evaluate_edge(e);
+	product = erd_mul(product, operation_values[e.from_id-1]);
 	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
 	if (multiply)
-	    operation_values[e.to_id-1] = operation_values[e.to_id-1].mul(product);
+	    operation_values[e.to_id-1] = erd_mul(operation_values[e.to_id-1], product);
 	else
-	    operation_values[e.to_id-1] = operation_values[e.to_id-1].add(product);
+	    operation_values[e.to_id-1] = erd_add(operation_values[e.to_id-1], product);
     }
-    Erd ecount = operation_values[egraph->root_id-1];
+    erd_t ecount = operation_values[egraph->root_id-1];
 
     operation_values.clear();
     mpf_clear(mval);
 
-    ecount = ecount.mul(rescale);
-    ecount.get_mpf(count.get_mpf_t());
+    ecount = erd_mul(ecount, rescale);
+    erd_to_mpf(count.get_mpf_t(), ecount);
 
 }
 
