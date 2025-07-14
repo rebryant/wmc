@@ -25,7 +25,7 @@ arm: nnfcount-arm
 cnf_info.o: cnf_info.hh cnf_info.cpp 
 	$(CXX) $(CPPFLAGS) -c cnf_info.cpp
 
-egraph.o: egraph.hh egraph.cpp $(IDIR)/erd.hh
+egraph.o: egraph.hh egraph.cpp $(IDIR)/erd.h $(IDIR)/erd-header.h
 	$(CXX) $(CPPFLAGS) -c egraph.cpp
 
 nnfcount: nnfcount.cpp cnf_info.o counters.o egraph.o $(MYLIBS)
