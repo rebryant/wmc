@@ -31,7 +31,7 @@ egraph.o: egraph.hh egraph.cpp er_double.hh $(IDIR)/erd.h $(IDIR)/erd-header.h
 nnfcount: nnfcount.cpp cnf_info.o counters.o egraph.o $(MYLIBS)
 	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf_info.o counters.o egraph.o $(LIBS)
 
-nnfcount-arm: nnfcount.cpp cnf_info.o counters.o egraph.cpp $(MYALIBS)
+nnfcount-arm: nnfcount.cpp cnf_info.o counters.o egraph.cpp er_double.hh $(MYALIBS)
 	$(CXX) $(ACPPFLAGS) -o nnfcount-arm nnfcount.cpp cnf_info.o counters.o egraph.cpp $(ALIBS)
 
 
