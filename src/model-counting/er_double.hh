@@ -31,9 +31,9 @@
 */
 #define DBL_EXP_OFFSET 52
 #define DBL_SIGN_OFFSET 63
-#define DBL_EXP_MASK ((uint64_t) 0x7ff)
+#define DBL_EXP_MASK 0x7ff
 #define DBL_MAX_PREC 54
-#define DBL_BIAS ((int64_t) 0x3ff)
+#define DBL_BIAS 0x3ff
 
 static uint64_t dbl_get_bits(double x) {
     union {
@@ -84,50 +84,26 @@ static double dbl_replace_exponent(double x, int exp) {
     return dbl_assemble(sign, exp, frac);
 }
 
-static double dbl_zero_exponent(double x) {
-    uint64_t bexp = (uint64_t) DBL_BIAS << DBL_EXP_OFFSET;
-    uint64_t bx = dbl_get_bits(x);
-    uint64_t mask = ~(DBL_EXP_MASK << DBL_EXP_OFFSET);
-    bx &= mask;
-    bx += bexp;
-    return dbl_from_bits(bx);
-}
-
-static void nz_norm(double &d, int64_t &e) { 
-    e += dbl_get_exponent(d); 
-    d = dbl_zero_exponent(d);
-}
-
-static void full_norm(double &d, int64_t &e) { 
-    if (d == 0) 
-	e = 0;
-    else
-	nz_norm(d, e); 
-}
-
 class Erd {
 private:
     double dbl;
     int64_t exp;
-
-    void normalize() { full_norm(dbl, exp); }
-
-    Erd(double d, int64_t e) { dbl = d; exp = e; normalize(); }
-
-    Erd(double d, int64_t e, bool norm)
-    { 
-	dbl = d; exp = e; 
-	if (norm) normalize();
+    Erd(double d, int64_t e) { 
+	if (d == 0) { dbl = d; exp = 0; } 
+	else { exp = e + dbl_get_exponent(d); dbl = dbl_replace_exponent(d, 0); } 
     }
-
 
 public:
 
     Erd() { dbl = 0.0; exp = 0; }
 
     Erd(double d) { 
-	dbl = d; exp = 0;
-	normalize();
+	if (d == 0) {
+	    dbl = d; exp = 0; 
+	} else {
+	    exp = dbl_get_exponent(d);
+	    dbl = dbl_replace_exponent(d, 0);
+	}
     }
 
     Erd(mpf_srcptr mval) { long int e; dbl = mpf_get_d_2exp(&e, mval); exp = (int64_t) e; }
@@ -163,18 +139,17 @@ public:
 	int64_t ep = 0.0;
 	int rcount = 0;
 	for (int i = 0; i < arguments.size(); i++) {
-	    if (arguments[i].is_zero())
-		return Erd();
 	    dp *= arguments[i].dbl;
 	    ep += arguments[i].exp;
 	    if (++rcount >= PROD_RENORM_COUNT) {
-		nz_norm(dp, ep);
+		Erd mid = Erd(dp, ep);
+		dp = mid.dbl;
+		ep = mid.exp;
 		rcount = 0;
 	    }
 
 	}
-	nz_norm(dp, ep);
-	return Erd(dp, ep, false);
+	return Erd(dp, ep);
     }
 
     friend Erd product_reduce_x2(std::vector<Erd> &arguments) {
@@ -185,32 +160,37 @@ public:
 	int len = (int) arguments.size();
 	for (i = 0; i <= len - 2; i+= 2) {
 	    for (int j = 0; j < 2; j++) {
-		if (arguments[i+j].is_zero())
-		    return Erd();
 		dp[j] *= arguments[i+j].dbl;
 		ep[j] += arguments[i+j].exp;
 	    }
 	    if (++rcount >= PROD_RENORM_COUNT) {
-		for (int j = 0; j < 2; j++)
-		    nz_norm(dp[j], ep[j]);
+		for (int j = 0; j < 2; j++) {
+		    Erd mid = Erd(dp[j], ep[j]);
+		    dp[j] = mid.dbl;
+		    ep[j] = mid.exp;
+		}
 		rcount = 0;
 	    }
 	}
 	if (2 * rcount > PROD_RENORM_COUNT) {
-	    for (int j = 0; j < 2; j++)
-		nz_norm(dp[j], ep[j]);
+	    for (int j = 0; j < 2; j++) {
+		Erd mid = Erd(dp[j], ep[j]);
+		dp[j] = mid.dbl;
+		ep[j] = mid.exp;
+	    }
 	}
 
 	for (; i < len; i++) {
-	    if (arguments[i].is_zero())
-		return Erd();
 	    dp[0] *= arguments[i].dbl;
 	    ep[0] += arguments[i].exp;
 	}
+	for (int j = 1; j < 2; j++) {
+	    dp[0] *= dp[j];
+	    ep[0] += ep[j];
+	}
 	double rd = dp[0] * dp[1];
 	int64_t re = ep[0] + ep[1];
-	nz_norm(rd, re);
-	return Erd(rd, re, false);
+	return Erd(rd, re);
     }
 
     friend Erd product_reduce_x4(std::vector<Erd> &arguments) {
@@ -221,32 +201,34 @@ public:
 	int len = (int) arguments.size();
 	for (i = 0; i <= len - 4; i+= 4) {
 	    for (int j = 0; j < 4; j++) {
-		if (arguments[i+j].is_zero())
-		    return Erd();
 		dp[j] *= arguments[i+j].dbl;
 		ep[j] += arguments[i+j].exp;
 	    }
 	    if (++rcount >= PROD_RENORM_COUNT) {
-		for (int j = 0; j < 4; j++)
-		    nz_norm(dp[j], ep[j]);
+		for (int j = 0; j < 4; j++) {
+		    Erd mid = Erd(dp[j], ep[j]);
+		    dp[j] = mid.dbl;
+		    ep[j] = mid.exp;
+		}
 		rcount = 0;
 	    }
 	}
 	if (4 * rcount > PROD_RENORM_COUNT) {
-	    for (int j = 0; j < 4; j++)
-		nz_norm(dp[j], ep[j]);
+	    for (int j = 0; j < 4; j++) {
+		Erd mid = Erd(dp[j], ep[j]);
+		dp[j] = mid.dbl;
+		ep[j] = mid.exp;
+	    }
 	}
 	for (; i < len; i++) {
-	    if (arguments[i].is_zero())
-		return Erd();
 	    dp[0] *= arguments[i].dbl;
 	    ep[0] += arguments[i].exp;
 	}
 	double rd = dp[0] * dp[1] * dp[2] * dp[3];
 	int64_t re = ep[0] + ep[1] + ep[2] + ep[3];
-	nz_norm(rd, re);
-	return Erd(rd, re, false);
+	return Erd(rd, re);
     }
+
 
 
     friend Erd product_reduce_slow(std::vector<Erd> &arguments) {
