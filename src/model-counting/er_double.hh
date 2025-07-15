@@ -184,10 +184,6 @@ public:
 	    dp[0] *= arguments[i].dbl;
 	    ep[0] += arguments[i].exp;
 	}
-	for (int j = 1; j < 2; j++) {
-	    dp[0] *= dp[j];
-	    ep[0] += ep[j];
-	}
 	double rd = dp[0] * dp[1];
 	int64_t re = ep[0] + ep[1];
 	return Erd(rd, re);
