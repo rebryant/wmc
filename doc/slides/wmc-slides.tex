@@ -144,60 +144,6 @@
 \small\url{http://www.cs.cmu.edu/~bryant}
 \end{frame}
 
-\begin{frame}
-
-  \frametitle{Weighted Model Counting Definition}
-
-  \begin{center}
-\begin{tikzpicture}[scale=0.035]
-  \node [left] at (0,25) {$\inputformula$};
-  \node [right] at (220,25) {$w(\inputformula)$};
-  \node [left] at (0,-20){$w$};
-
-  \draw[fill=structure] (60,0) rectangle (160,50);
-
-%  \draw[line width=2pt] (80,25) [-latex] -- (140,25);
-  \draw[line width=2pt] (0,25) [-latex] -- (60,25);
-  \draw[line width=2pt] (160,25) [-latex] -- (220,25);
-  \draw[line width=2pt] (0,-20) -- (110,-20) [-latex] -- (110,0);
-
-% \node [left] at (10,55) {\begin{tabular}{c} Input\\Formula \end{tabular}};
-
-  \node [left] at (10,52) {Input};
-  \node [left] at (10,40) {Formula};
-
-  \node [left] at (10, 7) {Weight};
-  \node [left] at (10,-5) {Assignment};
-
-  \node [right] at (210,52) {Weighted};
-  \node [right] at (210,40) {Count};
-
-
-  \node[white] at (110,37) {Weighted};
-  \node[white] at (110,25) {Model};
-  \node[white] at (110,13) {Counter};
-\end{tikzpicture}
-
-\end{center}
-
-\vskip -10pt
-  {\bf Given}
-
-  \begin{itemize}
-  \item CNF formula $\inputformula$ over variables $X$
-    \begin{itemize}
-      \bitem Set of satisfying assignments (\emph{models}) $\modelset(\inputformula)$
-      \bitem Each model $\assign$ is set of literals 
-    \end{itemize}
-  \item Weight assignment $w(x), w(\obar{x}) \in \mathbb{Q}$ for each $x \in X$
-  \end{itemize}
-
-  {\bf Compute}
-  \begin{displaymath}
-  w(\inputformula) \;\; \doteq \;\; \sum_{\assign \in \modelset(\inputformula)} \;\;\prod_{\lit \in \assign} w(\lit) 
-  \end{displaymath}
-
-\end{frame}
 
 \begin{frame}
   \frametitle{Weighted Model Counting: Computation}
@@ -348,7 +294,7 @@ For value $v$ and its approximation $\approxv$:
   $D = 30$
   \begin{itemize}
   \item Distance from Earth to Proxima Centauri $\approx 4.2465$ light years.
-  \item $D=30$ can represent distance from Earth to Alpha Centauri to nearest picometer
+  \item $D=30$ can represent distance from Earth to Proxima Centauri to nearest picometer
   \item Hydrogen atom diameter $\approx 106$ picometers.
   \end{itemize}
 }
@@ -985,6 +931,7 @@ For value $v$ and its approximation $\approxv$:
 
   \begin{itemize}
   \item Can reliably use floating-point for nonnegative weights
+  \item ERD is best choice for recent competitions
   \item Hybrid interval + rational works well for mixed weights
   \item Scheme works across wide range of target precisions
   \end{itemize}
