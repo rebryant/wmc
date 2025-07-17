@@ -969,52 +969,60 @@ Evaluation via extended-range double
 
 
 Evaluator_erd::Evaluator_erd(Egraph *eg, Egraph_weights *wts) { 
-    egraph = eg;
-    weights = wts;
-    clear_evaluation();
-}
     
-void Evaluator_erd::clear_evaluation() {
-    rescale = Erd(1.0);
+    egraph = eg;
+
+    mpf_t mval;
+    mpf_init2(mval, 64);
+
+    /* Convert weight values from mpq to Erd */
+    evaluation_weights.clear();
+    for (auto iter : wts->evaluation_weights) {
+	int lit = iter.first;
+	mpf_set_q(mval, iter.second.get_mpq_t());
+	evaluation_weights[lit] = Erd(mval);
+    }
+
+    smoothing_weights.clear();
+    for (auto iter : wts->smoothing_weights) {
+	int var = iter.first;
+	mpf_set_q(mval, iter.second.get_mpq_t());
+	smoothing_weights[var] = Erd(mval);
+    }
+
+    std::vector<Erd> rescale_weights;
+    for (mpq_class qval : wts->rescale_weights) {
+	mpf_set_q(mval, qval.get_mpq_t());
+	rescale_weights.push_back(Erd(mval));
+    }
+    rescale = product_reduce(rescale_weights);
 }
 
 Erd Evaluator_erd::evaluate_edge(Egraph_edge &e) {
     if (e.has_zero)
-	return Erd(0.0);
-    mpf_t mval;
-    mpf_init2(mval, 64);
+	return Erd();
     arguments.clear();
-    // Values are in mpq
-    for (int lit : e.literals) {
-	mpf_set_q(mval, weights->evaluation_weights[lit].get_mpq_t());
-	arguments.push_back(Erd(mval));
-    }
-    for (int v : e.smoothing_variables) {
-	mpf_set_q(mval, weights->smoothing_weights[v].get_mpq_t());
-	arguments.push_back(Erd(mval));
-    }
+    for (int lit : e.literals) 
+	arguments.push_back(evaluation_weights[lit]);
+
+    for (int v : e.smoothing_variables) 
+	arguments.push_back(smoothing_weights[v]);
+
     Erd eval = product_reduce(arguments);
     if (verblevel >= 4) {
+	mpf_t mval;
+	mpf_init2(mval, 64);
 	eval.get_mpf(mval);
 	mp_exp_t exp;
 	char *svalue = mpf_get_str(NULL, &exp, 10, 40, mval);
 	report(4, "MPF: Evaluating edge (%d <-- %d).  Value = 0.%se%ld\n", e.to_id, e.from_id, svalue, exp);
 	free(svalue);
+	mpf_clear(mval);
     }
-    mpf_clear(mval);
     return eval;
 }
 
 void Evaluator_erd::evaluate(mpf_class &count) {
-    clear_evaluation();
-    mpf_t mval;
-    mpf_init2(mval, 64);
-    for (mpq_class wt : weights->rescale_weights) {
-	mpf_set_q(mval, wt.get_mpq_t());
-	Erd ewt(mval);
-	rescale = rescale.mul(ewt);
-    }
-
     std::vector<Erd> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1041,7 +1049,6 @@ void Evaluator_erd::evaluate(mpf_class &count) {
     Erd ecount = operation_values[egraph->root_id-1];
 
     operation_values.clear();
-    mpf_clear(mval);
 
     ecount = ecount.mul(rescale);
     ecount.get_mpf(count.get_mpf_t());
@@ -1055,12 +1062,25 @@ Evaluation via Gnu multi-precision floating-point arithmetic
 
 Evaluator_mpf::Evaluator_mpf(Egraph *eg, Egraph_weights *wts) { 
     egraph = eg;
-    weights = wts;
-    clear_evaluation();
-}
-    
-void Evaluator_mpf::clear_evaluation() {
-    rescale = 1;
+
+    /* Convert weight values from mpq to mpf */
+    evaluation_weights.clear();
+    for (auto iter : wts->evaluation_weights) {
+	int lit = iter.first;
+	evaluation_weights[lit] = iter.second;
+    }
+
+    smoothing_weights.clear();
+    for (auto iter : wts->smoothing_weights) {
+	int var = iter.first;
+	smoothing_weights[var] = iter.second;
+    }
+
+    std::vector<Erd> rescale_weights;
+    rescale = 1.0;
+    for (mpq_class qval : wts->rescale_weights)
+	rescale *= qval;
+
 }
 
 void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
@@ -1069,11 +1089,10 @@ void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
 	return;
     }
     value = 1;
-    // Automatically convert from mpq to mpf
     for (int lit : e.literals)
-	value *= weights->evaluation_weights[lit];
+	value *= evaluation_weights[lit];
     for (int v : e.smoothing_variables)
-	value *= weights->smoothing_weights[v];
+	value *= smoothing_weights[v];
     if (verblevel >= 4) {
 	mp_exp_t exp;
 	char *svalue = mpf_get_str(NULL, &exp, 10, 40, value.get_mpf_t());
@@ -1083,10 +1102,6 @@ void Evaluator_mpf::evaluate_edge(mpf_class &value, Egraph_edge &e) {
 }
 
 void Evaluator_mpf::evaluate(mpf_class &count) {
-    clear_evaluation();
-    rescale = 1.0;
-    for (mpf_class wt : weights->rescale_weights)
-	rescale *= wt;
 
     std::vector<mpf_class> operation_values;
     operation_values.resize(egraph->operations.size());
@@ -1264,14 +1279,39 @@ Evaluation via MPFI
 
 Evaluator_mpfi::Evaluator_mpfi(Egraph *eg, Egraph_weights *wts, bool instr) { 
     egraph = eg;
-    weights = wts;
-    instrument = instr;
+
+    /* Convert weight values from mpq to mpfi */
+    int next_idx = 0;
+    weight_count = wts->evaluation_weights.size() + wts->smoothing_weights.size();
+    weights = new mpfi_t[weight_count];
+
+    evaluation_index.clear();
+    for (auto iter : wts->evaluation_weights) {
+	int lit = iter.first;
+	int idx = next_idx++;
+	evaluation_index[lit] = idx;
+	mpfi_init(weights[idx]);
+	mpfi_set_q(weights[idx], iter.second.get_mpq_t());
+    }
+
+    smoothing_index.clear();
+    for (auto iter : wts->smoothing_weights) {
+	int var = iter.first;
+	int idx = next_idx++;
+	smoothing_index[var] = idx;
+	mpfi_init(weights[idx]);
+	mpfi_set_q(weights[idx], iter.second.get_mpq_t());
+    }
+
     mpfi_init(rescale);
-    clear_evaluation();
+    mpfi_set_d(rescale, 1.0);
+    for (mpq_class wt : wts->rescale_weights)
+	mpfi_mul_q(rescale, rescale, wt.get_mpq_t());
+
+    instrument = instr;
 }
     
 void Evaluator_mpfi::clear_evaluation() {
-    mpfi_set_d(rescale, 1.0);
     min_digit_precision = MAX_DIGIT_PRECISION;
 }
 
@@ -1282,16 +1322,14 @@ void Evaluator_mpfi::evaluate_edge(mpfi_ptr value, Egraph_edge &e) {
     }
     mpfi_set_d(value, 1.0);
     for (int lit : e.literals)
-	mpfi_mul_q(value, value, weights->evaluation_weights[lit].get_mpq_t());
+	mpfi_mul(value, value, weights[evaluation_index[lit]]);
     for (int v : e.smoothing_variables)
-	mpfi_mul_q(value, value, weights->smoothing_weights[v].get_mpq_t());
+	mpfi_mul(value, value, weights[smoothing_index[v]]);
 }
 
 void Evaluator_mpfi::evaluate(mpfi_ptr count) {
     clear_evaluation();
-    mpfi_set_d(rescale, 1.0);
-    for (mpq_class wt : weights->rescale_weights)
-	mpfi_mul_q(rescale, rescale, wt.get_mpq_t());
+
     mpfi_t *operation_values = new mpfi_t[egraph->operations.size()];
     bool *operation_updated = new bool[egraph->operations.size()];
     for (int id = 1; id <= egraph->operations.size(); id++) {
@@ -1339,10 +1377,19 @@ void Evaluator_mpfi::evaluate(mpfi_ptr count) {
 	min_digit_precision = dp;
     for (int id = 1; id <= egraph->operations.size(); id++)
 	mpfi_clear(operation_values[id-1]);
+
     delete[] operation_values;
     delete[] operation_updated;
 
+    for (int i = 0; i < weight_count; i++)
+	mpfi_clear(weights[i]);
+
+    delete[] weights;
+
     mpfi_mul(count, count, rescale);
+
+
+
 }
 
 /*******************************************************************************************************************

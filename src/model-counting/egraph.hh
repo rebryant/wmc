@@ -185,14 +185,16 @@ private:
 };
 
 /*******************************************************************************************************************
-Evaluation via extended-range double-precision.  Use MPF as way to get weights in and out
+Evaluation via extended-range double-precision.  Use MPF as way to get weights out
 *******************************************************************************************************************/
 
 class Evaluator_erd {
 private:
     Egraph *egraph;
     // For evaluation
-    Egraph_weights *weights;
+    std::unordered_map<int,Erd> evaluation_weights;
+    std::unordered_map<int,Erd> smoothing_weights;
+
     Erd rescale;
     // Used for product computations
     std::vector<Erd> arguments;
@@ -219,7 +221,8 @@ class Evaluator_mpf {
 private:
     Egraph *egraph;
     // For evaluation
-    Egraph_weights *weights;
+    std::unordered_map<int,mpf_class> evaluation_weights;
+    std::unordered_map<int,mpf_class> smoothing_weights;
     mpf_class rescale;
 
 public:
@@ -264,8 +267,12 @@ Evaluation via MPFI interval floating point
 class Evaluator_mpfi {
 private:
     Egraph *egraph;
-    // For evaluation.  Use MPQ to store weights precisely
-    Egraph_weights *weights;
+    // For evaluation.  Each index indicates position in weights array
+    std::unordered_map<int,int> evaluation_index;
+    std::unordered_map<int,int> smoothing_index;
+    int weight_count;
+    mpfi_t *weights;
+
     mpfi_t rescale;
     // Measure precision of intermdiate results
     bool instrument;
