@@ -840,91 +840,72 @@ q25_ptr Evaluator_q25::evaluate(std::unordered_map<int,const char*> *literal_str
 Evaluation via DOUBLE
 *******************************************************************************************************************/
 
-Evaluator_double::Evaluator_double(Egraph *eg) { 
+static double double_product_reduce_x1(std::vector<double> &arguments) {
+    double result = 1.0;
+    for (double d : arguments)
+	result *= d;
+    return result;
+}
+
+static double double_product_reduce_x4(std::vector<double> &arguments) {
+    double d[4] = {1.0, 1.0, 1.0, 1.0};
+    int len = (int) arguments.size();
+    int i;
+    for (i = 0; i <= len-4; i+= 4) {
+	for (int j = 0; j < 4; j++)
+	    d[j] *= arguments[i+j];
+    }
+    for (; i < len; i++)
+	d[0] *= arguments[i];
+    return d[0] * d[1] * d[2] * d[3];
+}
+
+
+double double_product_reduce(std::vector<double> &arguments) {
+    if (arguments.size() <= 7)
+	return double_product_reduce_x1(arguments);
+    return double_product_reduce_x4(arguments);
+}
+
+Evaluator_double::Evaluator_double(Egraph *eg, Egraph_weights *wts) { 
     egraph = eg;
-    rescale = 1.0;
-    clear_evaluation();
+    evaluation_weights.clear();
+    for (auto iter : wts->evaluation_weights) {
+	int lit = iter.first;
+	evaluation_weights[lit] = mpq_get_d(iter.second.get_mpq_t());
+    }
+    smoothing_weights.clear();
+    for (auto iter : wts->smoothing_weights) {
+	int var = iter.first;
+	smoothing_weights[var] = mpq_get_d(iter.second.get_mpq_t());
+    }
+    std::vector<double> rescale_weights;
+    for (mpq_class qval : wts->rescale_weights) 
+	rescale_weights.push_back(mpq_get_d(qval.get_mpq_t()));
+
+    rescale = double_product_reduce(rescale_weights);
+
 }
     
-void Evaluator_double::clear_evaluation() {
-    evaluation_weights.clear();
-    smoothing_weights.clear();
-    rescale = 1.0;
-    egraph->reset_smooth();
-}
-
-
-// literal_string_weights == NULL for unweighted
-void Evaluator_double::prepare_weights(std::unordered_map<int,const char*> *literal_string_weights) {
-    clear_evaluation();
-    for (int v : *egraph->data_variables) {
-	double pwt = 0.0;
-	bool have_pos = false;
-	double nwt = 0.0;
-	bool have_neg = false;
-	if (!literal_string_weights) {
-	    // Unweighted counting
-	    pwt = 1.0;
-	    nwt = 1.0;
-	} else {
-	    if (literal_string_weights->find(v) != literal_string_weights->end()) {
-		if (sscanf((*literal_string_weights)[v], "%lf", &pwt) != 1)
-		    err(true, "DBL: Couldn't parse input weight for literal %d from string '%s'\n", v, (*literal_string_weights)[v]);
-		have_pos = true;
-	    }
-	    if (literal_string_weights->find(-v) != literal_string_weights->end()) {
-		if (sscanf((*literal_string_weights)[-v], "%lf", &nwt) != 1)
-		    err(true, "DBL: Couldn't parse input weight for literal %d from string '%s'\n", -v, (*literal_string_weights)[-v]);
-		have_neg = true;
-	    }
-	    if (have_pos) {
-		if (!have_neg)
-		    nwt = 1.0 - pwt;
-	    } else {
-		if (have_neg)
-		    pwt = 1.0 - nwt;
-		else {
-		    nwt = 1.0;
-		    pwt = 1.0;
-		}
-	    }
-	}
-	double sum = pwt + nwt;
-	if (egraph->is_smoothed)
-	    smoothing_weights[v] = sum;
-	else if (sum == 0.0) {
-	    smoothing_weights[v] = sum;
-	    egraph->smooth_single(v, true);
-	} else {
-	    rescale *= sum;
-	    pwt = pwt/sum;
-	    nwt = nwt/sum;
-	}
-	evaluation_weights[v] = pwt;
-	evaluation_weights[-v] = nwt;
-    }
-}
 
 double Evaluator_double::evaluate_edge(Egraph_edge &e) {
     if (e.has_zero)
 	return 0.0;
-    double result = 1.0;
-    for (int lit : e.literals) {
-	double wt = evaluation_weights[lit];
-	result *= wt;
-    }
-    for (int v : e.smoothing_variables) {
-	double wt = smoothing_weights[v];
-	result *= wt;
-    }
+    arguments.clear();
+    for (int lit : e.literals)
+	arguments.push_back(evaluation_weights[lit]);
+    for (int var : e.smoothing_variables)
+	arguments.push_back(smoothing_weights[var]);
+
+    double eval = double_product_reduce(arguments);
+
     if (verblevel >= 4) {
-	report(4, "DBL: Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, result);
+	report(4, "DBL: Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, eval);
     }
-    return result;
+    return eval;
 }
 
-double Evaluator_double::evaluate(std::unordered_map<int,const char*> *literal_string_weights) {
-    prepare_weights(literal_string_weights);
+double Evaluator_double::evaluate() {
     std::vector<double> operation_values;
     operation_values.resize(egraph->operations.size());
     for (int id = 1; id <= egraph->operations.size(); id++) {

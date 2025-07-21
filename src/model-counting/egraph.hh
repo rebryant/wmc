@@ -170,17 +170,17 @@ private:
     // For evaluation
     std::unordered_map<int,double> evaluation_weights;
     std::unordered_map<int,double> smoothing_weights;
+    std::vector<double> arguments;
     double rescale;
 
 public:
 
-    Evaluator_double(Egraph *egraph);
+    Evaluator_double(Egraph *egraph, Egraph_weights *weights);
     // literal_weights == NULL for unweighted
-    double evaluate(std::unordered_map<int,const char *> *literal_string_weights);
+    double evaluate();
     void clear_evaluation();
     
 private:
-    void prepare_weights(std::unordered_map<int,const char *> *literal_string_weights);
     double evaluate_edge(Egraph_edge &e);
 };
 

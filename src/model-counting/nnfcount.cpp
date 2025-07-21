@@ -205,8 +205,8 @@ void run(const char *cnf_name) {
 	    prefix, mpf_seconds);
 
     start_time = tod();
-    Evaluator_double dev = Evaluator_double(eg);
-    double dwcount = dev.evaluate(input_weights);
+    Evaluator_double dev = Evaluator_double(eg, weights);
+    double dwcount = dev.evaluate();
     end_time = tod();
     double wprecision = digit_precision_d(dwcount, mpq_count.get_mpq_t());
     lprintf("%s   %s DBL COUNT    = %.20g   precision = %.3f\n", prefix, wlabel, dwcount, wprecision);
