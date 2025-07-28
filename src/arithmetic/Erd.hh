@@ -167,13 +167,30 @@ static erd_t erd_zero() {
     return nval;
 }
 
-static erd_t erd_normalize(erd_t a) {
+static erd_t erd_normalize_old(erd_t a) {
     if (erd_is_zero(a))
 	return erd_zero();
     erd_t nval;
     nval.exp = a.exp + dbl_get_exponent(a.dbl);
     nval.dbl = dbl_zero_exponent(a.dbl);
     return nval;
+}
+
+// Variant that avoids testing double
+static erd_t erd_normalize_new(erd_t a) {
+    uint64_t ba = dbl_get_bits(a.dbl);
+    uint64_t bx = (ba >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
+    uint64_t nx = ba ? DBL_BIAS: 0;
+    uint64_t mask = ~(DBL_EXP_MASK << DBL_EXP_OFFSET);
+    uint64_t na = (ba & mask) + (nx << DBL_EXP_OFFSET);
+    erd_t nval;
+    nval.dbl = dbl_from_bits(na);
+    nval.exp = ba ? a.exp + ((int64_t) bx - DBL_BIAS) : ZEXP;
+    return nval;
+}
+
+static erd_t erd_normalize(erd_t a) {
+    return erd_normalize_old(a);
 }
 
 static erd_t erd_from_double(double dval) {
