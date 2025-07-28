@@ -177,9 +177,9 @@ void run(const char *cnf_name) {
 	q25_free(cwcount);
     } else {
 	mpf_t fw;
-	mpf_init(fw);
+	mpf_init2(fw, 256);
 	mpf_set_q(fw, mpq_count.get_mpq_t());
-	const char *swcount = mpf_string(fw, (int) target_precision);
+	const char *swcount = mpf_string(fw, (int) 70);
 	lprintf("%s   %s MPQ COUNT    = %s\n", prefix, wlabel, swcount);
 	mpf_clear(fw);
     }
