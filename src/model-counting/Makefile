@@ -25,13 +25,13 @@ arm: nnfcount-arm
 cnf_info.o: cnf_info.hh cnf_info.cpp 
 	$(CXX) $(CPPFLAGS) -c cnf_info.cpp
 
-egraph.o: egraph.hh egraph.cpp er_double.hh $(IDIR)/erd.h $(IDIR)/erd-header.h
+egraph.o: egraph.hh egraph.cpp $(IDIR)/Erd.hh $(IDIR)/erd-header.h
 	$(CXX) $(CPPFLAGS) -c egraph.cpp
 
 nnfcount: nnfcount.cpp cnf_info.o counters.o egraph.o $(MYLIBS)
 	$(CXX) $(CPPFLAGS) $(GINC) -o nnfcount nnfcount.cpp cnf_info.o counters.o egraph.o $(LIBS)
 
-nnfcount-arm: nnfcount.cpp cnf_info.o counters.o egraph.cpp er_double.hh $(MYALIBS)
+nnfcount-arm: nnfcount.cpp cnf_info.o counters.o egraph.cpp $(IDIR)/Erd.hh $(MYALIBS)
 	$(CXX) $(ACPPFLAGS) -o nnfcount-arm nnfcount.cpp cnf_info.o counters.o egraph.cpp $(ALIBS)
 
 
