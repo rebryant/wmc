@@ -27,6 +27,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 #include <gmp.h>
 #include "gmpxx.h"
 
@@ -363,7 +364,39 @@ static erd_t erd_div(erd_t a, erd_t b) {
     return erd_normalize(nval);
 }
 
+static int erd_cmp(erd_t a, erd_t b) {
+    if (erd_is_equal(a, b))
+	return 0;
+    int sa = a.dbl < 0;
+    int sb = b.dbl < 0;
+    if (sa & !sb)
+	return -1;
+    if (sb & !sa)
+	return 1;
+    int flip = sa ? -1 : 1;
+    if (a.exp > b.exp)
+	return flip;
+    if (a.exp < b.exp)
+	return -flip;
+    if (a.dbl > b.dbl)
+	return flip;
+    return -flip;
+}
 
+static erd_t erd_sqrt(erd_t a) {
+    if (erd_is_zero(a) || a.dbl < 0)
+	return erd_zero();
+    double da = a.dbl;
+    int64_t ea = a.exp;
+    if (ea % 2) {
+	da *= 2;
+	ea--;
+    }
+    erd_t nval;
+    nval.dbl = sqrt(da);
+    nval.exp = ea/2;
+    return erd_normalize(nval);
+}
 
 class Erd {
 private:
@@ -388,16 +421,25 @@ public:
     void get_mpf(mpf_ptr dest) { return erd_to_mpf(dest, eval); }
     mpf_class get_mpf() { mpf_class val; erd_to_mpf(val.get_mpf_t(), eval); return val; }
 
-    Erd add(const Erd &other) { return Erd(erd_add(eval, other.eval)); }
+    Erd add(const Erd &other) const { return Erd(erd_add(eval, other.eval)); }
 
-    Erd mul(const Erd &other) { return Erd(erd_mul(eval, other.eval)); }
+    Erd mul(const Erd &other) const { return Erd(erd_mul(eval, other.eval)); }
 
-    const Erd& operator=(const Erd &other) { eval = other.eval; return *this; }
-    bool operator==(const Erd &other) { return erd_is_equal(eval, other.eval); }
-    Erd operator+(const Erd &other) { return Erd(erd_add(eval, other.eval)); }
-    Erd operator*(const Erd &other) { return Erd(erd_mul(eval, other.eval)); }
+    const Erd& operator=(const Erd &other) { eval.dbl = other.eval.dbl; eval.exp = other.eval.exp; return *this; }
+    bool operator==(const Erd &other) const { return erd_is_equal(eval, other.eval); }
+    bool operator!=(const Erd &other) const { return !erd_is_equal(eval, other.eval); }
+    Erd operator+(const Erd &other) const { return Erd(erd_add(eval, other.eval)); }
+    Erd operator*(const Erd &other) const { return Erd(erd_mul(eval, other.eval)); }
+    Erd operator/(const Erd &other) const { return Erd(erd_div(eval, other.eval)); }
+    Erd operator-() const { return Erd(erd_negate(eval)); }
+    Erd operator-(const Erd &other) const { return Erd(erd_add(eval, erd_negate(other.eval))); }
     Erd& operator*=(const Erd &other) { eval = erd_mul(eval, other.eval); return *this; }
     Erd& operator+=(const Erd &other) { eval = erd_add(eval, other.eval); return *this; }
+    bool operator<(const Erd &other) const { return erd_cmp(eval, other.eval) < 0; }
+    bool operator<=(const Erd &other) const { return erd_cmp(eval, other.eval) <= 0; }
+    bool operator>(const Erd &other) const { return erd_cmp(eval, other.eval) > 0; }
+    bool operator>=(const Erd &other) const { return erd_cmp(eval, other.eval) >= 0; }
+
 
     friend Erd product_reduce_x1(Erd *data, int len) {
 	erd_t prod = erd_from_double(1.0);
