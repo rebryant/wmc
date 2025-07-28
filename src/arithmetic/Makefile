@@ -12,7 +12,7 @@ IDIR = ../../include
 LFILE = wmc_arithmetic.a
 
 OFILES = q25.o analysis.o 
-IFILES = q25.h analysis.h erd.h erd-header.h
+IFILES = q25.h analysis.h Erd.hh
 
 GLIB = -lz -lgmpxx -lgmp
 
@@ -51,14 +51,15 @@ random_product: random_product.c q25.o analysis.o
 mptest: mptest.c q25.o
 	$(CC) $(CFLAGS) -o mptest mptest.c q25.o $(GLIB)
 
-er_test: er_test.c er_double.c
-	$(CC) $(CFLAGS) -DSMALL_MODULUS -o er_test er_test.c er_double.c $(GLIB)
-
-erd_eval: erd_eval.c erd.h erd-header.h
+erd_eval: erd_eval.c erd.h 
 	$(CC) $(CFLAGS) $(INC) -I$(IDIR) -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(GLIB)
 
-erd_eval.s: erd_eval.c erd.h erd-hearder.h
+erd_eval.s: erd_eval.c erd.h 
 	$(CC) $(OPT) $(INC) -I$(IDIR) -S -o erd_eval.s erd_eval.c
+
+Erd_eval: Erd_eval.cpp Erd.hh 
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(INC) -I$(IDIR) -o Erd_eval Erd_eval.cpp $(LDIR)/wmc_util.a $(GLIB)
+
 
 clean:
 	 rm -f *.a *.o *~ erd_eval

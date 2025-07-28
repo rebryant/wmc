@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <gmp.h>
+#include "gmpxx.h"
 
 /*
   Representation of floating-point numbers based on double,
@@ -154,11 +155,11 @@ static double dbl_infinity(int sign) {
 
 /********************* ERD *************************/
 
-bool erd_is_zero(erd_t a) {
+static bool erd_is_zero(erd_t a) {
     return a.dbl == 0.0;
 }
 
-erd_t erd_zero() {
+static erd_t erd_zero() {
     erd_t nval;
     nval.dbl = 0.0;
     nval.exp = ZEXP;
@@ -174,7 +175,7 @@ static erd_t erd_normalize(erd_t a) {
     return nval;
 }
 
-erd_t erd_from_double(double dval) {
+static erd_t erd_from_double(double dval) {
     erd_t nval;
 #if ERDZ
     nval.exp = 0;
@@ -185,7 +186,7 @@ erd_t erd_from_double(double dval) {
     return erd_normalize(nval);
 }
 
-erd_t erd_from_mpf(mpf_srcptr fval) {
+static erd_t erd_from_mpf(mpf_srcptr fval) {
     erd_t nval;
     long int exp;
     nval.dbl = mpf_get_d_2exp(&exp, fval);
@@ -197,7 +198,7 @@ erd_t erd_from_mpf(mpf_srcptr fval) {
     return erd_normalize(nval);
 }
 
-void erd_to_mpf(mpf_ptr dest, erd_t eval) {
+static void erd_to_mpf(mpf_ptr dest, erd_t eval) {
     mpf_set_d(dest, eval.dbl);
 #if !ERDZ
     if (erd_is_zero(eval))
@@ -209,7 +210,7 @@ void erd_to_mpf(mpf_ptr dest, erd_t eval) {
 	mpf_mul_2exp(dest, dest, eval.exp);
 }
 
-double erd_to_double(erd_t eval) {
+static double erd_to_double(erd_t eval) {
     if (erd_is_zero(eval))
 	return 0.0;
     if (dbl_exponent_below(eval.exp))
@@ -221,13 +222,13 @@ double erd_to_double(erd_t eval) {
     return dbl_replace_exponent(eval.dbl, eval.exp);
 }
 
-bool erd_is_equal(erd_t a, erd_t b) {
+static bool erd_is_equal(erd_t a, erd_t b) {
     if (erd_is_zero(a))
 	return erd_is_zero(b);
     return a.dbl == b.dbl && a.exp == b.exp;
 }
 
-erd_t erd_negate(erd_t a) {
+static erd_t erd_negate(erd_t a) {
     erd_t nval;
     if (erd_is_zero(a))
 	return a;
@@ -236,7 +237,7 @@ erd_t erd_negate(erd_t a) {
     return nval;
 }
 
-erd_t erd_add(erd_t a, erd_t b) {
+static erd_t erd_add(erd_t a, erd_t b) {
 #if ERDZ
     if (erd_is_zero(a))
 	return b;
@@ -255,7 +256,7 @@ erd_t erd_add(erd_t a, erd_t b) {
     return erd_normalize(nval);
 }
 
-erd_t erd_quick_mul(erd_t a, erd_t b) {
+static erd_t erd_quick_mul(erd_t a, erd_t b) {
     erd_t nval;
     nval.exp = a.exp + b.exp;
     nval.dbl = a.dbl * b.dbl;
@@ -263,7 +264,7 @@ erd_t erd_quick_mul(erd_t a, erd_t b) {
 }
 
 
-erd_t erd_mul(erd_t a, erd_t b) {
+static erd_t erd_mul(erd_t a, erd_t b) {
     return erd_normalize(erd_quick_mul(a, b));
 }
 
@@ -349,16 +350,107 @@ static erd_t erd_mul_seq_x4(erd_t *val, int len) {
 }
 
 /* Compute product of sequence of values */
-erd_t erd_mul_seq(erd_t *val, int len) {
+static erd_t erd_mul_seq(erd_t *val, int len) {
     if (len < 8)
 	return erd_mul_seq_x1(val, len);
     return erd_mul_seq_x2(val, len);
 }
 
-erd_t erd_div(erd_t a, erd_t b) {
+static erd_t erd_div(erd_t a, erd_t b) {
     erd_t nval;
     nval.dbl = a.dbl / b.dbl;
     nval.exp = a.exp - b.exp;
     return erd_normalize(nval);
 }
+
+
+
+class Erd {
+private:
+    erd_t eval;
+
+    Erd(erd_t val) { eval = val; }
+
+    erd_t& get_erd_t() { return eval; }
+
+public:
+
+    Erd() { eval = erd_zero(); }
+
+    Erd(double d) { eval = erd_from_double(d); }
+
+    Erd(int i) { eval = erd_from_double((double) i); }
+
+    Erd(mpf_srcptr mval) { eval = erd_from_mpf(mval); }
+
+    bool is_zero() { return erd_is_zero(eval); }
+
+    void get_mpf(mpf_ptr dest) { return erd_to_mpf(dest, eval); }
+    mpf_class get_mpf() { mpf_class val; erd_to_mpf(val.get_mpf_t(), eval); return val; }
+
+    Erd add(const Erd &other) { return Erd(erd_add(eval, other.eval)); }
+
+    Erd mul(const Erd &other) { return Erd(erd_mul(eval, other.eval)); }
+
+    const Erd& operator=(const Erd &other) { eval = other.eval; return *this; }
+    bool operator==(const Erd &other) { return erd_is_equal(eval, other.eval); }
+    Erd operator+(const Erd &other) { return Erd(erd_add(eval, other.eval)); }
+    Erd operator*(const Erd &other) { return Erd(erd_mul(eval, other.eval)); }
+    Erd& operator*=(const Erd &other) { eval = erd_mul(eval, other.eval); return *this; }
+    Erd& operator+=(const Erd &other) { eval = erd_add(eval, other.eval); return *this; }
+
+    friend Erd product_reduce_x1(Erd *data, int len) {
+	erd_t prod = erd_from_double(1.0);
+	int rcount = 0;
+	for (int i = 0; i < len; i++) {
+	    prod = erd_quick_mul(prod, data[i].get_erd_t());
+	    if (++rcount >= MAX_MUL) {
+		erd_normalize(prod);
+		rcount = 0;
+	    }
+	}
+	erd_normalize(prod);
+	return Erd(prod);
+    }
+
+    friend Erd product_reduce_x4(Erd *data, int len) {
+	// Assume len >= 4
+	erd_t prod[4];
+	int i, j;
+	for (j = 0; j < 4; j++) 
+	    prod[j] = data[j].get_erd_t();
+	int count = 0;
+	for (i = 4; i <= len-4; i+= 4) {
+	    for (j = 0; j < 4; j++)
+		prod[j] = erd_quick_mul(prod[j], data[i+j].get_erd_t());
+	    if (++count > MAX_MUL) {
+		count = 0;
+		for (j = 0; j < 4; j++)
+		    prod[j] = erd_normalize(prod[j]);
+	    }
+	}
+	if (count * 4 > MAX_MUL) {
+	    for (j = 0; j < 4; j++)
+		prod[j] = erd_normalize(prod[j]);
+	}
+	erd_t result = prod[0];
+	for (j = 1; j < 4; j++)
+	    result = erd_quick_mul(result, prod[j]);
+	for (; i < len; i++)
+	    result = erd_quick_mul(result, data[i].get_erd_t());
+	return Erd(erd_normalize(result));
+    }
+
+
+    friend Erd product_reduce(Erd *data, int len) {
+	if (len >= 8)
+	    return product_reduce_x4(data, len);
+	else
+	    return product_reduce_x1(data, len);
+    }
+
+    friend Erd product_reduce(std::vector<Erd> data) { return product_reduce(data.data(), (int) data.size()); }
+
+
+};
 

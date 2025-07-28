@@ -43,8 +43,11 @@
 #include <mpfr.h>
 #include <mpfi.h>
 
-#include "er_double.hh"
+#include "Erd.hh"
 #include "q25.h"
+
+// Should double and Erd products be computed directly or via product reduction?
+#define PRODUCT_DIRECT 1
 
 /* Some useful utility functions */
 
@@ -170,8 +173,11 @@ private:
     // For evaluation
     std::unordered_map<int,double> evaluation_weights;
     std::unordered_map<int,double> smoothing_weights;
+#if !PRODUCT_DIRECT
     std::vector<double> arguments;
+#endif
     double rescale;
+
 
 public:
 
@@ -196,9 +202,10 @@ private:
     std::unordered_map<int,Erd> smoothing_weights;
 
     Erd rescale;
+#if !PRODUCT_DIRECT
     // Used for product computations
     std::vector<Erd> arguments;
-    
+#endif // !ERD_DIRECT    
 
 
 public:

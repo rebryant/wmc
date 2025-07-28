@@ -879,25 +879,37 @@ Evaluator_double::Evaluator_double(Egraph *eg, Egraph_weights *wts) {
 	int var = iter.first;
 	smoothing_weights[var] = mpq_get_d(iter.second.get_mpq_t());
     }
+#if PRODUCT_DIRECT
+    rescale = 1.0;
+    for (mpq_class qval : wts->rescale_weights) 
+	rescale *= mpq_get_d(qval.get_mpq_t());
+#else
     std::vector<double> rescale_weights;
     for (mpq_class qval : wts->rescale_weights) 
 	rescale_weights.push_back(mpq_get_d(qval.get_mpq_t()));
 
     rescale = double_product_reduce(rescale_weights);
-
+#endif
 }
     
 
 double Evaluator_double::evaluate_edge(Egraph_edge &e) {
     if (e.has_zero)
 	return 0.0;
+#if PRODUCT_DIRECT
+    double eval = 1.0;
+    for (int lit : e.literals)
+	eval *= evaluation_weights[lit];
+    for (int var : e.smoothing_variables)
+	eval *= smoothing_weights[var];
+#else
     arguments.clear();
     for (int lit : e.literals)
 	arguments.push_back(evaluation_weights[lit]);
     for (int var : e.smoothing_variables)
 	arguments.push_back(smoothing_weights[var]);
-
     double eval = double_product_reduce(arguments);
+#endif
 
     if (verblevel >= 4) {
 	report(4, "DBL: Evaluating edge (%d <-- %d).  Value = %f\n", e.to_id, e.from_id, eval);
@@ -956,6 +968,7 @@ Evaluator_erd::Evaluator_erd(Egraph *eg, Egraph_weights *wts) {
     mpf_t mval;
     mpf_init2(mval, 64);
 
+
     /* Convert weight values from mpq to Erd */
     evaluation_weights.clear();
     for (auto iter : wts->evaluation_weights) {
@@ -971,17 +984,33 @@ Evaluator_erd::Evaluator_erd(Egraph *eg, Egraph_weights *wts) {
 	smoothing_weights[var] = Erd(mval);
     }
 
+#if PRODUCT_DIRECT
+    rescale = 1.0;
+    for (mpq_class qval : wts->rescale_weights) {
+	mpf_set_q(mval, qval.get_mpq_t());
+	rescale *= Erd(mval);
+    }
+#else // PRODUCT_DIRECT
     std::vector<Erd> rescale_weights;
     for (mpq_class qval : wts->rescale_weights) {
 	mpf_set_q(mval, qval.get_mpq_t());
 	rescale_weights.push_back(Erd(mval));
     }
     rescale = product_reduce(rescale_weights);
+#endif // PRODUCT_DIRECT
 }
 
 Erd Evaluator_erd::evaluate_edge(Egraph_edge &e) {
     if (e.has_zero)
 	return Erd();
+
+#if PRODUCT_DIRECT
+    Erd eval = 1.0;
+    for (int lit : e.literals) 
+	eval *= evaluation_weights[lit];
+    for (int v : e.smoothing_variables) 
+	eval *= smoothing_weights[v];
+#else // PRODUCT_DIRECT
     arguments.clear();
     for (int lit : e.literals) 
 	arguments.push_back(evaluation_weights[lit]);
@@ -990,6 +1019,8 @@ Erd Evaluator_erd::evaluate_edge(Egraph_edge &e) {
 	arguments.push_back(smoothing_weights[v]);
 
     Erd eval = product_reduce(arguments);
+#endif // PRODUCT_DIRECT
+
     if (verblevel >= 4) {
 	mpf_t mval;
 	mpf_init2(mval, 64);
@@ -1019,20 +1050,16 @@ void Evaluator_erd::evaluate(mpf_class &count) {
 	}
     }
     for (Egraph_edge e : egraph->edges) {
-	Erd product = evaluate_edge(e);
-	product = product.mul(operation_values[e.from_id-1]);
+	Erd product = evaluate_edge(e) * operation_values[e.from_id-1];
 	bool multiply = egraph->operations[e.to_id-1].type == NNF_AND;
 	if (multiply)
-	    operation_values[e.to_id-1] = operation_values[e.to_id-1].mul(product);
+	    operation_values[e.to_id-1] *= product;
 	else
-	    operation_values[e.to_id-1] = operation_values[e.to_id-1].add(product);
+	    operation_values[e.to_id-1] += product;
     }
     Erd ecount = operation_values[egraph->root_id-1];
-
-    operation_values.clear();
-
-    ecount = ecount.mul(rescale);
-    ecount.get_mpf(count.get_mpf_t());
+    ecount *= rescale;
+    count = ecount.get_mpf();
 
 }
 
@@ -1057,7 +1084,6 @@ Evaluator_mpf::Evaluator_mpf(Egraph *eg, Egraph_weights *wts) {
 	smoothing_weights[var] = iter.second;
     }
 
-    std::vector<Erd> rescale_weights;
     rescale = 1.0;
     for (mpq_class qval : wts->rescale_weights)
 	rescale *= qval;
