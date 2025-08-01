@@ -38,7 +38,12 @@ def usage(name):
     p.print("  -f       Force regeneration of all files")
     p.print("  -s       Use smoothing")
     p.print("  -I       Measure digit precision of MPFI intermediate results");
-    p.print("  -L LEVEL Detail level: Basic+Don't attempt MPQ (0), Basic (1), + Individual methods (2), + Q25 (3)")
+    p.print("  -L LEVEL Detail level:")
+    p.print("           0: Basic+Don't attempt MPQ")
+    p.print("           1: + ERD")
+    p.print("           2: Basic.  Call MPQ basic fails")
+    p.print("           3: + Individual methods")
+    p.print("           4: + Q25")
     p.print("  -p PREC  Required precision (in decimal digits)");
     p.print("  -b BPREC Fix bit precision (should be multiple of 64)")
     p.print("  -D SPATH Directory for source NNF files")

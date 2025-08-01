@@ -71,7 +71,9 @@ const char *mpfr_string(mpfr_srcptr val, int digits);
 
 double digit_precision_mpfr(mpfr_srcptr x_est, mpq_srcptr x);
 double digit_precision_mpf(mpf_srcptr x_est, mpq_srcptr x);
+double digit_precision_mpf_mpf(mpf_srcptr x_est, mpf_srcptr x);
 double digit_precision_d(double x_est, mpq_srcptr x);
+double digit_precision_d_mpf(double x_est, mpf_srcptr x);
 double digit_precision_mpfi(mpfi_srcptr v);
 
 /*******************************************************************************************************************

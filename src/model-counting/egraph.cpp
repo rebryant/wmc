@@ -185,6 +185,21 @@ double digit_precision_mpf(mpf_srcptr x_est, mpq_srcptr x) {
     return result;
 }
 
+double digit_precision_mpf_mpf(mpf_srcptr x_est, mpf_srcptr x) {
+    mpfr_t rx_est;
+    int prec = mpf_get_prec(x_est);
+    mpfr_init2(rx_est, prec);
+    mpfr_set_f(rx_est, x_est, MPFR_RNDN);
+    mpq_t qx;
+    mpq_init(qx);
+    mpq_set_f(qx, x);
+    double result = digit_precision_mpfr(rx_est, qx);
+    mpfr_clear(rx_est);
+    mpq_clear(qx);
+    return result;
+}
+
+
 static uint64_t double2bits(double x) {
     union {
 	double dx;
@@ -212,6 +227,22 @@ double digit_precision_d(double x_est, mpq_srcptr x) {
     mpfr_clear(rx_est);
     return result;
 }
+
+double digit_precision_d_mpf(double x_est, mpf_srcptr x) {
+    if (double_is_special(x_est))
+	return 0.0;
+    mpfr_t rx_est;
+    int prec = 64;
+    mpfr_init2(rx_est, prec);
+    mpfr_set_d(rx_est, x_est, MPFR_RNDN);
+    mpq_t qx;
+    mpq_init(qx);
+    mpq_set_f(qx, x);
+    double result = digit_precision_mpfr(rx_est, qx);
+    mpfr_clear(rx_est);
+    return result;
+}
+
 
 static void mpq_one_minus(mpq_ptr dest, mpq_srcptr val) {
     mpq_t one;

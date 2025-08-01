@@ -45,7 +45,12 @@ void usage(const char *name) {
     lprintf("  -s          Use smoothing, rather than ring evaluation\n");
     lprintf("  -I          Measure digit precision of MPFI intermediate results\n");
     lprintf("  -v VERB     Set verbosity level\n");
-    lprintf("  -L LEVEL    Detail level: Basic+Don't attempt MPQ (0), Basic (1), + Individual methods (2), + Q25 (3)\n");
+    lprintf("  -L LEVEL Detail level:\n");
+    lprintf("           0: Basic+Don't attempt MPQ\n");
+    lprintf("           1: + ERD\n");
+    lprintf("           2: Basic.  Call MPQ basic fails\n");
+    lprintf("           3: + Individual methods\n");
+    lprintf("           4: + Q25\n");
     lprintf("  -p PREC     Required precision (in decimal digits)\n");
     lprintf("  -b BPREC    Fix bit precision (should be multiple of 64)\n");
     lprintf("  -o OUT.nnf  Save copy of formula (including possible smoothing)\n");
@@ -131,7 +136,7 @@ void run(const char *cnf_name) {
 
     q25_ptr wcount = q25_from_32(0);
     mpq_class mpq_count = 0;
-    if (detail_level >= 3) {
+    if (detail_level >= 4) {
 	Evaluator_q25 qev = Evaluator_q25(eg);
 	long weighted_operations = 0;
 	double peak_q25_bytes = 0;
@@ -168,7 +173,7 @@ void run(const char *cnf_name) {
 	mpq_seconds = tod() - start_time;
 	max_bytes = mpqev.max_bytes;
     }
-    if (detail_level >= 3) {
+    if (detail_level >= 4) {
 	q25_ptr cwcount = q25_from_mpq(mpq_count.get_mpq_t());
 	if (q25_compare(wcount, cwcount) == 0) 
 	    lprintf("%s   MPQ weighted count == Q25 weighted count\n", prefix);
@@ -299,8 +304,33 @@ void run_combo(const char *cnf_name) {
     lprintf("%s    COMBO COUNT    = %s  guaranteed precision = %.3f\n", prefix, sccount,precision);
     lprintf("%s      COMBO used %s with %.3f seconds and %d max bytes\n",
 	    prefix, combo_ev->method(), tod() - start_time, combo_ev->max_bytes);
+
+    if (detail_level == 1) {
+	start_time = tod();
+	Evaluator_double dev = Evaluator_double(eg, weights);
+	double dwcount = dev.evaluate();
+	double end_time = tod();
+	double wprecision = digit_precision_d_mpf(dwcount, ccount.get_mpf_t());
+	lprintf("%s   %s DBL COUNT    = %.20g   precision = %.3f\n", prefix, wlabel, dwcount, wprecision);
+	lprintf("%s     DBL required %.3f seconds\n",
+		prefix, end_time - start_time);
+
+	start_time = tod();
+	Evaluator_erd erdev = Evaluator_erd(eg, weights);
+	mpf_class erdcount = 0.0;
+	erdev.evaluate(erdcount);
+	end_time = tod();
+	double erd_seconds = end_time - start_time;
+	double erdprecision = digit_precision_mpf_mpf(erdcount.get_mpf_t(), ccount.get_mpf_t());
+	const char *secount = mpf_string(erdcount.get_mpf_t(), (int) target_precision);
+	lprintf("%s   %s ERD COUNT    = %s   precision = %.3f\n", prefix, wlabel, secount, erdprecision);
+	lprintf("%s     ERD required %.3f seconds\n",
+		prefix, erd_seconds);
+    }
+
     delete local_cnf;
 }
+
 
 
 void report_stats() {
@@ -413,7 +443,7 @@ int main(int argc, char *argv[]) {
 	lprintf("%s Saving results in '%s'\n", prefix, lname);
 	set_logname(lname);
 	run_combo(cnf_name);
-	if (detail_level >= 2)
+	if (detail_level >= 3)
 	    run(cnf_name);
 	report_stats();
 	set_logname(NULL);
