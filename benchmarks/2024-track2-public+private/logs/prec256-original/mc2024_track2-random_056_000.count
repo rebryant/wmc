@@ -4,7 +4,7 @@ c: CNT:    COMBO COUNT    = 1.3047229683030665224440369e-2  guaranteed precision
 c: CNT:      COMBO used MPF_ONLY with 0.001 seconds and 40 max bytes
 c: CNT:   Options           : 
 c: CNT:     Smooth:         : false
-c: CNT:     Digit precision : 50.0
+c: CNT:     Digit precision : 30.0
 c: CNT:     Bit precision   : 256
 c: CNT:   Data variables    : 120
 c: CNT:     Smooth variables: 0
