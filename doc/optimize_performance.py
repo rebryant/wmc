@@ -25,14 +25,14 @@ import math
 import getopt
 
 def usage(name):
-    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-C (p|n|b)] [-m (c|t|e|w)] [-o OUT]\n" % name)
+    sys.stderr.write("Usage: %s [-v] [-l] [-c] [-d PATH] [-x XPREC] [-C (p|n|b)] [-m (c|t|e|a|w)] [-o OUT]\n" % name)
     sys.stderr.write("  -v       Verbose\n")
     sys.stderr.write("  -l       Use reduced set of digit precision values\n")    
     sys.stderr.write("  -c       Show output as CSV\n")
     sys.stderr.write("  -d PATH  Directory with CSV files\n")
     sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
     sys.stderr.write("  -C COLL  Specify which collections to include: positive (p), negative (n), or both (b)")
-    sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e) work (w)\n")
+    sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e) avg. effort (a) work (w)\n")
     sys.stderr.write("  -o OUT   Specify output file\n")
 
 directory = "."
@@ -110,12 +110,15 @@ class PrecisionType:
     def newHistogram(self):
         return [0] * tabulationCount
 
+    def scaleHistogram(self, histo, scale):
+        return [h/scale  for h in histo]
+
     # Times for individual methods
     def accumulateEffort(self, isNonnegative, timeList, histo):
         mint = 0 if isNonnegative else 1
         for t in range(mint, precisionCount):
             tidx = self.nn_map[t] if isNonnegative else self.np_map[t]
-            histo[tidx] += timeList[t] / 3600.0
+            histo[tidx] += timeList[t]
 
     # Final method
     def accumulateCount(self, isNonnegative, ptype, histo):
@@ -142,8 +145,8 @@ class PrecisionType:
 ptyper = None
 
 class Mode:
-    count, effort, time, work  = range(4)
-    modeCharacters = ['c', 'e', 't', 'w']
+    percent, count, effort, aeffort, time, work  = range(6)
+    modeCharacters = ['p', 'c', 'e', 'a', 't', 'w']
 
     def parseMode(self, ch):
         for m in range(len(self.modeCharacters)):
@@ -303,7 +306,7 @@ class SolutionSet:
         for s in self.solutionList:
             s.accumulateEffort(histo)
         return histo
-    
+
     def tabulateWork(self, collection):
         (real, redundant) = (0.0, 0.0)
         for s in self.solutionList:
@@ -316,13 +319,15 @@ class SolutionSet:
             redundant += sredundant
         return [real, redundant]
 
-    def tabulate(self, mode):
-        if mode == moder.count:
-            return self.tabulateCount()
-        elif mode == moder.effort:
-            return self.tabulateEffort()
+    def tabulate(self, mode, scale):
+        if mode in [moder.percent, moder.count]:
+            histo = self.tabulateCount()
+        elif mode in [moder.effort, moder.aeffort]:
+            histo = self.tabulateEffort()
         elif mode == moder.time:
-            return self.tabulateTime()
+            histo = self.tabulateTime()
+        return ptyper.scaleHistogram(histo, scale)
+
         
 
 class InstanceSet:
@@ -363,8 +368,11 @@ class SolutionRange:
             sset = instances.solve(d)
             self.solutionSetList.append(sset)
         
-    def format(self, mode, outfile, types):
-        histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
+    def format(self, mode, outfile, types, count):
+        scale = count if mode in [moder.percent, moder.aeffort] else 3600
+        if mode == moder.percent:
+            scale = scale * 0.01
+        histoList = [ss.tabulate(mode, scale) for ss in self.solutionSetList]
         for t in types:
             outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
             for i in range(len(self.solutionSetList)):
@@ -373,10 +381,13 @@ class SolutionRange:
                 outfile.write("(%d,%.3f)" % (d, v))
             outfile.write("};\n")
 
-    def csvFormat(self, mode, outfile, types):
+    def csvFormat(self, mode, outfile, types, count):
+        scale = count if mode in [moder.percent, moder.aeffort] else 3600
+        if mode == moder.percent:
+            scale = scale * 0.01
         slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
-        histoList = [ss.tabulate(mode) for ss in self.solutionSetList]
+        histoList = [ss.tabulate(mode, scale) for ss in self.solutionSetList]
         sums = [0 for i in range(len(self.solutionSetList))]
         for t in types:
             slist = [ptyper.tabulateNames[t]] + ["%.4f" % histoList[i][t] for i in range(len(self.solutionSetList))]
@@ -385,7 +396,7 @@ class SolutionRange:
         slist = ["Sum"] + ["%.4f" % sums[i] for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')        
 
-    def csvFormatWork(self, outfile, collection):
+    def csvFormatWork(self, outfile, collection, count):
         names = ["Real", "Redundant"]
         slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
@@ -403,6 +414,7 @@ class SolutionRange:
 
 def run(name, args):
     fname = ["nonneg-tabulate.csv", "negpos-tabulate.csv"]
+    counts = [0, 0]
     nonnegative = [True, False]
     global verbose
     global directory
@@ -439,12 +451,6 @@ def run(name, args):
             collection = val
     instances = InstanceSet()
     
-    types = ptyper.all_types
-    if collection == 'n':
-        types = ptyper.np_types
-    if collection == 'p':
-        types = ptyper.nn_types
-
     for i in range(2):
         name = directory + "/" + fname[i]
         try:
@@ -452,8 +458,17 @@ def run(name, args):
         except:
             print("Can't open file '%s'" % name)
             continue
-        count = instances.load(infile, nonnegative[i])
+        counts[i] = instances.load(infile, nonnegative[i])
         infile.close()
+
+    types = ptyper.all_types
+    count = counts[0] + counts[1]
+    if collection == 'n':
+        types = ptyper.np_types
+        count = counts[1]
+    if collection == 'p':
+        types = ptyper.nn_types
+        count = counts[0]
 
     srange = SolutionRange(instances)
     outfile = sys.stdout
@@ -474,9 +489,9 @@ def run(name, args):
         if mode == moder.work:
             srange.csvFormatWork(outfile, collection)
         else:
-            srange.csvFormat(mode, outfile, types)
+            srange.csvFormat(mode, outfile, types, count)
     else:
-        srange.format(mode, outfile, types)
+        srange.format(mode, outfile, types, count)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])

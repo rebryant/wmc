@@ -335,7 +335,7 @@ def run(name, args):
         table_entry(ft)
         table_entry(fb)
         table_line()
-    ft, fb, f = tabulate(method_mpfi, "MPF|MPFI-128+MPQ")
+    ft, fb, f = tabulate(method_mpfi, "MPF|MPFI$\\times$1+MPQ")
     if wide_format:
         table_entry(f)
     else:

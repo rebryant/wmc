@@ -27,7 +27,7 @@ data:
 	$(INTERP) $(GRAB) 2 "MPF COUNT" $(PREC128)/mc2024_track2-random_*_3*.count > uposneg-mpf-prec-multi.csv
 	$(INTERP) $(GRAB) 2 "MPF COUNT" $(PREC128)/mc2024_track2-random_*_4*.count > eposneg-mpf-prec-multi.csv
 	$(INTERP) $(GRAB) 2 "MPF COUNT" $(PREC128)/mc2024_track2-random_*_5*.count > bposneg-mpf-prec-multi.csv
-	$(INTERP) $(GRAB) 2 "MPF COUNT" $(ORIGINAL)/mc2024_track2-random_*.count > original-mpf-prec.csv
+	$(INTERP) $(GRAB) 2 "MPF COUNT" $(ORIGINAL)/mc2024_track2-random_*.count > original-mpf-prec-multi.csv
 	# MPFI Est
 	$(INTERP) $(GRAB) 2 "MPFI COUNT" $(PREC128)/mc2024_track2-random_*_*.count > all-mpfi-eprec.csv
 	# MPFI Actual
@@ -57,6 +57,7 @@ data:
 	$(INTERP) $(MINIMIZE) uposneg-mpf-prec-multi.csv > uposneg-mpf-prec.csv
 	$(INTERP) $(MINIMIZE) eposneg-mpf-prec-multi.csv > eposneg-mpf-prec.csv
 	$(INTERP) $(MINIMIZE) bposneg-mpf-prec-multi.csv > bposneg-mpf-prec.csv
+	$(INTERP) $(MINIMIZE) original-mpf-prec-multi.csv > original-mpf-prec.csv
 
 	#### Combinations
 	# d-DNNF information
