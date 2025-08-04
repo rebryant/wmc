@@ -49,7 +49,7 @@ const char *mpf_string(mpf_class &val, int digits) {
     return archive_string(buf);
 }
 
-const char *erd_string(Erd a) {
+const char *erd_mpf_string(Erd a) {
     mpf_class mval(0.0, 64);
     mval = a.get_mpf();
     return mpf_string(mval, 20);
@@ -258,7 +258,8 @@ void run_sum(char *prefix, double *data, int len, int reps) {
     double mt = run_sum_mpf(mval, data, len, reps);
     double et = run_sum_erd(eval, data, len, reps);
     const char *ms = mpf_string(mval, 20);
-    const char *es = erd_string(eval);
+    const char *es = erd_mpf_string(eval);
+    Erd log10 = eval.log10();
     mpf_class md(0, 64);
     double dpd;
     if (dbl_exponent_below(dbl_get_exponent(dval)) || dbl_exponent_above(dbl_get_exponent(dval)))
@@ -276,6 +277,7 @@ void run_sum(char *prefix, double *data, int len, int reps) {
 	   dval, dt * 1e12 / sums, dpd);
     report(1, "    ERD: Sum = %s ps/sum = %.2f precision = %.2f\n",
 	   es, et * 1e12 / sums, dpe);
+    std::cout << "c     Cout Sum = " << eval << " log10 = " << log10 << std::endl;
     report(1, "    MPF: Sum = %s ps/sum = %.2f\n",
 	   ms, mt * 1e12 / sums);
     report(1, "    MPF:DBL = %f  MPF:ERD = %f ERD:DBL = %f\n",
@@ -291,7 +293,8 @@ void run_prod(char *prefix, double *data, int len, int reps) {
     double et = run_prod_erd(eval, data, len, reps);
     report(1, "Times: DBL %f MPF %f ERD %f\n", dt, mt, et);
     const char *ms = mpf_string(mval, 20);
-    const char *es = erd_string(eval);
+    const char *es = erd_mpf_string(eval);
+    Erd log10 = eval.log10();
     mpf_class md(0, 64);
     double dpd;
     if (dbl_exponent_below(dbl_get_exponent(dval)) || dbl_exponent_above(dbl_get_exponent(dval)))
@@ -309,6 +312,7 @@ void run_prod(char *prefix, double *data, int len, int reps) {
 	   dval, dt * 1e12 / prods, dpd);
     report(1, "    ERD: Product = %s ps/prod = %.2f precision = %.2f\n",
 	   es, et * 1e12 / prods, dpe);
+    std::cout << "c     Cout Product = " << eval << " log10 = " << log10 << std::endl;
     report(1, "    MPF: Product = %s ps/prod = %.2f\n",
 	   ms, mt * 1e12 / prods);
     report(1, "    MPF:DBL = %f  MPF:ERD = %f ERD:DBL = %f\n",

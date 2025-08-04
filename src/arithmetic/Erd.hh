@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -42,11 +44,12 @@ typedef struct {
 
 
 
+/********************* Defines **********************/ 
+
 /* 
    Support two versions: 
    DEFAULT:     0.0 has exp = INT64_MIN
    ERDZ:        0.0 has exp = 0
-
 */
 #define ERDZ 1
 
@@ -58,6 +61,11 @@ typedef struct {
 
 /* Max number of times fractions can be multiplied without overflowing exponent */
 #define MAX_MUL 1000
+
+/* Required size of buffer from printing ERD */
+#define ERD_BUF 40
+/* Number of significant digits when printing ERD */
+#define ERD_NSIG 16
 
 /********************* Double **********************/
 
@@ -311,33 +319,6 @@ static erd_t erd_mul_seq_x1(erd_t *val, int len) {
     return erd_normalize(result);
 }
 
-static erd_t erd_mul_seq_x2(erd_t *val, int len) {
-    // Assume len >= 2
-    erd_t prod[2];
-    int i, j;
-    for (j = 0; j < 2; j++) 
-	prod[j] = val[j];
-    int count = 0;
-    for (i = 2; i <= len-2; i+= 2) {
-	for (j = 0; j < 2; j++)
-	    prod[j] = erd_quick_mul(prod[j], val[i+j]);
-	if (++count > MAX_MUL) {
-	    count = 0;
-	    for (j = 0; j < 2; j++)
-		prod[j] = erd_normalize(prod[j]);
-	}
-    }
-    if (count * 2 > MAX_MUL) {
-	for (j = 0; j < 2; j++)
-	    prod[j] = erd_normalize(prod[j]);
-    }
-
-    erd_t result = erd_quick_mul(prod[0], prod[1]);
-    for (; i < len; i++)
-	result = erd_quick_mul(prod[0], val[i]);
-    return erd_normalize(result);
-}
-
 static erd_t erd_mul_seq_x4(erd_t *val, int len) {
     // Assume len >= 4
     erd_t prod[4];
@@ -371,7 +352,7 @@ static erd_t erd_mul_seq_x4(erd_t *val, int len) {
 static erd_t erd_mul_seq(erd_t *val, int len) {
     if (len < 8)
 	return erd_mul_seq_x1(val, len);
-    return erd_mul_seq_x2(val, len);
+    return erd_mul_seq_x4(val, len);
 }
 
 static erd_t erd_div(erd_t a, erd_t b) {
@@ -415,6 +396,65 @@ static erd_t erd_sqrt(erd_t a) {
     return erd_normalize(nval);
 }
 
+/* Buf must point to buffer with at least ERD_BUF character capacity */
+static void erd_string(erd_t a, char *buf, int nsig) {
+    if (nsig <= 0)
+	nsig = 1;
+    if (nsig > 20)
+	nsig = 20;
+    if (erd_is_zero(a)) {
+	snprintf(buf, ERD_BUF, "0.0");
+	return;
+    }
+    const char *sgn = "";
+    double da = a.dbl;
+    int64_t de = a.exp;
+    if (da < 0) {
+	da = -da;
+	sgn = "-";
+    }
+    // Convert exponent to base 10
+    double dlog = ((double) de) * log10(2.0);
+    // Get integer part of exponent
+    long long dec = (long long) floor(dlog);
+    // Incorporate the fractional part of the exponent into da
+    da *= __exp10(dlog-floor(dlog));
+    // Get decimal exponent for da
+    long long dexp = (long long) floor(log10(da));
+    // Add to decimal exponent
+    dec += dexp;
+    // Scale da to become integer representation of final fraction
+    da *= __exp10(nsig-1-dexp);
+    // Round it
+    long long dfrac = llround(da);
+    // Get digits to the left and right of the decimal point
+    long long lfrac = dfrac / (long long) __exp10(nsig-1);
+    long long rfrac = dfrac % (long long) __exp10(nsig-1);
+    if (dec == 0) 
+	snprintf(buf, ERD_BUF, "%s%lld.%lld", sgn, lfrac, rfrac);
+    else
+	snprintf(buf, ERD_BUF, "%s%lld.%llde%lld", sgn, lfrac, rfrac, dec);
+}
+
+/* Logarithms */
+static double erd_log2d(erd_t a) {
+    if (a.dbl <= 0)
+	return 0.0;
+    return log2(a.dbl) + (double) a.exp;
+}
+
+static erd_t erd_log2(erd_t a) {
+    return erd_from_double(erd_log2d(a));
+}
+
+static double erd_log10d(erd_t a) {
+    return erd_log2d(a) * log10(2.0);
+}
+
+static erd_t erd_log10(erd_t a) {
+    return erd_from_double(erd_log10d(a));
+}
+
 class Erd {
 private:
     erd_t eval;
@@ -441,6 +481,10 @@ public:
     Erd add(const Erd &other) const { return Erd(erd_add(eval, other.eval)); }
 
     Erd mul(const Erd &other) const { return Erd(erd_mul(eval, other.eval)); }
+
+    Erd log2() { return erd_log2(eval); }
+
+    Erd log10() { return erd_log10(eval); }
 
     const Erd& operator=(const Erd &other) { eval.dbl = other.eval.dbl; eval.exp = other.eval.exp; return *this; }
     bool operator==(const Erd &other) const { return erd_is_equal(eval, other.eval); }
@@ -509,6 +553,13 @@ public:
     }
 
     friend Erd product_reduce(std::vector<Erd> data) { return product_reduce(data.data(), (int) data.size()); }
+
+    friend std::ostream& operator<<(std::ostream& os, Erd &a) {
+	char buf[ERD_BUF];
+	erd_string(a.eval, buf, ERD_NSIG);
+	os << (const char *) buf;
+	return os;
+    }
 
 
 };
