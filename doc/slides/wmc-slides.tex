@@ -145,6 +145,7 @@
 \end{frame}
 
 
+
 \begin{frame}
   \frametitle{Weighted Model Counting Computation}
 
@@ -274,7 +275,7 @@ For value $v$ and its approximation $\approxv$:
 \begin{frame}
   \frametitle{Choosing Target Precision}
 
-\bigskip
+\medskip
   $D = 1$
   \begin{itemize}
     \item $10\%$ accuracy
@@ -614,7 +615,65 @@ For value $v$ and its approximation $\approxv$:
 \end{frame}
 
 \begin{frame}
+  \frametitle{Extended-Range Double (ERD)}
 
+  \smallskip
+
+  \begin{minipage}{0.49\textwidth}
+  \textbf{Standard Double}
+  \begin{center}
+  \begin{tikzpicture}[scale=0.08]
+    \draw[white] (0,0) rectangle  (64,6);
+    \draw (0,6) rectangle (1,12);
+    \draw (1,6) rectangle (12,12);
+    \draw (12,6) rectangle (64,12);
+    \node at (6.5,9) {$e$};
+    \node at (38,9) {$f$};
+  \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+    \item 11-bit exponent
+    \item Overall range $\approx \; 10^{\pm 308}$
+  \end{itemize}
+  \end{minipage}
+  \begin{minipage}{0.49\textwidth}
+  \textbf{Extended-Range Double}
+  \begin{center}
+  \begin{tikzpicture}[scale=0.07]
+    \draw (0,0) rectangle  (64,6);
+    \draw (0,6) rectangle (1,12);
+    \draw (1,6) rectangle (12,12);
+    \draw (12,6) rectangle (64,12);
+    \node at (6.5,9) {$0$};
+    \node at (38,9) {$f$};
+    \node at (32,3) {$e$};
+  \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+    \item 64-bit exponent
+    \item Overall range $\approx \; 10^{\pm 10^{18}}$
+  \end{itemize}
+  \end{minipage}
+
+\bigskip
+  \textbf{Performance Comparison}
+  \begin{itemize}
+    \item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
+    \item With double: 418 overflow, 209 underflow, 373 OK
+    \item Average seconds / instance:
+  \end{itemize}
+
+  \begin{center}
+    \begin{tabular}{rrrrrr}
+      Double & \rtext{ERD} & MPF-64 & MPF-128 & MPF-256 & MPQ \\
+      \midrule
+      1.87 & \rtext{2.01} & 6.66 & 7.33 & 8.28 & 106.93 \\
+    \end{tabular}
+  \end{center}
+
+\end{frame}
+
+\begin{frame}
 \frametitle{Evaluating Nonnegative Benchmarks}
 
 \bigskip
@@ -645,10 +704,10 @@ For value $v$ and its approximation $\approxv$:
 
 \begin{itemize}
 \item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
-\item ERD: Extended-Range Double
-\begin{itemize}
-\bitem  IEEE Double + 64-bit exponent
-\end{itemize}
+%% \item ERD: Extended-Range Double
+%% \begin{itemize}
+%% \bitem  IEEE Double + 64-bit exponent
+%% \end{itemize}
 \item Rely on Precision Bound Theorem to guarantee precision
 \item No redundant work required
 \end{itemize}
@@ -708,6 +767,7 @@ For value $v$ and its approximation $\approxv$:
 \end{tikzpicture}
 
 \end{frame}
+
 
 
 \begin{frame}
@@ -971,7 +1031,7 @@ For value $v$ and its approximation $\approxv$:
 \medskip
 
   \begin{itemize}
-  \item Can reliably use floating-point for nonnegative weights
+  \item Can reliably use floating point for nonnegative weights
   \item ERD is best choice for recent competitions
   \item Hybrid interval + rational works well for mixed weights
   \item Scheme works across wide range of target precisions

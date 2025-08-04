@@ -93,14 +93,14 @@ data:
 	# Nonegative using MPF
 	$(INTERP) $(GRAB) "Data variables" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-variables.csv	
 #	$(INTERP) $(GRAB) 2 "WEIGHTED DBL COUNT" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-precision.csv	
-#	$(INTERP) $(GRAB) "DBL required" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-seconds.csv
+	$(INTERP) $(GRAB) "DBL required" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-seconds.csv
 	$(INTERP) $(GRAB) "ERD required" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-erd-seconds.csv
 	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" $(PREC64)/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf64-seconds.csv
 	$(INTERP) $(GRAB) "COMBO used MPF" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf128-seconds.csv
 	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" $(PREC256)/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf256-seconds.csv
 	$(INTERP) $(GRAB) "MPQ required " $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-mpq-seconds.csv
-	$(INTERP) $(MERGE) -l bench,var,erd-sec,mpf64-sec,mpf128-sec,mpf256-sec,mpq-sec \
-		nonneg-variables.csv nonneg-erd-seconds.csv nonneg-mpf64-seconds.csv  nonneg-mpf128-seconds.csv nonneg-mpf256-seconds.csv nonneg-mpq-seconds.csv > nonneg-tabulate.csv
+	$(INTERP) $(MERGE) -l bench,var,dbl-sec,erd-sec,mpf64-sec,mpf128-sec,mpf256-sec,mpq-sec \
+		nonneg-variables.csv nonneg-double-seconds.csv nonneg-erd-seconds.csv nonneg-mpf64-seconds.csv  nonneg-mpf128-seconds.csv nonneg-mpf256-seconds.csv nonneg-mpq-seconds.csv > nonneg-tabulate.csv
 	# Negative/positive using MPFI
 	$(INTERP) $(GRAB) "Data variables" $(PREC128)/mc2024_track2-random_*_{3,4,5}*.count > negpos-variables.csv
 	$(INTERP) $(GRAB) 2 "COMBO COUNT" $(PREC64)/mc2024_track2-random_*_{3,4,5}*.count > negpos-mpfi064-precision.csv
