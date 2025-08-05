@@ -5,15 +5,15 @@ OPT = -O2
 DFLAGS = -DEDEBUG
 CFLAGS=-g $(OPT) -Wno-nullability-completeness $(DFLAGS)
 CXXFLAGS=-std=c++11
-INC = -I.. -I../util
 LDIR = ../../lib
 IDIR = ../../include
 LOCAL=/opt/homebrew
+INC = -I.. -I$(IDIR) -I$(LOCAL)/include
 
 LFILE = wmc_arithmetic_arm.a
 
 OFILES = q25.o analysis.o
-IFILES = q25.h analysis.h erd-header.h erd.h
+IFILES = q25.h analysis.h Erd.hh
 
 # ARM specific things
 LOCAL=/opt/homebrew
@@ -29,6 +29,9 @@ $(LFILE): $(OFILES)
 
 erd_eval: erd_eval.c erd-header.h erd.h
 	$(CC) $(ACFLAGS) $(INC)  -o erd_eval erd_eval.c $(LDIR)/wmc_util.a $(LOCAL)/lib/libgmp.a
+
+Erd_eval: Erd_eval.cpp Erd.hh 
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(INC) -o Erd_eval Erd_eval.cpp $(LDIR)/wmc_util.a $(LOCAL)/lib/libgmp.a
 
 .c.o:
 	$(CC) $(ACFLAGS) $(INC) -c $<

@@ -59,6 +59,9 @@ typedef struct {
 #define ZEXP INT64_MIN
 #endif
 
+/* Two ways of implementing normalization: standard and one that reduces need for conditional control */
+#define ERD_NORM_STD 1
+
 /* Max number of times fractions can be multiplied without overflowing exponent */
 #define MAX_MUL 1000
 
@@ -175,7 +178,7 @@ static erd_t erd_zero() {
     return nval;
 }
 
-static erd_t erd_normalize_old(erd_t a) {
+static erd_t erd_normalize_standard(erd_t a) {
     if (erd_is_zero(a))
 	return erd_zero();
     erd_t nval;
@@ -185,7 +188,7 @@ static erd_t erd_normalize_old(erd_t a) {
 }
 
 // Variant that avoids testing double
-static erd_t erd_normalize_new(erd_t a) {
+static erd_t erd_normalize_nocond(erd_t a) {
     uint64_t ba = dbl_get_bits(a.dbl);
     uint64_t bx = (ba >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
     uint64_t nx = ba ? DBL_BIAS: 0;
@@ -198,7 +201,11 @@ static erd_t erd_normalize_new(erd_t a) {
 }
 
 static erd_t erd_normalize(erd_t a) {
-    return erd_normalize_old(a);
+#if ERD_NORM_STD
+    return erd_normalize_standard(a);
+#else
+    return erd_normalize_nocond(a);
+#endif    
 }
 
 static erd_t erd_from_double(double dval) {
