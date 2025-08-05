@@ -396,6 +396,21 @@ static erd_t erd_sqrt(erd_t a) {
     return erd_normalize(nval);
 }
 
+/* Generate integral power of 10 */
+static long long p10(int exp) {
+    if (exp < 0)
+	return 0;
+    long long result = 1;
+    long long power = 10;
+    while (exp != 0) {
+	if (exp & 0x1)
+	    result *= power;
+	power *= power;
+	exp = exp >> 1;
+    }
+    return result;
+}
+
 /* Buf must point to buffer with at least ERD_BUF character capacity */
 static void erd_string(erd_t a, char *buf, int nsig) {
     if (nsig <= 0)
@@ -424,12 +439,13 @@ static void erd_string(erd_t a, char *buf, int nsig) {
     // Add to decimal exponent
     dec += dexp;
     // Scale da to become integer representation of final fraction
-    da *= __exp10(nsig-1-dexp);
+    da *= p10(nsig-1-dexp);
     // Round it
     long long dfrac = llround(da);
     // Get digits to the left and right of the decimal point
-    long long lfrac = dfrac / (long long) __exp10(nsig-1);
-    long long rfrac = dfrac % (long long) __exp10(nsig-1);
+    long long sep = p10(nsig-1);
+    long long lfrac = dfrac / sep;
+    long long rfrac = dfrac % sep;
     if (dec == 0) 
 	snprintf(buf, ERD_BUF, "%s%lld.%lld", sgn, lfrac, rfrac);
     else
