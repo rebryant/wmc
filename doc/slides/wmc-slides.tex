@@ -659,17 +659,17 @@ For value $v$ and its approximation $\approxv$:
   \textbf{Performance Comparison}
   \begin{itemize}
     \item 100 formulas $\times$ 2 weight collections $\times$ 5 random assignments
-    \item With double: 418 overflow, 209 underflow, 373 OK
-    \item Average seconds / instance:
+    \item With double: 419 overflow, 209 underflow, 372 OK
+    \item With MPQ, 50 fail due to memory limitations
   \end{itemize}
 
-  \begin{center}
-    \begin{tabular}{rrrrrr}
-      Double & \rtext{ERD} & MPF-64 & MPF-128 & MPF-256 & MPQ \\
+\smallskip
+    \begin{tabular}{lrrrrrr}
+&      Double & \rtext{ERD} & MPF-64 & MPF-128 & MPF-256 & MPQ \\
       \midrule
-      1.87 & \rtext{2.01} & 6.66 & 7.33 & 8.28 & 106.93 \\
-    \end{tabular}
-  \end{center}
+Avg. &       1.87 & \rtext{2.01} & 6.66 & 7.33 & 8.28 & 182.23 \\
+Rel. &  0.93$\times$ & \rtext{1.00$\times$} & 3.31$\times$ & 3.65$\times$ & 4.12$\times$ & 90.66$\times$\\
+  \end{tabular}
 
 \end{frame}
 

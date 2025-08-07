@@ -1063,10 +1063,38 @@ For $D=1$ and $D=5$, all can be evaluated with ERD, as can most of the instances
 MPF-64 suffices for the remaining instances with $D=10$ and the majority with $D=15$.  MPF-128 then suffices through $D=30$,
 but achieving higher values of $D$ requires using MPF-256 for most ($D=35$) and then all cases.
 
-The lower portion shows the average evaluation time per instance (in seconds)
-as a function of target precision $D$.  We can see that ERD runs over $3$ times
-faster than MPF-64.  Interestingly, the evaluation time using MPF grows
-only slowly with increasing levels of precision.
+\begin{table}
+  \caption{Average time to evaluate nonnnegative instances for different numeric representations.
+  Double-precision evaluation could fail due to underflow or overflow.  MPQ could fail due to memory limitatons.}
+  \label{tab:nonneg:perf}
+\begin{center}
+    \begin{tabular}{llrrrrrr}
+      \toprule
+Item &        Double & ERD & MPF-64 & MPF-128 & MPF-256 & MPQ \\
+      \midrule
+Average Seconds & 1.87 & 2.01 & 6.66 & 7.33 & 8.28 & 182.23 \\
+Relative to ERD & 0.93$\times$ & 1.00$\times$ & 3.31$\times$ & 3.65$\times$ & 4.12$\times$ & 90.66$\times$ \\
+      \bottomrule
+    \end{tabular}
+\end{center}
+\end{table}
+
+The lower portion of Figure~\ref{fig:solution:nonnegative} shows the
+average evaluation time per instance (in seconds) as a function of
+target precision $D$.  Several trends can be seen here, which are
+further highlighted in Table~\ref{tab:nonneg:perf}.  This table shows
+the average time per instance for the evaluations using the five
+different representations.  The evaluation using double-precision
+failed for 628 of the evaluations due to underflow and overflow, while
+the evaluations using MPQ failed for 50 due to running out of memory.
+The times for the failing cases are included in the averages.  We can
+see that evaluation using ERD required only $1.07\times$ longer than
+with Double while also successfully evaluating all 1000 instances.
+Relative to ERD, the times for evaluation using MPF were
+$3.3$--$4.1\times$ longer, with a suprisingly low increase with the
+precision.  Finally, evaluation using MPQ requires substantially more
+time, in part due to the 50 failing cases.  Even considering only the
+successful evaluations gives an average of 106.93 seconds per instance, $52.2\times$ longer than for ERD\@.
 
 \section{Mixed Negative and Positive  Weights}
 \label{sect:neg}
@@ -1530,7 +1558,7 @@ evaluation using MPQ\@.  In these cases, the hybrid runtime is
 greater than that for MPQ alone, since the program also performs two
 evaluations using MPFI\@.  Of the 81 instances for which MPQ requires
 more than $1.0$ seconds, we find that the hybrid approach runs between
-$1.1$ and $1.5$ times slower, with an average and a median of $1.1$.
+$1.05$ and $1.51$ times slower, with an average of $1.14$ and a median of $1.12$.
 Fortunately, this performance penalty is more than offset by the gains achieved by the less costly evaluation methods.
 
 %% Of course, finding an optimal strategy depends heavily on the formulas
