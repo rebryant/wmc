@@ -56,11 +56,11 @@ pdata:
 	$(INTERP) $(DGEN) -X 2 -Y 3 -y 50 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
 		< $(RDATA)/bposneg-mpf+vars.csv > $(FDATA)/bposneg-mpf+vars.tex
 	#
-	$(INTERP) $(DGEN) -X 2 -Y 3 -x 50 -y 50 -O "only marks, color=redorange, mark=*, mark options={scale=0.7, opacity=0.7}" \
+	$(INTERP) $(DGEN) -X 2 -Y 4 -x 50 -y 50 -O "only marks, color=redorange, mark=*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/uposneg-mpfi-est+act.csv > $(FDATA)/uposneg-mpfi-est+act.tex
-	$(INTERP) $(DGEN) -X 2 -Y 3 -x 50 -y 50  -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
+	$(INTERP) $(DGEN) -X 2 -Y 4 -x 50 -y 50  -O "only marks, color=bluegray, mark=triangle*, mark options={scale=0.7, opacity=0.7}" \
 		< $(RDATA)/eposneg-mpfi-est+act.csv > $(FDATA)/eposneg-mpfi-est+act.tex
-	$(INTERP) $(DGEN) -X 2 -Y 3 -x 50 -y 50 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
+	$(INTERP) $(DGEN) -X 2 -Y 4 -x 50 -y 50 -O "only marks, color=darkgreen, mark=diamond*, mark options={scale=1.1, opacity=0.7}" \
 		< $(RDATA)/bposneg-mpfi-est+act.csv > $(FDATA)/bposneg-mpfi-est+act.tex
 	#
 	$(INTERP) $(DGEN) -L 0.001 -X 3 -Y 2 -O "only marks, color=redorange, mark=*, mark options={scale=0.6, opacity=0.7}" \

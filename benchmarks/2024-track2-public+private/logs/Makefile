@@ -92,7 +92,7 @@ data:
 	$(INTERP) $(MERGE) -l bench,mode,mpf,mpfi,mpfi2,mpq modality-all.csv combo-mpf-secs.csv all-mpfi-secs.csv all-mpfi2-secs.csv all-mpq-secs.csv > tabulate-all.csv
 	# Nonegative using MPF
 	$(INTERP) $(GRAB) "Data variables" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-variables.csv	
-#	$(INTERP) $(GRAB) 2 "WEIGHTED DBL COUNT" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-precision.csv	
+	$(INTERP) $(GRAB) 2 "WEIGHTED DBL COUNT" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-precision.csv	
 	$(INTERP) $(GRAB) "DBL required" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-double-seconds.csv
 	$(INTERP) $(GRAB) "ERD required" $(PREC128)/mc2024_track2-random_*_{1,2}*.count > nonneg-erd-seconds.csv
 	$(INTERP) $(GRAB) "COMBO used MPF_ONLY" $(PREC64)/mc2024_track2-random_*_{1,2}*.count > nonneg-mpf64-seconds.csv
