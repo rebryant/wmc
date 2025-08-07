@@ -31,7 +31,7 @@ def usage(name):
     sys.stderr.write("  -c       Show output as CSV\n")
     sys.stderr.write("  -d PATH  Directory with CSV files\n")
     sys.stderr.write("  -x XPREC Extra digits when computing minimum MPFI precision\n")
-    sys.stderr.write("  -C COLL  Specify which collections to include: positive (p), negative (n), or both (b)")
+    sys.stderr.write("  -C COLL  Specify which collections to include: positive (p), negative (n), or both (b)\n")
     sys.stderr.write("  -m MODE  Graphing mode: count (c) time (t) effort (e) avg. effort (a) work (w)\n")
     sys.stderr.write("  -o OUT   Specify output file\n")
 
@@ -369,9 +369,13 @@ class SolutionRange:
             self.solutionSetList.append(sset)
         
     def format(self, mode, outfile, types, count):
-        scale = count if mode in [moder.percent, moder.aeffort] else 3600
+        scale = 1
         if mode == moder.percent:
-            scale = scale * 0.01
+            scale = count * 0.01
+        elif mode == moder.aeffort:
+            scale = count
+        elif mode == moder.time:
+            scale = 3600
         histoList = [ss.tabulate(mode, scale) for ss in self.solutionSetList]
         for t in types:
             outfile.write("\\addplot+[ybar, %s] plot coordinates {" % ptyper.tabulateColors[t])
@@ -382,9 +386,13 @@ class SolutionRange:
             outfile.write("};\n")
 
     def csvFormat(self, mode, outfile, types, count):
-        scale = count if mode in [moder.percent, moder.aeffort] else 3600
+        scale = 1
         if mode == moder.percent:
-            scale = scale * 0.01
+            scale = count * 0.01
+        elif mode == moder.aeffort:
+            scale = count
+        elif mode == moder.time:
+            scale = 3600
         slist = ["Precision"] + [str(dataPoints[i]) for i in range(len(self.solutionSetList))]
         outfile.write(",".join(slist) + '\n')
         histoList = [ss.tabulate(mode, scale) for ss in self.solutionSetList]
@@ -487,7 +495,7 @@ def run(name, args):
 
     if csvOutput:
         if mode == moder.work:
-            srange.csvFormatWork(outfile, collection)
+            srange.csvFormatWork(outfile, collection, count)
         else:
             srange.csvFormat(mode, outfile, types, count)
     else:

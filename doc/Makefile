@@ -77,8 +77,15 @@ pdata:
 		< $(RDATA)/combo-mpfi+nompq.csv > $(FDATA)/combo-mpfi+nompq.tex
 	$(INTERP) $(DGEN) -L 0.001 -X 4 -Y 5 -O "only marks, color=midblue, mark=diamond*, mark options={scale=0.9, opacity=0.7}" \
 		< $(RDATA)/combo-mpfi2+nompq.csv > $(FDATA)/combo-mpfi2+nompq.tex
+	# Old
 	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m c > $(FDATA)/tabulate-count-limited.tex
 	$(INTERP) $(OPTIMIZE) -l -d $(RDATA) -m e > $(FDATA)/tabulate-effort-limited.tex
 	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m c > $(FDATA)/tabulate-count.tex
 	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m e > $(FDATA)/tabulate-effort.tex
+	# New
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m p -C p > $(FDATA)/tabulate-percent-nonneg.tex
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m p -C n > $(FDATA)/tabulate-percent-posneg.tex
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m a -C p > $(FDATA)/tabulate-aeffort-nonneg.tex
+	$(INTERP) $(OPTIMIZE)  -x 2 -d $(RDATA) -m a -C n > $(FDATA)/tabulate-aeffort-posneg.tex
+
 
