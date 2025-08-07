@@ -47,9 +47,17 @@ typedef struct {
 /********************* Defines **********************/ 
 
 /* 
+   Use library code to manipulate numbers? 
+   Functionally correct, but runs a bit slower than what can get with bit manipulation
+*/
+
+#define ERD_LIBRARY 0
+
+/* 
    Support two versions: 
    DEFAULT:     0.0 has exp = INT64_MIN
    ERDZ:        0.0 has exp = 0
+   Must be ERDZ for library
 */
 #define ERDZ 1
 
@@ -60,6 +68,7 @@ typedef struct {
 #endif
 
 /* Two ways of implementing normalization: standard and one that reduces need for conditional control */
+/*   Must be standardfor library */
 #define ERD_NORM_STD 1
 
 /* Max number of times fractions can be multiplied without overflowing exponent */
@@ -72,11 +81,46 @@ typedef struct {
 
 /********************* Double **********************/
 
+#define DBL_MAX_PREC 54
 #define DBL_EXP_OFFSET 52
 #define DBL_SIGN_OFFSET 63
 #define DBL_EXP_MASK ((uint64_t) 0x7ff)
-#define DBL_MAX_PREC 54
 #define DBL_BIAS ((int64_t) 0x3ff)
+
+#if ERD_LIBRARY
+
+static uint64_t dbl_get_bits(double x) {
+    union {
+	double   d;
+	uint64_t b;
+    } u;
+    u.d = x;
+    return u.b;
+}
+
+/* Get exponent as unsigned integer */
+static uint64_t dbl_get_biased_exponent(double x) {
+    uint64_t bx = dbl_get_bits(x);
+    return (bx >> DBL_EXP_OFFSET) & DBL_EXP_MASK;
+}
+
+/* Get exponent as signed integer */
+static int64_t dbl_get_exponent(double x) {
+    int64_t bexp = (int64_t) dbl_get_biased_exponent(x);
+    return bexp - DBL_BIAS;
+}
+
+/* Signed exponent too small */
+static bool dbl_exponent_below(int64_t exp) {
+    return exp <= -(int64_t) DBL_BIAS;
+}
+
+/* Signed exponent too large */
+static bool dbl_exponent_above(int64_t exp) {
+    return exp >= (int64_t) DBL_EXP_MASK - DBL_BIAS;
+}
+
+#else /* !ERD_LIBRARY */
 
 static uint64_t dbl_get_bits(double x) {
     union {
@@ -163,6 +207,7 @@ static double dbl_zero_exponent(double x) {
 static double dbl_infinity(int sign) {
     return dbl_assemble(sign, DBL_EXP_MASK - DBL_BIAS, 0);
 }
+#endif
 
 
 /********************* ERD *************************/
@@ -182,11 +227,18 @@ static erd_t erd_normalize_standard(erd_t a) {
     if (erd_is_zero(a))
 	return erd_zero();
     erd_t nval;
+#if ERD_LIBRARY
+    int dexp;
+    nval.dbl = frexp(a.dbl, &dexp);
+    nval.exp = a.exp + dexp;
+#else
     nval.exp = a.exp + dbl_get_exponent(a.dbl);
     nval.dbl = dbl_zero_exponent(a.dbl);
+#endif
     return nval;
 }
 
+#if !ERD_LIBRARY
 // Variant that avoids testing double
 static erd_t erd_normalize_nocond(erd_t a) {
     uint64_t ba = dbl_get_bits(a.dbl);
@@ -199,9 +251,10 @@ static erd_t erd_normalize_nocond(erd_t a) {
     nval.exp = ba ? a.exp + ((int64_t) bx - DBL_BIAS) : ZEXP;
     return nval;
 }
+#endif
 
 static erd_t erd_normalize(erd_t a) {
-#if ERD_NORM_STD
+#if ERD_NORM_STD || ERD_LIBRARY
     return erd_normalize_standard(a);
 #else
     return erd_normalize_nocond(a);
@@ -210,7 +263,7 @@ static erd_t erd_normalize(erd_t a) {
 
 static erd_t erd_from_double(double dval) {
     erd_t nval;
-#if ERDZ
+#if ERDZ || ERD_LIBRARY
     nval.exp = 0;
 #else
     nval.exp = dval == 0 ? ZEXP : 0;
@@ -246,6 +299,13 @@ static void erd_to_mpf(mpf_ptr dest, erd_t eval) {
 static double erd_to_double(erd_t eval) {
     if (erd_is_zero(eval))
 	return 0.0;
+#if ERD_LIBRARY
+    if (eval.exp > INT_MAX)
+	return eval.dbl < 0 ? -INFINITY : INFINITY;
+    if (eval.exp < INT_MIN)
+	return 0.0;
+    return ldexp(eval.dbl, eval.exp);
+#else
     if (dbl_exponent_below(eval.exp))
 	return 0.0;
     if (dbl_exponent_above(eval.exp)) {
@@ -253,6 +313,7 @@ static double erd_to_double(erd_t eval) {
 	return dbl_infinity(sign);
     }
     return dbl_replace_exponent(eval.dbl, eval.exp);
+#endif
 }
 
 static bool erd_is_equal(erd_t a, erd_t b) {
@@ -283,7 +344,11 @@ static erd_t erd_add(erd_t a, erd_t b) {
 	return b;
     erd_t nval;
     int64_t ediff = a.exp - b.exp;
+#if ERD_LIBRARY
+    double ad = ldexp(a.dbl, ediff);
+#else
     double ad = dbl_replace_exponent(a.dbl, ediff);
+#endif
     nval.dbl = ad + b.dbl;
     nval.exp = b.exp;
     return erd_normalize(nval);
@@ -370,22 +435,36 @@ static erd_t erd_div(erd_t a, erd_t b) {
 }
 
 static int erd_cmp(erd_t a, erd_t b) {
-    if (erd_is_equal(a, b))
-	return 0;
-    int sa = a.dbl < 0;
-    int sb = b.dbl < 0;
-    if (sa & !sb)
-	return -1;
-    if (sb & !sa)
-	return 1;
-    int flip = sa ? -1 : 1;
-    if (a.exp > b.exp)
-	return flip;
-    if (a.exp < b.exp)
-	return -flip;
-    if (a.dbl > b.dbl)
-	return flip;
-    return -flip;
+    int rval = 0;
+    if (!erd_is_equal(a, b)) {
+	int sa = a.dbl < 0;
+	int sb = b.dbl < 0;
+	int za = a.dbl == 0;
+	int zb = b.dbl == 0;
+	if (!sa && sb)
+	    rval = 1;
+	else if (sa && !sb)
+	    rval = -1;
+	else if (za) {
+	    if (zb)
+		rval = 0;
+	    else
+		/* Must have b > 0 */
+		rval = -1;
+	} else if (zb) {
+	    /* Must have a > 0 */
+	    rval = 1;
+	} else {
+	    int flip = sa ? -1 : 1;
+	    if (a.exp > b.exp)
+		rval = flip;
+	    if (a.exp < b.exp)
+		rval = -flip;
+	    if (a.dbl < b.dbl)
+		rval = flip;
+	}
+    }
+    return rval;
 }
 
 static erd_t erd_sqrt(erd_t a) {
@@ -418,8 +497,24 @@ static long long p10(int exp) {
     return result;
 }
 
+/* Create right-justified string representation of nonnegative number */
+static void rj_string(char *sbuf, long long val, int len) {
+    int i;
+    for (i = 0; i < len; i++)
+	sbuf[i] = '0';
+    sbuf[len] = 0;
+    if (val <= 0)
+	return;
+    i = len-1;
+    while(val) {
+	sbuf[i--] = '0' + (val % 10);
+	val = val / 10;
+    }
+}
+
 /* Buf must point to buffer with at least ERD_BUF character capacity */
 static void erd_string(erd_t a, char *buf, int nsig) {
+    char sbuf[25];
     if (nsig <= 0)
 	nsig = 1;
     if (nsig > 20)
@@ -453,10 +548,11 @@ static void erd_string(erd_t a, char *buf, int nsig) {
     long long sep = p10(nsig-1);
     long long lfrac = dfrac / sep;
     long long rfrac = dfrac % sep;
+    rj_string(sbuf, rfrac, nsig-1);
     if (dec == 0) 
-	snprintf(buf, ERD_BUF, "%s%lld.%lld", sgn, lfrac, rfrac);
+	snprintf(buf, ERD_BUF, "%s%lld.%s", sgn, lfrac, sbuf);
     else
-	snprintf(buf, ERD_BUF, "%s%lld.%llde%lld", sgn, lfrac, rfrac, dec);
+	snprintf(buf, ERD_BUF, "%s%lld.%se%lld", sgn, lfrac, sbuf, dec);
 }
 
 /* Logarithms */
@@ -501,24 +597,38 @@ public:
     void get_mpf(mpf_ptr dest) { return erd_to_mpf(dest, eval); }
     mpf_class get_mpf() { mpf_class val; erd_to_mpf(val.get_mpf_t(), eval); return val; }
 
+    double get_double() { return erd_to_double(eval); }
+
     Erd add(const Erd &other) const { return Erd(erd_add(eval, other.eval)); }
 
     Erd mul(const Erd &other) const { return Erd(erd_mul(eval, other.eval)); }
 
-    Erd log2() { return erd_log2(eval); }
+    Erd log2() const { return erd_log2(eval); }
 
-    Erd log10() { return erd_log10(eval); }
+    Erd log10() const { return erd_log10(eval); }
 
-    const Erd& operator=(const Erd &other) { eval.dbl = other.eval.dbl; eval.exp = other.eval.exp; return *this; }
+    Erd& operator=(const Erd &v) { eval = v.eval; return *this; }
+    Erd& operator=(const mpf_t v) { eval = erd_from_mpf(v); return *this; }
+    Erd& operator=(const double v) { eval = erd_from_double(v); return *this; }
+    Erd& operator=(const unsigned long int v) { eval = erd_from_double((double) v); return *this; }
+    Erd& operator=(const unsigned long long int v) { eval = erd_from_double((double) v); return *this; }
+    Erd& operator=(const long long int v)  { eval = erd_from_double((double) v); return *this; }
+    Erd& operator=(const unsigned int v)  { eval = erd_from_double((double) v); return *this; }
+    Erd& operator=(const long int v)  { eval = erd_from_double((double) v); return *this; }
+    Erd& operator=(const int v)  { eval = erd_from_double((double) v); return *this; }
+
     bool operator==(const Erd &other) const { return erd_is_equal(eval, other.eval); }
     bool operator!=(const Erd &other) const { return !erd_is_equal(eval, other.eval); }
     Erd operator+(const Erd &other) const { return Erd(erd_add(eval, other.eval)); }
     Erd operator*(const Erd &other) const { return Erd(erd_mul(eval, other.eval)); }
+    Erd operator*(double &other) const { return Erd(erd_mul(eval, erd_from_double(other))); }
     Erd operator/(const Erd &other) const { return Erd(erd_div(eval, other.eval)); }
     Erd operator-() const { return Erd(erd_negate(eval)); }
     Erd operator-(const Erd &other) const { return Erd(erd_add(eval, erd_negate(other.eval))); }
     Erd& operator*=(const Erd &other) { eval = erd_mul(eval, other.eval); return *this; }
+    Erd& operator*=(double &other) { eval = erd_mul(eval, erd_from_double(other)); return *this; }
     Erd& operator+=(const Erd &other) { eval = erd_add(eval, other.eval); return *this; }
+    Erd& operator/=(const Erd &other) { eval = erd_div(eval, other.eval); return *this; }
     bool operator<(const Erd &other) const { return erd_cmp(eval, other.eval) < 0; }
     bool operator<=(const Erd &other) const { return erd_cmp(eval, other.eval) <= 0; }
     bool operator>(const Erd &other) const { return erd_cmp(eval, other.eval) > 0; }
@@ -577,7 +687,7 @@ public:
 
     friend Erd product_reduce(std::vector<Erd> data) { return product_reduce(data.data(), (int) data.size()); }
 
-    friend std::ostream& operator<<(std::ostream& os, Erd &a) {
+    friend std::ostream& operator<<(std::ostream& os, const Erd &a) {
 	char buf[ERD_BUF];
 	erd_string(a.eval, buf, ERD_NSIG);
 	os << (const char *) buf;
