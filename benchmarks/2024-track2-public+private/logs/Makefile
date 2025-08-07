@@ -70,9 +70,9 @@ data:
 	$(INTERP) $(MERGE) -f all-variables.csv bposneg-mpf-prec.csv > bposneg-mpf+vars.csv
 	$(INTERP) $(MERGE) -f -t 2:49:49 all-variables.csv original-mpf-prec.csv > original-mpf+vars.csv
 	# MPFI Predictive value
-	$(INTERP) $(MERGE) -f all-mpfi-eprec.csv uposneg-mpfi-prec.csv > uposneg-mpfi-est+act.csv
-	$(INTERP) $(MERGE) -f all-mpfi-eprec.csv eposneg-mpfi-prec.csv > eposneg-mpfi-est+act.csv
-	$(INTERP) $(MERGE) -f all-mpfi-eprec.csv bposneg-mpfi-prec.csv > bposneg-mpfi-est+act.csv
+	$(INTERP) $(MERGE) -t 2:45:47 -f all-mpfi-eprec.csv uposneg-mpfi-prec.csv > uposneg-mpfi-est+act.csv
+	$(INTERP) $(MERGE) -t 2:45:47 -f all-mpfi-eprec.csv eposneg-mpfi-prec.csv > eposneg-mpfi-est+act.csv
+	$(INTERP) $(MERGE) -t 2:45:47 -f all-mpfi-eprec.csv bposneg-mpfi-prec.csv > bposneg-mpfi-est+act.csv
 	# MPQ TIMES
 	$(INTERP) $(MERGE) -f combo-mpf-secs.csv all-mpq-secs.csv > combo-mpf+mpq.csv
 	$(INTERP) $(MERGE) -f combo-mpfi-secs.csv all-mpq-secs.csv >  combo-mpfi+mpq.csv
